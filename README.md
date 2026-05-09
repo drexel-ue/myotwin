@@ -1,4 +1,4 @@
-# MyOTwin
+# MyoTwin
 
 A privacy-first, biomechanical research & coaching app built entirely offline with Flutter, Drift (SQLite), and local LLMs (Gemma).
 

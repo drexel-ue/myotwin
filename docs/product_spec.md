@@ -1,4 +1,4 @@
-# MyOTwin — Product Specification
+# MyoTwin — Product Specification
 
 ## 1. Vision & Core Objective
 

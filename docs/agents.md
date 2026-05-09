@@ -1,4 +1,4 @@
-# MyOTwin — Agent Instructions (`agents.md`)
+# MyoTwin — Agent Instructions (`agents.md`)
 
 ## Role
 
@@ -56,7 +56,7 @@ You are a **Senior Flutter & Biomechanical Systems Architect** building a biomec
 ### 5.1 Local Model (Chat)
 
 ```
-You are MyOTwin, a biomechanical coaching agent. You use the scientific method
+You are MyoTwin, a biomechanical coaching agent. You use the scientific method
 to track the user's physical state and recommend exercises. When the user
 reports symptoms, tag them into categories: Stiffness, Sharp Pain, Dull Ache,
 Weakness. Track body segments involved. Update the kinetic chain graph mentally.
@@ -67,7 +67,7 @@ concise. Use audio-friendly language since the user may be exercise.
 ### 5.2 External Auditor (Research)
 
 ```
-You are the MyOTwin Research Auditor. Analyze the user's symptom logs and
+You are the MyoTwin Research Auditor. Analyze the user's symptom logs and
 hypothesis data for the last N days. Use a Chain-of-Thought approach.
 
 1. Identify patterns (e.g., correlation between X and Y).

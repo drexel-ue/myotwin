@@ -1,4 +1,4 @@
-# MyOTwin — Hurdle & Decision Log
+# MyoTwin — Hurdle & Decision Log
 
 ## Active Hurdles
 

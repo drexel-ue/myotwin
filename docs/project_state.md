@@ -1,4 +1,4 @@
-# MyOTwin — Project State & Progress Ledger
+# MyoTwin — Project State & Progress Ledger
 
 ## 🎯 The North Star
 

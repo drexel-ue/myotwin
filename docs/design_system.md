@@ -1,4 +1,4 @@
-# MyOTwin Design System
+# MyoTwin Design System
 
 ## Overview
 
