@@ -42,35 +42,6 @@ Build a privacy-first, biomechanical research & coaching app using Flutter, Drif
 | D18 | MyoTwin = app, Motus = inference model | Clear identity: MyoTwin is the application wrapper; Motus is the AI model running inside it | 2026-05-09 |
 | D19 | Motus split: `motus_local/` + `motus_auditor/` | Architecture reflects real responsibility split; clean boundaries | 2026-05-09 |
 
-## 🛠️ Commit Convention
-
-All commits MUST follow Conventional Commits format:
-
-```
-<type>(<scope>): <description>
-```
-
-| Type | Use |
-|---|---|
-| `feat` | New functionality |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Formatting, no code change |
-| `refactor` | Code restructuring (no new features) |
-| `perf` | Performance improvement |
-| `test` | Adding/updating tests |
-| `chore` | Build tooling, deps, CI |
-| `ci` | CI config changes |
-| `build` | Build system/dependency changes |
-| `revert` | Revert a commit |
-
-**Scope**: package name or layer (`db`, `core`, `llm`, `app`, or full feature path).
-- Subject ≤100 chars, imperative, no period.
-- Body explains *why*, not *what*. Blank for trivially obvious changes.
-- Reference planning docs in footer: `Refs: project_state.md Phase 1`.
-
----
-
 ## 🛠️ Task Breakdown
 
 ### Phase 1.5: Theme Implementation & Design Tokens
@@ -85,7 +56,7 @@ All commits MUST follow Conventional Commits format:
 | ⬜ | Implement FAB animation states (rest → hover → active → hot → locked) | High | — |
 | ⬜ | Implement scan-in and holographic transition animation classes | High | — |
 
-### Phase 1: Motus & Core Architecture
+### Phase 1: Core Architecture & Drift Schema
 
 | Status | Task | Priority | Linked Hurdle |
 |---|---|---|---|
@@ -93,9 +64,9 @@ All commits MUST follow Conventional Commits format:
 | ⬜ | Define `myotwin_core` entities (Symptom, Exercise, Hypothesis, Source, etc.) | High | — |
 | ⬜ | Define Drift schema with all tables from agents.md | High | — |
 | ⬜ | Implement `DatabaseIsolate` and `DatabaseExportService` | High | — |
-| ⬜ | Create `ModelCoordinator` interface and default implementation | High | — |
-| ⬜ | Scaffold `motus_local/` (Motus mediapipe inference, context window manager) | High | — |
-| ⬜ | Scaffold `motus_auditor/` (Motus Ollama client, batch research) | High | — |
+| ⬜ | Scaffold `motus_local/` (Motus mediapipe inference, context window management) | High | — |
+| ⬜ | Scaffold `motus_auditor/` (Motus Ollama auditor, batch research) | High | — |
+| ⬜ | Create `ModelCoordinator` interface in myotwin_core | Med | — |
 | ⬜ | Scaffold `myotwin_features/hypothesis_engine/` | Med | — |
 | ⬜ | Scaffold `myotwin_features/kinetic_chains/` | Med | — |
 | ⬜ | Define BLoC events/states for `symptom_tracker` feature | Med | — |
@@ -171,6 +142,16 @@ All commits MUST follow Conventional Commits format:
 - **Current Blockers**: None — planning phase complete.
 - **Immediate Next Step**: Initialize melos monorepo and scaffold `myotwan_core` + first Drift schema tables.
 - **Confidence Level**: 5 (spec is comprehensive and unambiguous)
+- **Date**: 2026-05-09
+
+#### Session #1 — Design System & Motus Package Split
+- **What I finished**: Created `design_system.md` with full cyberpunk/sci-fi black-and-white token set (palette, typography, shape, motion, animation patterns, widget specs). Split `myotwin_llm` into `motus_local/` and `motus_auditor/` to reflect Motus' two responsibilities: real-time inference and GPU-assisted research. Added conventional commits rules to `agents.md`, `architecture_rules.md`, and `project_state.md`.
+- **Where I stopped**: All planning documents complete. No code written yet. Session #1 committed as `626f285` (design system) and `1ef1155` (Motus split).
+- **Current Blockers**: None — design and architecture governance fully documented.
+- **Decisions Made**: D16 (Conventional Commits), D17 (cyberpunk/sci-fi aesthetic), D18 (MyoTwin = app, Motus = inference model), D19 (Motus split into two packages)
+- **Next Step**: Phase 1.5 or Phase 1 — implement design tokens and Scaffold `motus_local/` + `motus_auditor/` packages.
+- **Confidence Level**: 5 (planning and governance complete, ready to scaffold)
+- **Files Modified**: `README.md`, `docs/agents.md`, `docs/architecture_rules.md`, `docs/hurdle_tracker.md`, `docs/product_spec.md`, `docs/project_state.md`, `docs/design_system.md`
 - **Date**: 2026-05-09
 
 ---
