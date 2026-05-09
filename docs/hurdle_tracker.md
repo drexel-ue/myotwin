@@ -14,7 +14,7 @@
 | # | Description | Resolution | Date |
 |---|---|---|---|
 | 1 | Architecture choice | Selected BLoC + Clean Architecture + Drift for maximal agent support | 2026-05-09 |
-| 2 | Local vs External LLM | Local first (Gemma) + external Ollama as research auditor | 2026-05-09 |
+| 2 | Local vs External LLM | Local first (Motus via mediapipe) + Motus external auditor on Ollama | 2026-05-09 |
 | 3 | Database persistence | Drift in Application Documents Directory + export/import | 2026-05-09 |
 | 4 | Body map approach | 3D GLB muscle model with vertex coloring, not flat SVG | 2026-05-09 |
 

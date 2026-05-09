@@ -1,6 +1,6 @@
 # MyoTwin
 
-A privacy-first, biomechanical research & coaching app built entirely offline with Flutter, Drift (SQLite), and local LLMs (Gemma).
+A privacy-first, biomechanical research & coaching app built entirely offline with Flutter, Drift (SQLite), and Motus (local inference model with external GPU auditor support).
 
 ---
 
@@ -27,7 +27,7 @@ See `docs/product_spec.md` for the full architecture specification.
 |---|---|
 | `myotwan_core` | Domain entities, value types, repository interfaces |
 | `myotwan_db` | Drift DAOs, schema, export service |
-| `myotwan_llm` | LLM orchestration (mediapipe, Ollama, prompts) |
+| `myotwin_llm` | LLM orchestration: Motus local inference, Motus external auditor, prompt builders |
 | `myotwan_features/*/` | Feature libraries (one per BLoC group) |
 | `myotwan_app` | Presentation: widgets, navigation, FAB, shell |
 | `myotwan_test_support` | Shared mocks and fakes |

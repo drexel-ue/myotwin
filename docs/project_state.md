@@ -2,7 +2,7 @@
 
 ## 🎯 The North Star
 
-Build a privacy-first, biomechanical research & coaching app using Flutter, Drift, and Local LLMs (Gemma/Ollama) featuring a 3D interactive muscle heatmap and a Scientific Hypothesis Engine — all running offline with multi-device sync.
+Build a privacy-first, biomechanical research & coaching app using Flutter, Drift, and Motus (the local inference model with external auditor support) featuring a 3D interactive muscle heatmap and a Scientific Hypothesis Engine — all running offline with multi-device sync.
 
 ## 📍 Current Phase
 
@@ -25,7 +25,7 @@ Build a privacy-first, biomechanical research & coaching app using Flutter, Drif
 | D1 | BLoC for state management | Dense documentation, strong agent examples, strict event-driven pattern | 2026-05-09 |
 | D2 | Drift (SQLite) over NoSQL | Relational data (exercise → feedback → pain), portability, SQL clarity | 2026-05-09 |
 | D3 | Clean Architecture (3-layer) | Extensibility, testable domain layer, swappable LLM backend | 2026-05-09 |
-| D4 | Local-first: Gemma via mediapipe | Privacy, no external dependency, works offline | 2026-05-09 |
+| D4 | Local-first: Motus via mediapipe, Motus external auditor on Ollama | Privacy, no external dependency, works offline, GPU-assisted research | 2026-05-09 |
 | D5 | External Ollama for research | GPU compute offload, deep audit capability | 2026-05-09 |
 | D6 | Monorepo via melos | Isolated packages, clear boundaries, shared core | 2026-05-09 |
 | D7 | Body map: 3D muscle model (GLB) | Rotation, vertex-based heatmap, anatomical accuracy | 2026-05-09 |
@@ -38,7 +38,7 @@ Build a privacy-first, biomechanical research & coaching app using Flutter, Drif
 | D14 | Isolate-based performance | 16ms rule, no UI lockup | 2026-05-09 |
 | D15 | mDNS + WebSocket for sync | Mac Mini as primary source of truth, no cloud needed | 2026-05-09 |
 | D16 | Conventional Commits for all commits | Standardized history, agent-readable diffs, easy bisect | 2026-05-09 |
-| D17 | Black & white cyberpunk/sci-fi aesthetic | Terminal/HUD interface vibe, monochrome with data-driven heatmap accents, holographic transitions | 2026-05-09 |
+| D18 | MyoTwin = app, Motus = inference model | Clear identity: MyoTwin is the application wrapper; Motus is the AI model running inside it | 2026-05-09 |
 
 ## 🛠️ Commit Convention
 
@@ -111,8 +111,8 @@ All commits MUST follow Conventional Commits format:
 
 | Status | Task | Priority | Linked Hurdle |
 |---|---|---|---|
-| ⬜ | Implement mediapipe Gemma client | High | — |
-| ⬜ | Implement Ollama OpenAI-compatible client | High | — |
+| ⬜ | Implement Motus local inference client (mediapipe) | High | — |
+| ⬜ | Implement Motus external auditor client (Ollama OpenAI-compatible) | High | — |
 | ⬜ | FAB state machine widget with all gesture modes | High | — |
 | ⬜ | Live transcription (speech_to_text) | High | — |
 | ⬜ | TTS audio dialog mode (hands-free) | High | — |

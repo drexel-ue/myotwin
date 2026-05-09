@@ -6,7 +6,7 @@ A privacy-first, local-only Flutter application for functional strength, work ca
 
 - Schedules exercises and movements throughout the day based on real-time user feedback.
 - Tracks symptoms, builds kinetic chain hypotheses, and adjusts recommendations using the scientific method.
-- Runs inference on-device (Gemma via mediapipe) with the ability to call out to an external GPU server (Ollama, OpenAI-compatible) for deep research.
+- Runs Motus (the local inference model) on-device via mediapipe with the ability to call out to an external GPU server (Ollama, OpenAI-compatible) for deep research.
 - Persists all data locally via Drift (SQLite) in the Application Documents Directory.
 - Syncs across devices on the same local network (phone + Mac Workstation).
 
@@ -17,8 +17,8 @@ A privacy-first, local-only Flutter application for functional strength, work ca
 | Framework | Flutter (latest stable) |
 | State Management | BLoC (event/driver pattern) |
 | Database | Drift (SQLite, with background isolate) |
-| Local LLM | Google mediapipe (running Gemma 4:ep4b) |
-| External LLM | REST API client (Ollama, OpenAI-compatible) |
+| Local LLM | Motus (mediapipe inference) |
+| External LLM | Motus external auditor (Ollama, OpenAI-compatible) |
 | Background Tasks | workmanager |
 | Routing | GoRouter (deep-link support) |
 | Speech | speech_to_text (platform-native STT) |
@@ -35,7 +35,7 @@ A privacy-first, local-only Flutter application for functional strength, work ca
 
 All features are organized into three layers:
 
-- **Data Layer** — Drift DAOs, API clients (local model / external Ollama), file imports/exports, background sync.
+- **Data Layer** — Drift DAOs, API clients (Motus local / Motus external auditor), file imports/exports, background sync.
 - **Domain Layer** — Pure Dart entities, repository interfaces, use cases (no Flutter deps).
 - **Presentation Layer** — BLoC event/state pairs, widgets (3D Body Map, Chat Sheet, Dossier View).
 
@@ -149,7 +149,7 @@ myotwin/
 ├── packages/
 │   ├── myotwin_core/          # Domain layer: entities, value types, repository interfaces
 │   ├── myotwin_db/            # Data layer: DriftDAOs, schema, export service
-│   ├── myotwin_llm/           # LLM orchestration: mediapipe, Ollama client, prompt builders
+│   ├── myotwin_llm: LLM orchestration (Motus local inference, Motus external auditor, prompt builders)
 │   ├── myotwin_features/      # Feature packages (one per BLoC group)
 │   │   ├── body_map/
 │   │   ├── chat/
