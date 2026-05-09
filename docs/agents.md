@@ -45,13 +45,15 @@ You are a **Senior Flutter & Biomechanical Systems Architect** building a biomec
 
 ## 4. Model Orchestration
 
-The app (**MyoTwin**) contains a local AI model named **Motus** — they are not the same thing. MyoTwin is the application; Motus is the inference engine that powers Motus is the model that lives inside the app, not the app itself.
+The app (**MyoTwin**) contains a local AI model named **Motus** — they are not the same thing. MyoTwin is the application; Motus is the inference engine that lives inside it. Motus has two implementations, housed in separate packages:
 
-- **`ModelCoordinator`** decides between:
-  - Motus (local inference via mediapipe) for fast chat and real-time interaction.
-  - External Ollama server for background research and deep audit.
-- All LLM calls wrap in `Result<T, Failure>` — no UI hangs.
-- Implement `ExternalModelAvailability` check with automatic fallback.
+- **`motus_local`** — Motus local inference via mediapipe. Handles fast chat, voice interaction, real-time symptom tagging, and context window management.
+- **`motus_auditor`** — Motus external GPU auditor (Ollama). Handles batch research, deep audit, hypothesis formulation, and principle ingestion.
+
+`ModelCoordinator` (in `myotwin_core`) decides at runtime which Motus implementation to use. Agents depend on the interfaces defined in `myotwin_core`, never on the package names directly.
+
+- All Motus calls wrap in `Result<T, Failure>` — no UI hangs.
+- Implement `ExternalModelAvailability` check with automatic fallback to `motus_local`.
 
 ## 5. Prompt Engineering
 

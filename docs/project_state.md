@@ -38,7 +38,9 @@ Build a privacy-first, biomechanical research & coaching app using Flutter, Drif
 | D14 | Isolate-based performance | 16ms rule, no UI lockup | 2026-05-09 |
 | D15 | mDNS + WebSocket for sync | Mac Mini as primary source of truth, no cloud needed | 2026-05-09 |
 | D16 | Conventional Commits for all commits | Standardized history, agent-readable diffs, easy bisect | 2026-05-09 |
+| D17 | Black & white cyberpunk/sci-fi aesthetic | Terminal/HUD interface vibe, monochrome with data-driven heatmap accents, holographic transitions | 2026-05-09 |
 | D18 | MyoTwin = app, Motus = inference model | Clear identity: MyoTwin is the application wrapper; Motus is the AI model running inside it | 2026-05-09 |
+| D19 | Motus split: `motus_local/` + `motus_auditor/` | Architecture reflects real responsibility split; clean boundaries | 2026-05-09 |
 
 ## 🛠️ Commit Convention
 
@@ -83,7 +85,7 @@ All commits MUST follow Conventional Commits format:
 | ⬜ | Implement FAB animation states (rest → hover → active → hot → locked) | High | — |
 | ⬜ | Implement scan-in and holographic transition animation classes | High | — |
 
-### Phase 1: Core Architecture & Drift Schema
+### Phase 1: Motus & Core Architecture
 
 | Status | Task | Priority | Linked Hurdle |
 |---|---|---|---|
@@ -91,9 +93,11 @@ All commits MUST follow Conventional Commits format:
 | ⬜ | Define `myotwin_core` entities (Symptom, Exercise, Hypothesis, Source, etc.) | High | — |
 | ⬜ | Define Drift schema with all tables from agents.md | High | — |
 | ⬜ | Implement `DatabaseIsolate` and `DatabaseExportService` | High | — |
-| ⬜ | Create `ModelCoordinator` interface and default implementation | Medium | — |
-| ⬜ | Scaffold `myotwan_features/hypothesis_engine/` | Med | — |
-| ⬜ | Scaffold `myotwan_features/kindetic_chains/` | Med | — |
+| ⬜ | Create `ModelCoordinator` interface and default implementation | High | — |
+| ⬜ | Scaffold `motus_local/` (Motus mediapipe inference, context window manager) | High | — |
+| ⬜ | Scaffold `motus_auditor/` (Motus Ollama client, batch research) | High | — |
+| ⬜ | Scaffold `myotwin_features/hypothesis_engine/` | Med | — |
+| ⬜ | Scaffold `myotwin_features/kinetic_chains/` | Med | — |
 | ⬜ | Define BLoC events/states for `symptom_tracker` feature | Med | — |
 | ⬜ | Setup `system_health.md` | Low | — |
 

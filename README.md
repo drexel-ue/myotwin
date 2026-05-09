@@ -25,12 +25,13 @@ See `docs/product_spec.md` for the full architecture specification.
 
 | Package | Purpose |
 |---|---|
-| `myotwan_core` | Domain entities, value types, repository interfaces |
-| `myotwan_db` | Drift DAOs, schema, export service |
-| `myotwin_llm` | LLM orchestration: Motus local inference, Motus external auditor, prompt builders |
-| `myotwan_features/*/` | Feature libraries (one per BLoC group) |
-| `myotwan_app` | Presentation: widgets, navigation, FAB, shell |
-| `myotwan_test_support` | Shared mocks and fakes |
+| `myotwin_core` | Domain entities, value types, repository interfaces |
+| `myotwin_db` | Drift DAOs, schema, export service |
+| `motus_local` | Motus inference via mediapipe, context window management, streaming |
+| `motus_auditor` | Motus external GPU auditor (Ollama), batch research, prompt builders |
+| `myotwin_features/*/` | Feature libraries (one per BLoC group) |
+| `myotwin_app` | Presentation: widgets, navigation, FAB, shell |
+| `myotwin_test_support` | Shared mocks and fakes |
 
 ## Governance Documents
 

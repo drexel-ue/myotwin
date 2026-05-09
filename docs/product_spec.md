@@ -149,7 +149,8 @@ myotwin/
 ├── packages/
 │   ├── myotwin_core/          # Domain layer: entities, value types, repository interfaces
 │   ├── myotwin_db/            # Data layer: DriftDAOs, schema, export service
-│   ├── myotwin_llm: LLM orchestration (Motus local inference, Motus external auditor, prompt builders)
+│   ├── motus_local/           # Motus local inference: mediapipe, context window management, streaming
+│   ├── motus_auditor/         # Motus external GPU: Ollama client, batch research, prompt builders
 │   ├── myotwin_features/      # Feature packages (one per BLoC group)
 │   │   ├── body_map/
 │   │   ├── chat/
