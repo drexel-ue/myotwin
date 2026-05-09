@@ -8,7 +8,9 @@ Build a privacy-first, biomechanical research & coaching app using Flutter, Drif
 
 - [x] Product vision & specification complete
 - [x] Agent instructions & architecture rules drafted
+- [x] Design language & visual system complete
 - [ ] Phase 1: Core Architecture & Drift Schema (Next)
+- [ ] Phase 1.5: Theme Implementation & Design Tokens
 - [ ] Phase 2: 3D Body Map & Shader Implementation
 - [ ] Phase 3: Local LLM Integration & Audio Dialog
 - [ ] Phase 4: Kinetic Chain Engine & Hypothesis Tracking
@@ -36,6 +38,7 @@ Build a privacy-first, biomechanical research & coaching app using Flutter, Drif
 | D14 | Isolate-based performance | 16ms rule, no UI lockup | 2026-05-09 |
 | D15 | mDNS + WebSocket for sync | Mac Mini as primary source of truth, no cloud needed | 2026-05-09 |
 | D16 | Conventional Commits for all commits | Standardized history, agent-readable diffs, easy bisect | 2026-05-09 |
+| D17 | Black & white cyberpunk/sci-fi aesthetic | Terminal/HUD interface vibe, monochrome with data-driven heatmap accents, holographic transitions | 2026-05-09 |
 
 ## 🛠️ Commit Convention
 
@@ -67,6 +70,18 @@ All commits MUST follow Conventional Commits format:
 ---
 
 ## 🛠️ Task Breakdown
+
+### Phase 1.5: Theme Implementation & Design Tokens
+
+| Status | Task | Priority | Linked Hurdle |
+|---|---|---|---|
+| ⬜ | Create `design_system.md` with tokens (palette, typography, shape, motion, widget specs) | High | — |
+| ⬜ | Implement `app_theme.dart` with full `ThemeData` | High | — |
+| ⬜ | Implement reusable themed components (buttons, elevated cards, FAB variants, chat bubbles, navigation) | High | — |
+| ⬜ | Add Google Fonts (Space Mono, JetBrains Mono) to pubspec | Med | — |
+| ⬜ | Add SVG assets (grid background, scanlines, noise overlay) | Low | — |
+| ⬜ | Implement FAB animation states (rest → hover → active → hot → locked) | High | — |
+| ⬜ | Implement scan-in and holographic transition animation classes | High | — |
 
 ### Phase 1: Core Architecture & Drift Schema
 
