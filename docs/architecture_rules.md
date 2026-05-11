@@ -1,52 +1,41 @@
 # Architecture & Performance Rules
 
-## ⚖️ Rules
+## ⚖️ The 16ms Rule
 
-### 16ms Rule
-Any operation expected to take >16ms MUST be moved to a compute() call or a dedicated Isolate.
+Any operation expected to take >16ms MUST be moved to a background Isolate or `compute()`.
 - No heavy JSON parsing on Main UI thread.
-- No Drift queries on Main UI thread — use `compute()` or `DriftBackgroundIsolate`.
+- No Drift queries on Main UI thread — use `DriftBackgroundIsolate` or `DatabaseConnection.daemon`.
 - LLM prompt construction on isolates.
+- Vector DB searches on isolates.
 
-### Reactive UI
-The 3D Body Map MUST listen to a `Stream` from the BLoC. Use `StreamBuilder` or `BlocBuilder`.
-**Never** use `setState()` for global heatmap updates.
+## 🧬 Clean Architecture
 
-### Result Pattern
-All LLM calls, network requests, and database imports/exports MUST return `Result<T, Failure>`.
-- Use from `fpdart` package.
-- No try/catch without wrapping — errors must be modeled as Failure types.
-- UI displays "Research Pending" when external model unreachable.
+- **Data Layer**: Drift DAOs and API Clients (motus_hub).
+- **Domain Layer**: Pure Dart Entities and Use Cases (shared_core). Zero Flutter dependencies.
+- **Presentation Layer**: BLoCs and Widgets (mobile / desktop clients).
 
-### Thread Safety
-- Drift DAOs must run on background isolate via `DatabaseConnection.daemon`.
-- No shared mutable state between isolates — use message passing only.
+## 🚫 No Location Tracking
 
-### Debounce Policy
-- Heatmap color updates: debounced to 150ms.
-- Voice transcription finalization: debounced to 200ms.
-- Hypothesis score updates: debounced to 300ms.
+Under no circumstances should Motus access or infer the user's GPS/cellular location. The only discovery mechanism is manual equipment registration via conversation.
 
-### Context Window Management
-- Chat history kept to last 20 turns in active prompt.
-- Older history summarized into `ResearchNote` entries periodically (every ~30 turns).
-- Summarization uses the external auditor model to reduce token usage.
+## 🧪 The Scientific Method Requirement
 
-### Clean Architecture Strictness
-- Domain layer imports zero packages from Flutter ecosystem.
-- Feature packages are independent — no cross-feature imports except through domain interfaces in `myotwin_core`.
-- Data layer depends on domain interfaces (dependency inversion).
+Every exercise recommendation must be wrapped in a `Hypothesis` object.
+The agent must verify the `CertaintyScore` before moving a body segment from "Red" to "Yellow".
+User overrides disable chains (`certainty_score = -1.0`).
 
-### Memory Leak Prevention
-- Every `StreamSubscription` must be stored, cancelled, and set to null in BLoC `close()`.
-- Every `AnimationController` must be disposed in `close()`.
-- Every `Image`/`Picture`/`Canvas` must be disposed on widget dispose.
-- No static globals except dependency injection container.
+## 🧪 Informed Autonomy
 
-### Logging & Observability
-- All domain use cases log: event, input params, result, duration (ms).
-- Use `logging` package (not `print()`) for structured logs.
-- Error stack traces captured for all `Failure.unknown`.
+Never block user action. Always present choices with biomechanical rationale.
+Adjust `SafetyMargin` on low recovery — suggest alternatives, do not forbid.
+The user is the Principal Investigator; Motus is the lab partner.
+
+## 🧪 Physics Over Hallucination
+
+Motus MUST use tool endpoints for ALL biomechanical math.
+- `calculate_torque_load(bodyWeight, angle, leverLength)` → returns `double torqueNm`
+- `get_progression_step(exerciseId, currentIntegrity)` → returns exercise details
+- Never estimate numbers in natural language.
 
 ## 📝 Commit Conventions
 
@@ -58,31 +47,13 @@ All commits MUST follow [Conventional Commits](https://www.conventionalcommits.o
 
 **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`
 
-**Scope** (optional but preferred): `db`, `core`, `llm`, `app`, or full feature path like `features/hypothesis_engine`.
+**Scope** (optional but preferred): `shared`, `mobile`, `desktop`, `hub`, `db`, `core`, `features/*`.
 
 **Rules**:
 - Subject ≤100 characters, imperative, no trailing period.
 - Body describes *why*, not *what*. Blank for trivially obvious changes.
 - Breaking changes referenced in footer as `BREAKING CHANGE: `.
-- Cross-reference planning docs with `Refs: project_state.md Phase 1`.
-
-### Bad examples (reject)
-
-```
-"fixed stuff"
-"update db"
-"WIP"
-"lol"
-```
-
-### Good examples (accept)
-
-```
-feat(db): add hypothesis engine use cases
-refactor(llm): extract prompt builder from coordinator
-test(hypothesis_engine): add certainty score unit tests
-chore: bump drift to 11.0.0
-```
+- Cross-reference planning docs with `Refs: project_state.md Phase X`.
 
 ## 🚫 Anti-Patterns to Avoid
 
@@ -96,8 +67,69 @@ chore: bump drift to 11.0.0
 | Large files (>400 lines) | Split into smaller, focused libraries |
 | God BLoCs (>10 events, >10 states) | Split into smaller BLoCs |
 | Free-form commit messages | Conventional Commits format |
+| Hard-coding equipment names | Use EquipmentRegistry enum/table |
+| LLM-guessed biomechanics | Use tool-calculated values |
+| Binary color transitions (0↔1) | Ghost alpha floor (min ~0.1) |
+| Diagonal tether lines | Manhattan routing (90° elbows only) |
+| Full-screen on desktop | Floating callout windows on desktop |
+
+## 📐 3D Model & Shader Requirements
+
+- Use layered GLB (Skeletal, Muscular, Cardiovascular).
+- Data-driven heatmap mapping from Drift `SymptomLog` via vertex groups.
+- X-Ray dissolve transition with `u_ghostAlpha` uniform.
+- Mesh names must match `BodySegment` IDs from `shared_core`.
+- Polygon count target: < 150,000 triangles.
+- No high-res textures needed — procedural shaders handle all visualization.
+
+## 📐 Desktop UI Tether Requirements
+
+- Manhattan routing (straight lines, sharp elbows).
+- Dynamic segment creation/collapse based on window distance.
+- Grid-snapping (8px/16px grid).
+- Occlusion state: dashed grey when node is hidden.
+- Docking: snap to screen edges → sidebar panel.
+- "Draw itself" animation: constant-velocity path extraction, linear easing.
+- Collision avoidance: windows fan out, do not overlap.
+
+## 📐 Mobile UI Requirements
+
+- FAB state machine with slide-to-lock mic.
+- Proposal window stems from FAB → blooms to full screen.
+- Flow windows: full-screen, high contrast, massive typography.
+- Haptic confirmation: double-pulse on spawn, long pulse on validation.
+
+## 🧪 Context Window Management
+
+The Motus Hub context orchestrator must:
+1. Compress `InjuryVault` and `EquipmentRegistry` into a minified JSON object for the System Prompt.
+2. Execute a Vector Search for relevant `ResearchNotes` before every LLM call.
+3. Truncate and summarize chat history once it exceeds 25% of the model's total token limit.
+
+## 🧪 Data Point Source Type
+
+Every data point in the database must include a `SourceType` enum:
+- `manual` — User-reported (symptom, equipment, nutrition, sleep, etc.)
+- `computed` — Engine-calculated (torque, integrity score, certainty)
+- `vision` — Computer Vision-derived (future feature)
+- `rag` — Retrieved from research vector store
+
+This enables Motus to track confidence levels per data point.
+
+## 💾 Memory Leak Prevention
+
+- Every `StreamSubscription` must be stored, cancelled, and set to null in BLoC `close()`.
+- Every `AnimationController` must be disposed in `close()`.
+- Every `Image`/`Picture`/`Canvas` must be disposed on widget dispose.
+- No static globals except dependency injection container.
+
+## 📊 Logging & Observability
+
+- All domain use cases log: event, input params, result, duration (ms).
+- Use `logging` package (not `print()`) for structured logs.
+- Error stack traces captured for all `Failure.unknown`.
 
 ---
 
-**Document version**: 1.1
-**Last updated**: 2026-05-09
+**Document version**: 2.0
+**Last updated**: 2026-05-11
