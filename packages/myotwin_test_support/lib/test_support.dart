@@ -1,4 +1,8 @@
-/// Mock test doubles for MyoTwin domain interfaces.
+/// Test support library for MyoTwin — a biomechanical coaching app.
+///
+/// Provides mock repositories, a fake [Failure] type, and a mock
+/// [MotusCoordinator] for unit testing domain logic without real hardware
+/// or network dependencies.
 library;
 
 import 'package:fpdart/fpdart.dart';
@@ -351,11 +355,13 @@ class MockSourceRepository implements SourceRepository {
   Future<void> deleteSource(int id) async {}
 }
 
-/// Fake [HypothesisEntity] for tests.
+/// Fake Failure for tests.
 class MockFailure extends Failure {
+  /// Creates a mock failure instance.
   MockFailure(super.message, {super.code});
 }
 
+/// Mock MotusCoordinator for use in tests.
 class MockMotusCoordinator implements MotusCoordinator {
   @override
   Future<bool> get externalModelAvailable async => false;

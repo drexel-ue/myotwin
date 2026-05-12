@@ -1,23 +1,27 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for Exercise data access.
+/// Data access interface for Exercise entities.
 /// Manages exercise definitions and metadata.
 abstract class ExerciseRepository {
   /// Fetches all exercises.
   Future<List<ExerciseEntity>> getAll();
 
-  /// Fetches exercises by category.
+  /// Fetches exercises whose category matches [category].
   Future<List<ExerciseEntity>> getByCategory(String category);
 
-  /// Fetches exercises requiring specific equipment.
+  /// Fetches exercises requiring equipment matching [equipment].
   Future<List<ExerciseEntity>> getByEquipment(String equipment);
 
-  /// Fetches a specific exercise by ID.
+  /// Fetches a specific exercise by [id].
+  ///
+  /// Returns `null` if no exercise with the given ID exists.
   Future<ExerciseEntity?> getExerciseById(int id);
 
-  /// Saves or updates an exercise.
+  /// Inserts a new exercise or updates an existing one.
+  ///
+  /// Returns the exercise ID.
   Future<int> upsert(ExerciseEntity exercise);
 
-  /// Deletes an exercise by ID.
+  /// Deletes the exercise with the given [id].
   Future<void> deleteExercise(int id);
 }

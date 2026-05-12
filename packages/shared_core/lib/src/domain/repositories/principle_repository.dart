@@ -1,20 +1,22 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for Principle data access.
+/// Data access interface for Principle entities.
 /// Manages ingested biomechanical rules.
 abstract class PrincipleRepository {
-  /// Fetches all principles.
+  /// Fetches all biomechanical principles.
   Future<List<PrincipleEntity>> getAll();
 
-  /// Fetches principles by category.
+  /// Fetches principles whose category matches [category].
   Future<List<PrincipleEntity>> getByCategory(String category);
 
-  /// Fetches principles from a specific knowledge source.
+  /// Fetches principles originating from knowledge source [knowledgeSourceId].
   Future<List<PrincipleEntity>> getByKnowledgeSource(String knowledgeSourceId);
 
-  /// Saves a principle.
+  /// Persists a new [principle].
+  ///
+  /// Returns the principle ID.
   Future<int> save(PrincipleEntity principle);
 
-  /// Deletes a principle by ID.
+  /// Deletes the principle with the given [id].
   Future<void> deletePrinciple(int id);
 }

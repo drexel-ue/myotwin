@@ -1,19 +1,42 @@
-/// Domain entity: Hypothesis in the scientific method loop.
-/// Every exercise recommendation is wrapped in a Hypothesis with a certainty score.
+/// Hypothesis in the scientific method loop for recovery and rehab.
+///
+/// Wraps exercise recommendations with a certainty score so the
+/// local-only research process remains auditable and traceable.
 class HypothesisEntity {
+  /// Creates a hypothesis for the scientific method loop.
   const HypothesisEntity({
+    /// Unique database ID, null for unsaved entities.
     this.id,
+
+    /// Target body segment node ID.
     required this.targetNode,
+
+    /// Linked body segment node IDs in the kinetic chain.
     required this.linkedNodes,
+
+    /// The hypothesis statement (e.g. "Strengthening X improves Y").
     required this.statement,
+
+    /// Certainty score between 0.0 and 1.0.
     required this.certaintyScore,
+
+    /// Current status: Active, Proven, Disproved, etc.
     required this.status,
+
+    /// Cited source IDs, comma-separated in the database.
     this.sourcesCited,
+
+    /// Evidence or theory motivating this hypothesis.
     this.scientificRationale,
+
+    /// Timestamp when the hypothesis was first logged.
     required this.createdAt,
+
+    /// Timestamp of the most recent update.
     required this.updatedAt,
   });
 
+  /// Constructs a [HypothesisEntity] from a database row map.
   factory HypothesisEntity.fromDb(Map<String, dynamic> row) {
     return HypothesisEntity(
       id: row['id'] as int,
@@ -30,17 +53,38 @@ class HypothesisEntity {
       updatedAt: row['updatedAt'] as DateTime,
     );
   }
+
+  /// Unique database ID. Null before the entity is persisted.
   final int? id;
+
+  /// Target body segment node ID.
   final String targetNode;
+
+  /// Linked body segment node IDs in the kinetic chain.
   final List<String> linkedNodes;
+
+  /// The hypothesis statement (e.g. "Strengthening X improves Y").
   final String statement;
+
+  /// Certainty score between 0.0 and 1.0.
   final double certaintyScore;
+
+  /// Status of the hypothesis: Active, Proven, Disproved, etc.
   final String status;
+
+  /// Cited source IDs (null when none cited).
   final List<String>? sourcesCited;
+
+  /// Evidence or theory motivating this hypothesis.
   final String? scientificRationale;
+
+  /// Timestamp when the hypothesis was first logged.
   final DateTime createdAt;
+
+  /// Timestamp of the most recent update.
   final DateTime updatedAt;
 
+  /// Exports the entity to a database row map for persistence.
   Map<String, dynamic> toDb() {
     return {
       if (id != null) 'id': id,
@@ -54,6 +98,7 @@ class HypothesisEntity {
     };
   }
 
+  /// Creates a copy of this entity with the given fields replaced.
   HypothesisEntity copyWith({
     int? id,
     String? targetNode,

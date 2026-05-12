@@ -1,17 +1,19 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for Source data access.
+/// Data access interface for Source entities.
 /// Manages cited research material.
 abstract class SourceRepository {
   /// Fetches all sources.
   Future<List<SourceEntity>> getAll();
 
-  /// Fetches sources by category.
+  /// Fetches sources whose category matches [category].
   Future<List<SourceEntity>> getByCategory(String category);
 
-  /// Saves a source.
+  /// Persists a new [source].
+  ///
+  /// Returns the source ID.
   Future<int> save(SourceEntity source);
 
-  /// Deletes a source by ID.
+  /// Deletes the source with the given [id].
   Future<void> deleteSource(int id);
 }

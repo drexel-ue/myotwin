@@ -13,7 +13,7 @@ abstract class MotusCoordinator {
   ///
   /// [message] The user message or prompt.
   /// [context] Optional context (injury info, active hypotheses, etc.).
-   /// [mode] Optional mode override. Defaults to auto-detect based on availability.
+  /// [mode] Optional mode override. Defaults to auto-detect based on availability.
   Either<String, Failure> sendMessage(
     String message, {
     Map<String, dynamic>? context,
@@ -48,11 +48,18 @@ abstract class MotusCoordinator {
   Future<String> getContextSnapshot();
 }
 
-/// Result type for Motus coordination operations.
+/// Result type for Motus coordination operations, wrapping failures with metadata.
 class Failure {
+  /// Creates a failure with a message, optional error code, and optional underlying exception.
   const Failure(this.message, {this.code, this.underlying});
+
+  /// Error message describing the failure.
   final String message;
+
+  /// Optional error code for programmatic handling.
   final String? code;
+
+  /// Optional underlying exception that caused the failure.
   final Exception? underlying;
 
   @override

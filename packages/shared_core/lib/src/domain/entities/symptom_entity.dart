@@ -1,14 +1,32 @@
-/// Domain entity: Symptom event recorded from user input.
-/// Represents a single symptom observation event with intensity and category.
+/// Symptom event recorded from user input for MyoTwin tracking.
+///
+/// Represents a single symptom observation with intensity and
+/// category tied to a body segment for the pain monitoring loop.
 class SymptomEvent {
+  /// Creates a symptom observation event.
   const SymptomEvent({
+    /// Unique database ID, null for unsaved entities.
     this.id,
+
+    /// Body segment ID the symptom is in (e.g. "Trapezius_L").
     required this.muscleId,
+
+    /// Pain/stiffness intensity on a 1-10 scale.
     required this.intensity,
+
+    /// Optional free-text description of the symptom.
     this.note,
+
+    /// Symptom category: Stiffness, Sharp Pain, Dull Ache, Weakness.
     this.category,
+
+    /// Source of the data point.
     required this.sourceType,
+
+    /// When the symptom was logged by the user.
     required this.loggedAt,
+
+    /// When inserted into the database.
     required this.createdAt,
   });
 
@@ -26,16 +44,16 @@ class SymptomEvent {
     );
   }
 
-  /// Unique ID of the symptom event.
+  /// Unique database ID. Null before the entity is persisted.
   final int? id;
 
-  /// Body segment ID (e.g. "Trapezius_L").
+  /// Body segment ID the symptom is in (e.g. "Trapezius_L").
   final String muscleId;
 
-  /// Pain/stiffness intensity (1-10).
+  /// Pain/stiffness intensity on a 1-10 scale.
   final int intensity;
 
-  /// Optional natural language description.
+  /// Free-text description of the symptom.
   final String? note;
 
   /// Symptom category: Stiffness, Sharp Pain, Dull Ache, Weakness.
@@ -44,13 +62,14 @@ class SymptomEvent {
   /// Source of the data point.
   final String sourceType;
 
-  /// When the symptom was logged.
+  /// When the symptom was logged by the user.
   final DateTime loggedAt;
 
-  /// When inserted into database.
+  /// When inserted into the database.
   final DateTime createdAt;
 
   /// Exports entity to map for database insertion.
+  /// Exports the entity to a database row map for persistence.
   Map<String, dynamic> toDb() {
     return {
       if (id != null) 'id': id,
@@ -63,6 +82,7 @@ class SymptomEvent {
     };
   }
 
+  /// Creates a copy of this entity with the given fields replaced.
   SymptomEvent copyWith({
     int? id,
     String? muscleId,

@@ -1,26 +1,32 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for SymptomLog data access.
+/// Data access interface for SymptomEvent entities.
 /// Tracks real-time symptom events reported by the user.
 abstract class SymptomLogRepository {
-  /// Fetches recent symptom logs for a body region.
+  /// Fetches recent symptom events for the muscle identified by [muscleId].
+  ///
+  /// [limit] caps the number of results (default 10).
   Future<List<SymptomEvent>> getRecentSymptoms(
     String muscleId, {
     int limit = 10,
   });
 
-  /// Gets the average symptom intensity for a region over last N days.
+  /// Gets the average symptom intensity for [muscleId] over the last [days].
   Future<double> getAvgIntensity(String muscleId, int days);
 
-  /// Fetches all symptom logs.
+  /// Fetches all symptom event logs.
   Future<List<SymptomEvent>> getAllSymptoms();
 
-  /// Logs a new symptom event.
+  /// Logs a new [symptom] event.
+  ///
+  /// Returns the event ID.
   Future<int> logSymptom(SymptomEvent symptom);
 
-  /// Logs batch symptoms.
+  /// Logs [symptoms] in batch.
+  ///
+  /// Returns a list of inserted event IDs.
   Future<List<int>> logBatch([List<SymptomEvent> symptoms]);
 
-  /// Deletes a symptom entry by ID.
+  /// Deletes the symptom entry with the given [id].
   Future<void> deleteSymptom(int id);
 }

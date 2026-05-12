@@ -1,30 +1,35 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for Equipment data access.
-/// Tracks user's registered equipment with availability configuration.
+/// Data access interface for Equipment entities.
+/// Tracks user-registered equipment with availability configuration.
 abstract class EquipmentRepository {
-  /// Fetches all registered equipment.
+  /// Fetches all registered equipment items.
   Future<List<EquipmentEntity>> getAllEquipment();
 
-  /// Fetches available (active) equipment.
+  /// Fetches only available (active) equipment items.
   Future<List<EquipmentEntity>> getAvailableEquipment();
 
-  /// Fetches specific equipment by ID.
+  /// Fetches specific equipment by [id].
+  ///
+  /// Returns `null` if no equipment with the given ID exists.
   Future<EquipmentEntity?> getEquipmentById(int id);
 
-  /// Fetches equipment of a specific modality.
+  /// Fetches equipment whose modality matches [modality].
   Future<List<EquipmentEntity>> getByModality(String modality);
 
-  /// Updates equipment availability and configuration.
+  /// Updates the availability and optional [configuration] of
+  /// the equipment identified by [id].
   Future<void> updateStatus(
     int id, {
     required bool isAvailable,
     Map<String, dynamic>? configuration,
   });
 
-  /// Saves or updates equipment.
+  /// Inserts a new equipment item or updates an existing one.
+  ///
+  /// Returns the equipment ID.
   Future<int> upsert(EquipmentEntity equipment);
 
-  /// Deletes equipment by ID.
+  /// Deletes the equipment with the given [id].
   Future<void> deleteEquipment(int id);
 }

@@ -1,26 +1,29 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for KineticChainEdge data access.
+/// Data access interface for KineticChainEdge entities.
 /// Manages weighted edges between body segment nodes.
 abstract class KineticChainEdgeRepository {
   /// Fetches all edges in the kinetic chain graph.
   Future<List<KineticChainEdgeEntity>> getAll();
 
-  /// Fetches edges for a specific source node.
+  /// Fetches edges originating from the node identified by [sourceNode].
   Future<List<KineticChainEdgeEntity>> getBySourceNode(String sourceNode);
 
-  /// Fetches edges connecting two specific nodes.
+  /// Fetches edges between the [source] and [target] nodes.
   Future<List<KineticChainEdgeEntity>> getBetweenNodes(
     String source,
     String target,
   );
 
-  /// Creates a kinetic chain edge.
+  /// Persists a new [edge].
+  ///
+  /// Returns the edge ID.
   Future<int> create(KineticChainEdgeEntity edge);
 
-  /// Updates edge weight and correlation strength.
+  /// Updates the [weight] and/or [correlation] of the edge identified
+  /// by [id]. Only provided values are updated.
   Future<void> updateEdge(int id, {double? weight, double? correlation});
 
-  /// Deletes a kinetic chain edge by ID.
+  /// Deletes the edge with the given [id].
   Future<void> deleteEdge(int id);
 }

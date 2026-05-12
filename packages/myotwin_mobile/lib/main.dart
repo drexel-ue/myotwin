@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// Initializes navigation (GoRouter), BLoC providers, and the Drift
 /// background database. The FAB is the primary interaction point.
+/// Entry point function that initializes the app and runs the mobile MyoTwin application.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyotwinApp());
@@ -11,6 +12,7 @@ Future<void> main() async {
 
 /// Top-level MyoTwin application widget.
 class MyotwinApp extends StatefulWidget {
+  /// Creates a MyoTwin mobile application widget.
   const MyotwinApp({super.key});
 
   @override

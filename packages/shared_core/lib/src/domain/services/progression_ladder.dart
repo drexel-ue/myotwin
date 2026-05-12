@@ -1,7 +1,11 @@
 import 'package:shared_core/core.dart';
 
-/// Domain service for ProgressionLadder use case.
-/// Determines regression/progression steps on the Recovery Ladder.
+/// Domain service that navigates the Recovery Ladder — a graduated exercise
+/// progression framework for injury recovery and performance building.
+///
+/// Given an exercise ID, current integrity score, and drive level, the service
+/// computes the next step (either regression for tissue recovery or progression
+/// for strengthening) along with the recommended ring height and coaching mode.
 class ProgressionLadder {
   /// Determines the next exercise step on the recovery ladder.
   ///
@@ -25,10 +29,13 @@ class ProgressionLadder {
     return steps;
   }
 
-  /// Internal ladder steps for a given exercise.
+  /// Computes the appropriate ladder step for regression or progression.
   ///
-  /// [exerciseId] The exercise identifier.
-  /// [driveLevel] Drive level 0.0–1.0.
+  /// Uses heuristic logic to adjust exercise duration, coaching mode, and
+  /// ring height based on the current drive level and recovery direction.
+  ///
+  /// [exerciseId] The exercise identifier from the exercise catalog.
+  /// [driveLevel] Drive level between 0.0 (resting) and 1.0 (max effort).
   /// [isRegression] Whether to produce a regression (softer) or progression (harder) step.
   static ExerciseDetails _getLadderSteps(
     String exerciseId,
@@ -58,6 +65,10 @@ class ProgressionLadder {
     );
   }
 
+  /// Resolves the coaching mode based on drive level and recovery direction.
+  ///
+  /// Regression always uses neural priming to maintain motor patterns with reduced load.
+  /// Progression uses structural loading when drive level exceeds 0.7, otherwise neural priming.
   static String _resolveMode(double driveLevel, bool isRegression) {
     if (isRegression) {
       return 'neural_priming';
@@ -67,8 +78,12 @@ class ProgressionLadder {
 }
 
 /// Result type for progression ladder.
+/// Detailed prescription for a single Recovery Ladder step.
+///
+/// Contains all information needed to present the recommended exercise to the
+/// user, including biomechanical parameters, coaching rationale, and ring setup.
 class ExerciseDetails {
-  /// Creates exercise details with the recommended step.
+  /// Creates a prescribed Recovery Ladder exercise step with all parameters.
   const ExerciseDetails({
     required this.name,
     required this.description,

@@ -134,6 +134,13 @@ Build MyoTwin — a privacy-first, biomechanical research & coaching app using F
 - **Files Deleted**: `docs/huddle_tracker.md` (consolidated into existing `hurdle_tracker.md`)
 - **Date**: 2026-05-11
 
+### Session #5 — Lint Resolution & Public Member Documentation
+- **What I finished**: Resolved all 32 lint issues across all 5 packages. Fixed `public_member_api_docs` warnings by adding docstrings to `toDb()` methods on all 17 entities, `copyWith()` methods on 4 entities, enum extension method on EquipmentType, Failure fields in MotusCoordinator, `main()` entry points on mobile and desktop, MockFailure/ MockMotusCoordinator in test_support. Fixed `comment_references` issues by removing `[ClassName]` angle bracket references that cannot be resolved without imports (project_state.md, agents.md, core.dart, database.dart, entities). Corrected agent instructions to remove false claim that `public_member_api_docs: ignore` was configured (it is NOT — it is enforced by very_good_analysis). Ran `dart format --set-exit-if-changed -l 120` — 8 files formatted. Verified zero issues across all packages.
+- **Where I stopped**: All lint resolved, all formatting applied.
+- **Current Blockers**: None.
+- **Files Modified**: `analysis_options.yaml` (removed stray nesting from earlier fix attempt), `docs/agents.md` (removed false `public_member_api_docs: ignore` claim), 34 Dart files across all 5 packages (docstring additions + formatting).
+- **Date**: 2026-05-11
+
 ### Session #4 — Phase 1 Core Architecture Implementation
 - **What I finished**: Phase 1 complete. Created melos monorepo config. Built full `shared_core` package: 17 domain entities (SymptomEvent, HypothesisEntity, BodySegmentEntity, InjuryEntity, EquipmentEntity, SourceEntity, PrincipleEntity, KnowledgeSourceEntity, NotificationContextEntity, NoiseLogEntity, KineticChainEdgeEntity, DriveSettingsEntity, DeviceSyncStateEntity, WorkoutLogEntity, ResearchNoteEntity, ExerciseEntity) with fromDb/toDb methods. 16 Drift schema tables matching product spec exactly. 14 repository interfaces. 4 biomechanical services: TorqueCalculator (τ = F·d·sin(θ)), SafetyMarginCalculator (S_margin = integrity×consistency/symptom), ProgressionLadder, DatabaseExportService. 5 enums: BodySegment (44 anatomical nodes), MovementMode, HypothesisStatus, SourceType (manual/computed/vision/rag), EquipmentType, RingHeight (5 presets with lever multipliers). `motus_hub` Dart server scaffold with REST endpoints for all tool calling spec tools. `myotwin_mobile` + `myotwin_desktop` Flutter app scaffolds with dark theme. `myotwin_test_support` with 14 mock repositories + MockMotusCoordinator.
 - **Where I stopped**: All Phase 1 packages scaffolded and documented. No code implementations yet — only interfaces and scaffolds.
@@ -147,5 +154,5 @@ Build MyoTwin — a privacy-first, biomechanical research & coaching app using F
 
 ---
 
-**Document version**: 4.0
+**Document version**: 5.0
 **Last updated**: 2026-05-11

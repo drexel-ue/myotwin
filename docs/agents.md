@@ -225,7 +225,6 @@ All Dart packages use `very_good_analysis` with project-specific overrides in `a
 - `avoid_setters_without_getters: false` — allows setters without getters
 - `flutter_style_todos: false` — custom todos allowed
 - `unused_element_parameter: ignore` — required parameters may be unused
-- `public_member_api_docs: ignore` — public member documentation not enforced
 
 ### Formatting Rules
 

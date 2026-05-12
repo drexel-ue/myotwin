@@ -1,20 +1,21 @@
 /// Inventory of available equipment types for the equipment registry.
 enum EquipmentType {
-  /// Gymnastics rings.
+  /// Gymnastics rings
   rings,
 
-  /// Parallettes.
+  /// Parallel bars
   parallettes,
 
-  /// Mace.
+  /// Heavy weight with offset center of mass
   mace,
 
   /// No equipment (bodyweight only).
   none,
 }
 
-/// Extension providing database-safe string representation for [EquipmentType].
+/// Extension providing database-safe string representation for EquipmentType.
 extension EquipmentTypeX on EquipmentType {
+  /// Returns the database-safe string value of this EquipmentType.
   String get value {
     switch (this) {
       case EquipmentType.rings:

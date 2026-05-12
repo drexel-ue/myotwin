@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 /// Initializes navigation (GoRouter), BLoC providers, and the Drift
 /// background database. Detects desktop platform to enable floating
 /// callout windows instead of full-screen flow.
+/// Entry point function that initializes the app and runs the desktop MyoTwin application.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyotwinDesktopApp());
@@ -12,6 +13,7 @@ Future<void> main() async {
 
 /// Top-level MyoTwin desktop application widget.
 class MyotwinDesktopApp extends StatelessWidget {
+  /// Creates a MyoTwin desktop application widget.
   const MyotwinDesktopApp({super.key});
 
   @override

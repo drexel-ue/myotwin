@@ -1,8 +1,19 @@
-/// shared_core — the nervous system of MyoTwin.
+/// Barrel library for shared_core — the nervous system of MyoTwin.
 ///
-/// Pure Dart domain layer: entities, repository interfaces,
-/// biomechanical calculators, and Drift schema definitions.
-/// Zero Flutter dependencies in the domain layer.
+/// Re-exports all public APIs from the pure Dart domain layer:
+///
+/// * **Entities** — domain models for body segments, exercises, workouts,
+///   equipment, injuries, hypotheses, symptoms, and more.
+/// * **Enums** — value types for body segments, equipment, movements,
+///   hypothesis status, ring height, and knowledge sources.
+/// * **Repositories** — interfaces for all domain aggregates, defining the
+///   contract between the domain layer and persistence implementations.
+/// * **Services** — biomechanical calculators (torque, safety margins,
+///   progression ladders) and database export utilities.
+/// * **Data** — the Drift-based database schema and access layer.
+/// * **Interfaces** — cross-cutting contracts such as the MotusCoordinator.
+///
+/// The domain layer has zero Flutter dependencies.
 library;
 
 export 'src/data/database.dart';

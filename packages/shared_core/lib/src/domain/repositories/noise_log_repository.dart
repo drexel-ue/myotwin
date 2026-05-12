@@ -1,17 +1,19 @@
 import 'package:shared_core/core.dart';
 
-/// Repository interface for NoiseLog data access.
+/// Data access interface for NoiseLog entities.
 /// Tracks environmental, mental, and stress data.
 abstract class NoiseLogRepository {
-  /// Fetches noise logs by date range.
+  /// Fetches noise logs within the date range [start] to [end].
   Future<List<NoiseLogEntity>> getByDateRange(DateTime start, DateTime end);
 
-  /// Fetches noise logs by type.
+  /// Fetches noise logs whose type matches [type].
   Future<List<NoiseLogEntity>> getByType(String type);
 
-  /// Saves a noise log entry.
+  /// Persists a new [entry].
+  ///
+  /// Returns the entry ID.
   Future<int> save(NoiseLogEntity entry);
 
-  /// Deletes a noise log by ID.
+  /// Deletes the noise log with the given [id].
   Future<void> deleteNoiseLog(int id);
 }
