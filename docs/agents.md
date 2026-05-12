@@ -208,16 +208,16 @@ Every session MUST maintain code quality. Follow these rules:
 
 ### Before committing any Dart code:
 
-1. **Run linter**: `melos run lint` — fix all errors, warnings, and infos
-2. **Run formatter**: `melos run format-fix` — auto-format with line width 80
-3. **Check results**: `melos run format` — verify format returns 0 (no changes needed)
-4. **Re-run analyzer**: `melos run lint` — ensure zero lint issues remain
+1. **Run linter**: `dart analyze <target_directory>` — fix all errors, warnings, and infos
+2. **Run formatter**: `dart format .` — auto-format with configured settings
+3. **Verify**: ensure zero lint issues remain before committing
 
 ### Linting Configuration
 
 All Dart packages use `very_good_analysis` with project-specific overrides in `analysis_options.yaml`:
 
-- `lines_longer_than_80_chars: false` — exceeded 80 chars allowed
+- `lines_longer_than_80_chars: false` — 80 character limit allowed
+- `lines_longer_than_120_chars: false` — 120 character limit allowed
 - `avoid_catches_without_on_clauses: false` — permits catch-all exceptions
 - `prefer_int_literals: false` — allows int literals
 - `sort_child_properties_last: true` — child properties sorted last
@@ -225,12 +225,12 @@ All Dart packages use `very_good_analysis` with project-specific overrides in `a
 - `avoid_setters_without_getters: false` — allows setters without getters
 - `flutter_style_todos: false` — custom todos allowed
 - `unused_element_parameter: ignore` — required parameters may be unused
+- `public_member_api_docs: ignore` — public member documentation not enforced
 
 ### Formatting Rules
 
-- Line width: 80 characters
-- Trailing commas always preserved
-- Formatter enforced via `melos run format-fix`
+- Page width: 120 characters (formatter `page_width`)
+- Trailing commas: always preserved
 
 ### Lint Fix Strategy
 

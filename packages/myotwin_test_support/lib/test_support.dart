@@ -353,7 +353,7 @@ class MockSourceRepository implements SourceRepository {
 
 /// Fake [HypothesisEntity] for tests.
 class MockFailure extends Failure {
-  MockFailure(String message, {String? code}) : super(message, code: code);
+  MockFailure(super.message, {super.code});
 }
 
 class MockMotusCoordinator implements MotusCoordinator {

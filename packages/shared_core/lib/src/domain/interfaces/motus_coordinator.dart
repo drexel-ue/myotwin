@@ -13,7 +13,7 @@ abstract class MotusCoordinator {
   ///
   /// [message] The user message or prompt.
   /// [context] Optional context (injury info, active hypotheses, etc.).
-  /// [mode] Optional mode override. [null] auto-detects based on availability.
+   /// [mode] Optional mode override. Defaults to auto-detect based on availability.
   Either<String, Failure> sendMessage(
     String message, {
     Map<String, dynamic>? context,

@@ -17,7 +17,6 @@ class ProgressionLadder {
     String? direction,
     double driveLevel = 0.5,
   }) {
-    final autoDirection = currentIntegrity >= 0.7 ? 'progression' : 'regression';
     final isRegression = direction == 'regression' || (direction == null && currentIntegrity < 0.7);
 
     // Regression/progression ladder steps
@@ -37,14 +36,11 @@ class ProgressionLadder {
     bool isRegression,
   ) {
     double baseDuration;
-    String mode;
 
     if (isRegression) {
       baseDuration = 30.0 * driveLevel; // shorter duration for regression
-      mode = 'regression';
     } else {
       baseDuration = 120.0 + 60.0 * driveLevel; // longer duration for progression
-      mode = 'structural_loading';
     }
 
     return ExerciseDetails(

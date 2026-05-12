@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -70,5 +71,5 @@ Future<void> main([List<String> args = const []]) async {
       .addHandler(router.call);
 
   final server = await shelf_io.serve(handler, 'localhost', port);
-   print('Motus Hub listening on http://${server.address}:${server.port}');
+   developer.log('Motus Hub listening on http://${server.address}:${server.port}');
 }
