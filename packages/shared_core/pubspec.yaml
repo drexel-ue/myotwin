@@ -1,0 +1,21 @@
+name: shared_core
+description: Pure Dart domain layer for MyoTwin. Entities, interfaces, Drift schema, and biomechanical calculators.
+version: 0.0.1
+publish_to: none
+
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.4"
+  flutter: ">=3.38.1"
+
+dependencies:
+  drift: ^2.0.0
+  flutter:
+    sdk: flutter
+  fpdart: ^1.2.0
+
+dev_dependencies:
+  build_runner: any
+  drift_dev: ^2.0.0
+  test: ^1.25.0

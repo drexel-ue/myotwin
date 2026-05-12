@@ -1,0 +1,90 @@
+# Dart/Flutter
+.dart_tool/
+.dart_tool.lock
+.packages
+build/
+*.pdb
+*.iws
+*.opens
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Flutter iOS/Android
+*.xcworkspace
+*.xcode.ext
+*.xcodeproj
+*.xcconfig
+DerivedData/
+Flutter/
+Pods/
+*.ephemeral
+*.xcuserdata
+
+# Web
+web/web_assets/
+# Web pub assets
+web/assets/*
+!.gitkeep
+
+# Package exports
+lib/.dart_tool/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Docs
+*.class
+*.xml~
+.DS_Store
+
+# macOS (Xcode IDE)
+project.xcworkspace/
+xcuserdata/
+xcshareddata/
+*.pbxproj.swp
+
+# macOS Desktop
+Desktop.ini
+
+# macOS Files
+**/._*
+
+# pub
+pubspec.lock
+
+# Flutter generated files
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Flutter Web
+web/flutter_assets/.dart_tool/
+
+# Mac
+*.DS_Store
+*.Spotlight-V100
+*.Trashes
+*/.DS_Store
+
+# Android
+*.apk
+*.apks
+*.aab
+*.jar
+
+# iOS/macOS
+*.dSYM.zip
+*.dSYM
+*.ipa
+
+# Analysis
+coverage/
+pubspec_overrides.yaml
+
+# Local config
+*.local

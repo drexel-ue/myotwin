@@ -1,0 +1,36 @@
+name: myotwin
+publish_to: none
+environment:
+  sdk: ">=3.11.4"
+  flutter: ">=3.38.1"
+workspace:
+  - packages/motus_hub
+  - packages/myotwin_desktop
+  - packages/myotwin_mobile
+  - packages/myotwin_test_support
+  - packages/shared_core
+dev_dependencies:
+  melos: ^7.0.0
+  very_good_analysis: ^10.0.0
+melos:
+  scripts:
+    lint:
+      description: Run linter across all Dart packages
+      exec: dart analyze --fatal-infos 2>&1
+      packageFilters:
+        dirExists: lib
+    format:
+      description: Format Dart code across all packages with line width 120
+      exec: dart format --set-exit-if-changed -l 120 .
+      packageFilters:
+        dirExists: lib
+    format-fix:
+      description: Format and fix Dart code across all packages with line width 120
+      exec: dart format -l 120 .
+      packageFilters:
+        dirExists: lib
+    test:
+      description: Run tests across all Dart packages
+      exec: dart test --concurrency=1
+      packageFilters:
+        dirExists: test

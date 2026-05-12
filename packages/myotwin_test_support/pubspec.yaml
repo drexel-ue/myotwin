@@ -1,0 +1,19 @@
+name: myotwin_test_support
+description: Shared mocks and test support for MyoTwin monorepo.
+version: 0.0.1
+publish_to: none
+
+resolution: workspace
+
+environment:
+  sdk: ">=3.11.4"
+  flutter: ">=3.38.1"
+
+dependencies:
+  fpdart: ^1.2.0
+  shared_core:
+    path: ../shared_core
+  test: ^1.25.0
+
+dev_dependencies:
+  mockito: ^5.4.0

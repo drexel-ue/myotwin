@@ -1,0 +1,20 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    lines_longer_than_80_chars: false
+    avoid_catches_without_on_clauses: false
+    prefer_int_literals: false
+    sort_child_properties_last: true
+    always_put_required_named_parameters_first: false
+    avoid_setters_without_getters: false
+    flutter_style_todos: false
+
+analyzer:
+  errors:
+    unused_element_parameter: ignore
+    public_member_api_docs: ignore
+
+formatter:
+  page_width: 120
+  trailing_commas: preserve

@@ -202,6 +202,51 @@ Refs: project_state.md Phase 1
 - **At end of session**: Update `project_state.md` and `hurdle_tracker.md`. Write a `Session Handoff` entry.
 - **Track all architectural decisions**: Log them in `project_state.md` under "Decisions Made".
 
+## 10. Code Quality — Lint & Format
+
+Every session MUST maintain code quality. Follow these rules:
+
+### Before committing any Dart code:
+
+1. **Run linter**: `melos run lint` — fix all errors, warnings, and infos
+2. **Run formatter**: `melos run format-fix` — auto-format with line width 80
+3. **Check results**: `melos run format` — verify format returns 0 (no changes needed)
+4. **Re-run analyzer**: `melos run lint` — ensure zero lint issues remain
+
+### Linting Configuration
+
+All Dart packages use `very_good_analysis` with project-specific overrides in `analysis_options.yaml`:
+
+- `lines_longer_than_80_chars: false` — exceeded 80 chars allowed
+- `avoid_catches_without_on_clauses: false` — permits catch-all exceptions
+- `prefer_int_literals: false` — allows int literals
+- `sort_child_properties_last: true` — child properties sorted last
+- `always_put_required_named_parameters_first: false` — ordering preserved
+- `avoid_setters_without_getters: false` — allows setters without getters
+- `flutter_style_todos: false` — custom todos allowed
+- `unused_element_parameter: ignore` — required parameters may be unused
+
+### Formatting Rules
+
+- Line width: 80 characters
+- Trailing commas always preserved
+- Formatter enforced via `melos run format-fix`
+
+### Lint Fix Strategy
+
+1. **Errors first**: fix compilation-breaking issues
+2. **Warnings second**: fix style/convention violations
+3. **Info last**: fix minor suggestions
+4. **Never ignore**: do not add `// ignore:` comments without justification in the commit message
+
+### Commit Convention for Quality Fixes
+
+```
+style(package): fix lint errors and format code
+
+Refs: project_state.md Phase X
+```
+
 ---
 
 **Document version**: 2.0
