@@ -246,7 +246,19 @@ style(package): fix lint errors and format code
 Refs: project_state.md Phase X
 ```
 
+## 11. Knowledge Retrieval & Indexing Protocol
+
+To minimize token usage and prevent hallucinations, follow this retrieval hierarchy:
+
+1. **Internal Codebase (`ccc`):** For any query regarding existing files, imports, or project structure, use the `ccc` skill. This is your primary search tool.
+2. **External Frameworks (`context7`):** For any queries regarding external libraries (Flutter, Dart, etc.), use the `context7` tool to retrieve up-to-date documentation.
+3. **Fallback (`grep`/`read`):** Use `grep` or `read` only if `ccc` fails to find a match or if you need to verify a specific string pattern.
+
+### Index Freshness
+- **Post-Change Trigger:** Immediately after any `edit`, `write`, or `git` operation that modifies the codebase, you must trigger the `ccc` re-indexing process.
+- **Verification:** Before marking a task as `completed`, verify that recent changes are searchable via `ccc`.
+
 ---
 
-**Document version**: 2.0
-**Last updated**: 2026-05-11
+**Document version**: 2.1
+**Last updated**: 2026-05-12

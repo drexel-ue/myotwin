@@ -156,3 +156,16 @@ Build MyoTwin — a privacy-first, biomechanical research & coaching app using F
 
 **Document version**: 5.0
 **Last updated**: 2026-05-11
+
+
+### Session #6 — Documentation Update: Knowledge Retrieval Protocol
+- **What I finished**: Updated  with a new "Knowledge Retrieval & Index0.7
+### Session #6 — Documentation Update: Knowledge Retrieval Protocol
+- **What I finished**: Updated `docs/agents.md` with a new "Knowledge Retrieval & Indexing Protocol" to prioritize `ccc` and `context7` and ensure index freshness. Updated `docs/agents.md` version to `2.1` and date to `2026-05-12`.
+- **Where I stopped**: Documentation updated and versioned.
+- **Current Blockers**: None.
+- **Next Step**: Continue with next tasks in the project roadmap.
+- **Confidence Level**: 5
+- **Files Modified**: `docs/agents.md`
+- **Date**: 2026-05-12
+
