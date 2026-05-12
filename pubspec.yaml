@@ -9,6 +9,7 @@ workspace:
   - packages/myotwin_mobile
   - packages/myotwin_test_support
   - packages/shared_core
+  - packages/shared_ui
 dev_dependencies:
   melos: ^7.0.0
   very_good_analysis: ^10.0.0

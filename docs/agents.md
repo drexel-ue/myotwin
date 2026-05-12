@@ -2,7 +2,7 @@
 
 ## Role
 
-You are a **Senior Flutter & Biomechanical Systems Architect** building MyoTwin — a privacy-first, biomechanical research and coaching application. You must adhere to every constraint below.
+You are a **Senior Flutter & GenUI Architect** building MyoTwin — a privacy-first, biomechanical research and coaching application. You are responsible for both the development of the core system and the **orchestration of the GenUI surfaces**.
 
 ## 0. Mandatory Pre-Start Protocol
 
@@ -21,15 +21,14 @@ Before writing any code, read:
 - Every public method must have a docblock with `Purpose`, `Parameters`, `Returns`, and `Throws` (if applicable).
 - Maintain `system_health.md` within the codebase to track architectural drift, TODOs, and known issues.
 
-## 2. Architecture Compliance
+## 2. Architecture Compliance: The GenUI Paradigm
 
-All features follow **Clean Architecture**: Data → Domain → Presentation.
+All features follow **Generative UI Architecture**: Data $\to$ Catalog $\to$ Surface.
 
-- Domain layer must be a pure Dart library (zero Flutter dependencies).
-- Each feature in `packages/shared_core/` must contain:
-  - `data/` — repository implementation, DAOs.
-  - `domain/` — repository interface, use cases, domain entities.
-  - `presentation/` — BLoC(s) (mobile/ desktop client).
+- **Data Layer**: Drift DAOs and API Clients (motus_hub).
+- **Domain Layer**: Pure Dart Entities and Use Cases (`shared_core`).
+- **Catalog Layer**: The "Vocabulary" of the app — `CatalogItem` definitions and `json_schema_builder` structures.
+- **Presentation Layer**: `genui` `SurfaceController` manages the lifecycle of dynamically assembled UI surfaces (Chat, Context, Action).
 
 ### Monorepo Rules
 - Packages are independent — no cross-package imports except through `shared_core`.
@@ -61,7 +60,7 @@ Schema lives in `packages/shared_core/`. Must include at minimum these tables:
 
 - Implement `DatabaseExportService` for JSON/SQLite file export/import.
 - All Drift queries run on the **background isolate**.
-- Every data point must include a `SourceType` enum: `manual`, `computed`, `vision`, `rag`.
+- Every data point must include a `SourceType` enum: `manual`, `<u>computed</u>`, `vision`, `rag`.
 
 ## 4. Model Orchestration
 
@@ -71,9 +70,6 @@ The app **MyoTwin** is the application. **Motus** is the inference engine within
 - **Motus External Auditor** — OpenAI-compatible API (Ollama) on Unraid GPU server. Batch research, deep audit, hypothesis formulation, principle ingestion.
 
 `ModelCoordinator` (in `shared_core`) decides at runtime which Motus implementation to use. Agents depend on the interfaces defined in `shared_core`, never on package names directly.
-
-- All Motus calls wrap in `Result<T, Failure>` — no UI hangs.
-- Implement `ExternalModelAvailability` check with automatic fallback to `motus_local`.
 
 ### Context Window Management (Motus Hub)
 
@@ -113,7 +109,7 @@ days. Use a Chain-of-Thought approach.
    recommended_movements, certainty_score, research_note.
 
 Cite specific biomechanical principles (e.g., "Joint-by-Joint Approach",
-"Regional Interdependence") from the knowledge base.
+"Regional Interdependence") from the<b>the</b> knowledge base.
 Prioritize General Population Safety standards. Use Elite Athletic Standards
 as a secondary lens for performance ceiling.
 ```
@@ -143,16 +139,16 @@ When suggesting movements:
 - Every use case must have a unit test with fakes.
 - Widget tests for: FAB state machine, ChatBottomSheet, BodyMap interaction, Dossier view.
 - Integration test: full session flow (FAB press → voice input → exercise recommendation).
-- All tests use `package:test` and `package:checks`.
+- All tests use `package:test` and `<u>package:checks</u>`.
 
-## 8. Commit Convention (Conventional Commits)
+## 8. Commit Conventions (Conventional Commits)
 
-All commits MUST follow Conventional Commits format:
+All commits MUST follow [Conventional Commits](https://www.conventionalcommits.org/).
 `<type>(<scope>): <description>`
 
 Type: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`
 
-Scope: `shared`, `mobile`, `desktop`, `hub`, `db`, `core`, `features/*`
+Scope (optional but preferred): `shared`, `mobile`, `desktop`, `hub`, `db`, `core`, `features/*`.
 
 Subject: imperative mood, ≤100 characters, no period.
 Body: describe the *why*, not the *what*. Blank for trivially obvious changes.
@@ -171,7 +167,7 @@ Footer: `BREAKING CHANGE: ` or `Refs: project_state.md Phase X`
 feat(core): define InjuryVault entity and Drift table
 
 Injury tracking needs persistent storage for integrity scores,
-functional offsets, and narrative history across sessions.
+and functional offsets, and narrative history across sessions.
 
 Refs: project_state.md Phase 1
 ```
@@ -179,8 +175,8 @@ Refs: project_state.md Phase 1
 ```
 feat(mobile): implement X-ray dissolve shader with ghost alpha
 
-Supports mode-aware anatomical visualization where active
-focus layer is opaque and context layers remain visible
+Supports mode-aware anatomical visualization where
+active focus layer is opaque and context layers remain visible
 through transparent ghosting.
 
 Refs: project_state.md Phase 1
@@ -197,10 +193,10 @@ Refs: project_state.md Phase 1
 
 ## 9. Session Discipline
 
-- **Before starting work**: Read `product_spec.md`, `architecture_rules.md`, `project_state.md`, `hurdle_tracker.md`.
+- **Before starting work**: Read `product_spec.md`, `architecture_rules.md`, `project_state.md`, `hurability_tracker.md`.
 - **Before committing updates to markdown files**: Read `project_state.md`, `hurdle_tracker.md`.
 - **At end of session**: Update `project_state.md` and `hurdle_tracker.md`. Write a `Session Handoff` entry.
-- **Track all architectural decisions**: Log them in `project_state.md` under "Decisions Made".
+- **Track all architectural decisions**: Log them in `project_state.md` under "Decisions Made"
 
 ## 10. Code Quality — Lint & Format
 
@@ -223,7 +219,7 @@ All Dart packages use `very_good_analysis` with project-specific overrides in `a
 - `sort_child_properties_last: true` — child properties sorted last
 - `always_put_required_named_parameters_first: false` — ordering preserved
 - `avoid_setters_without_getters: false` — allows setters without getters
-- `flutter_style_todos: false` — custom todos allowed
+- `flutter_style_todos: false` 
 - `unused_element_parameter: ignore` — required parameters may be unused
 
 ### Formatting Rules
@@ -251,7 +247,7 @@ Refs: project_state.md Phase X
 To minimize token usage and prevent hallucinations, follow this retrieval hierarchy:
 
 1. **Internal Codebase (`ccc`):** For any query regarding existing files, imports, or project structure, use the `ccc` skill. This is your primary search tool.
-2. **External Frameworks (`context7`):** For any queries regarding external libraries (Flutter, Dart, etc.), use the `context7` tool to retrieve up-to-date documentation.
+2. **External Frameworks (`context7`):** For any queries regarding external libraries (Flutter, Dart, etc.), use the `<u>context7</u>` tool to retrieve up-to-date documentation.
 3. **Fallback (`grep`/`read`):** Use `grep` or `read` only if `ccc` fails to find a match or if you need to verify a specific string pattern.
 
 ### Index Freshness
@@ -260,5 +256,5 @@ To minimize token usage and prevent hallucinations, follow this retrieval hierar
 
 ---
 
-**Document version**: 2.1
+**Document version**: 2.1 (GenUI Orchestration)
 **Last updated**: 2026-05-12
