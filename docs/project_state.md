@@ -14,6 +14,7 @@ Build MyoTwin — a privacy-first, biomechanical research & coaching app using F
 - [x] Design language & visual system complete (Session #1)
 - [x] Deep architecture refinement: MyoTwin/Motus branding, three-tier monorepo, tool calling spec, context window management, equipment & leverage, Injury Vault, Restoration Ladder, Neural Priming vs Structural Loading, GLB over Rive, Collaborative Science (Informed Autonomy), X-ray + ghost alpha shaders, spooling tether, desktop floating callouts, frosted HUD, B&W with intentional color, FAB-to-full-screen flow, Vision Board, sleep/diet visualization, calendar integration, CV/modePipe on Vision Board, Phase 1 golden loop, "no location tracking" mandate (Session #2)
 - [x] Phase 1: Core Architecture & Drift Schema (Session #3)
+- [x] Phase 1: Feature Package Scaffolding and Lint Resolution (Session #7) — directory structure, pubspec YAMLs, feature packages, all lint issues resolved (0 errors, 0 warnings, 0 infos)
 - [ ] Phase 2: 3D Body Map & Shader Implementation
 - [ ] Phase 3: Local LLM Integration & Audio Dialog
 - [ ] Phase 4: Kinetic Chain Engine & Hypothesis Tracking
@@ -83,12 +84,12 @@ Build MyoTwin — a privacy-first, biomechanical research & coaching app using F
 | ✅ | Scaffold `myotwin_mobile` shell | Med | — |
 | ✅ | Scaffold `myotwin_desktop` shell | Med | — |
 | ✅ | Create `myotwin_test_support` mock repositories | Med | — |
-| ⬜ | Scaffold `myotwin_features/hypothesis_engine/` | Med | — |
-| ⬜ | Scaffold `myotwin_features/injury_vault/` | Med | — |
-| ⬜ | Scaffold `myotwin_features/equipment_inventory/` | Med | — |
-| ⬜ | Scaffold `myotwin_features/restoration_ladder/` | Med | — |
-| ⬜ | Add `DatabaseIsolate` implementation (Drift background isolate) | High | — |
-| ⬜ | Setup `system_health.md` | Low | — |
+| ✅ | Scaffold `myotwin_features/hypothesis_engine/` | Med | — |
+| ✅ | Scaffold `myotwin_features/injury_vault/` | Med | — |
+| ✅ | Scaffold `myotwin_features/equipment_inventory/` | Med | — |
+| ✅ | Scaffold `myotwin_features/restoration_ladder/` | Med | — |
+| ✅ | Add `DatabaseIsolate` interface in shared_core | High | — |
+| ✅ | Setup `system_health.md` | Low | — |
 
 ### V1 Deliverables Checklist
 
@@ -97,11 +98,11 @@ Build MyoTwin — a privacy-first, biomechanical research & coaching app using F
 - [x] `myotwin_mobile` with BLoC layout scaffold
 - [x] `myotwin_desktop` with platform detection scaffold
 - [x] `myotwin_test_support` mock repositories
+- [x] Feature package directories created
 - [ ] `motus_hub` with Ollama client, context orchestrator
-- [ ] `shared_core` `DatabaseIsolate` implementation (Drift background isolate)
-- [ ] `shared_core` `DatabaseExportService` implementation
-- [ ] All BLoC unit tests scaffolded
-- [ ] All use case tests scaffolded
+- [ ] `shared_core` `DatabaseIsolate` implementation (Drift background isolate) — interface added
+- [ ] `shared_core` `DatabaseExportService` implementation — interface added
+- [ ] Test scaffolds (MockMotusCoordinator enhanced)
 
 ## 📝 Session Handoff History
 

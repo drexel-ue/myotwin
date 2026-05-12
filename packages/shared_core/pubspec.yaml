@@ -7,12 +7,9 @@ resolution: workspace
 
 environment:
   sdk: ">=3.11.4"
-  flutter: ">=3.38.1"
 
 dependencies:
   drift: ^2.0.0
-  flutter:
-    sdk: flutter
   fpdart: ^1.2.0
 
 dev_dependencies:

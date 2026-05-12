@@ -16,7 +16,6 @@
 /// The domain layer has zero Flutter dependencies.
 library;
 
-export 'src/data/database.dart';
 export 'src/domain/entities/body_segment_entity.dart';
 export 'src/domain/entities/device_sync_state_entity.dart';
 export 'src/domain/entities/drive_settings_entity.dart';

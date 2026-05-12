@@ -1,5 +1,3 @@
-/// Main entrypoint for the Motus Hub server.
-library;
 
 import 'dart:async';
 import 'dart:developer' as developer;

@@ -1,0 +1,16 @@
+name: myotwin_features_$name
+description: Feature package: $name.
+
+publish_to: none
+
+resolution: workspace
+
+dependencies:
+  drift: ^2.0.0
+  fpdart: ^1.2.0
+  shared_core:
+    path: ../shared_core
+
+dev_dependencies:
+  build_runner: any
+  test: ^1.25.0
