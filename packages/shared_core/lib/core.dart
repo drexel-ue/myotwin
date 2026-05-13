@@ -38,6 +38,7 @@ export 'src/domain/enums/hypothesis_status.dart';
 export 'src/domain/enums/movement_mode.dart';
 export 'src/domain/enums/ring_height.dart';
 export 'src/domain/enums/source_type.dart';
+export 'src/domain/interfaces/database_isolate.dart';
 export 'src/domain/interfaces/motus_coordinator.dart';
 export 'src/domain/repositories/body_segment_repository.dart';
 export 'src/domain/repositories/device_sync_state_repository.dart';

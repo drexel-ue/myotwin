@@ -18,7 +18,7 @@ Every `CatalogItem` in the `myotwin_mobile` and `myotwin_desktop` packages must 
 ## ⚖️ The 16ms Rule (Performance)
 Any operation expected to take >16ms MUST be moved to a background Isolate or `compute()`.
 - No heavy JSON parsing or `json_schema_builder` logic on the Main UI thread.
-- No Drift queries on Main UI thread.
+- No Drift queries on Main UI thread. Use the `DatabaseIsolate` interface to ensure all database access is off-loaded.
 - LLM prompt construction and parsing must occur in `motus_hub` or a background isolate.
 
 ## 🧬 Clean Architecture

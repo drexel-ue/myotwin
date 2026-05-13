@@ -1,11 +1,37 @@
 import 'package:drift/drift.dart';
 
+part 'database.g.dart';
+
 /// Application database using Drift (SQLite) with background isolate support.
 /// All tables defined here; queries execute on a background isolate via
 /// `DatabaseConnection.daemon` (Drift singleton connection pool).
-abstract class MyoTwinDatabase extends DriftDatabase {
-  /// Constructs the database instance for dependency injection.
-  MyoTwinDatabase();
+@DriftDatabase(
+  tables: [
+    ExercisesTable,
+    WorkoutLogsTable,
+    SymptomLogsTable,
+    HypothesesTable,
+    SourcesTable,
+    PrinciplesTable,
+    ResearchNotesTable,
+    NotificationContextTable,
+    KnowledgeSourcesTable,
+    NoiseLogsTable,
+    KineticChainEdgesTable,
+    BodySegmentsTable,
+    DriveSettingsTable,
+    DeviceSyncStateTable,
+    InjuriesTable,
+    EquipmentTable,
+  ],
+)
+class MyoTwinDatabase extends _$MyoTwinDatabase {
+  /// Constructs the database instance with a provided query executor.
+  MyoTwinDatabase(super.e);
+
+  /// The version of the database schema.
+  @override
+  int get schemaVersion => 1;
 
   /// Exposure of the Exercises table definition.
   ExercisesTable get exercises => ExercisesTable();
@@ -55,6 +81,10 @@ abstract class MyoTwinDatabase extends DriftDatabase {
   /// Exposure of the Equipment table definition.
   EquipmentTable get equipment => EquipmentTable();
 }
+
+
+
+
 
 // ====== TABLE DEFINITIONS ======
 

@@ -19,7 +19,6 @@ Core capabilities:
 |---|---|
 | **UI Framework** | Flutter (latest stable) |
 | **Generative UI Engine** | `genui` (Surface-based widget assembly) |
-/
 | **UI Vocabulary** | `json_schema_builder` (for CatalogItem schema definition) |
 | **State Management** | `genui` `DataModel` (Reactive, path-based observable state) |
 | **Database** | Drift (SQLite, background isolate) |
