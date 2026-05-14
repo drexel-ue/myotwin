@@ -1,15 +1,12 @@
 name: myotwin
 publish_to: none
 environment:
-  sdk: ">=3.11.4"
-  flutter: ">=3.38.1"
+  sdk: '>=3.11.5'
+  flutter: '>=3.41.9'
 workspace:
-  - packages/motus_hub
-  - packages/myotwin_desktop
-  - packages/myotwin_mobile
-  - packages/myotwin_test_support
+  - packages/motus_server
+  - packages/myotwin_app
   - packages/shared_core
-  - packages/shared_ui
 dev_dependencies:
   melos: ^7.0.0
   very_good_analysis: ^10.0.0

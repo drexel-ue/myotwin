@@ -1,24 +1,28 @@
-name: myotwin_desktop
-description: Flutter desktop client for MyoTwin — floating callout windows and deep audit dashboard.
+name: myotwin_mobile
+description: Flutter mobile client for MyoTwin.
 version: 0.0.1
 publish_to: none
 
 resolution: workspace
 
 environment:
-  sdk: ">=3.11.4"
-  flutter: ">=3.38.1"
+  sdk: '>=3.11.5'
+  flutter: '>=3.41.9'
 
 dependencies:
+  bonsoir: ^6.1.0
   drift: ^2.0.0
   flutter:
     sdk: flutter
   flutter_bloc: ^8.1.2
+  flutter_local_notifications: ^17.0.0
+  flutter_tts: ^4.0.0
   fpdart: ^1.2.0
   go_router: ^13.0.0
   shared_core:
     path: ../shared_core
-  shared_preferences: ^2.2.0
+  speech_to_text: ^7.0.0
+  workmanager: ^0.5.2
 
 dev_dependencies:
   flutter_test:

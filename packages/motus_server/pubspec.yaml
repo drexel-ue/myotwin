@@ -6,7 +6,7 @@ publish_to: none
 resolution: workspace
 
 environment:
-  sdk: ">=3.11.4"
+  sdk: '>=3.11.5'
 
 dependencies:
   drift: ^2.0.0
