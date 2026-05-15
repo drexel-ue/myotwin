@@ -53,11 +53,11 @@ The application uses Flutter's [genui](https://github.com/flutter/genui) framewo
 ### Intelligence Pipeline
 
 ```
-Local Motus (Gemma 4:e4b via MediaPipe)
+Local Motus (Gemma 4 E2B via llamadart/llama.cpp)
     ↑↓
 IntentRecords / KnowledgeGraph / ResearchSync
     ↑↓
-Server Motus (Ollama on Unraid GPU)
+Server Motus (Ollama GPU)
 ```
 
 Local Motus handles real-time interaction, heuristic scheduling, and symptom tagging. Server Motus conducts deeper research and syncs findings (Principles, ResearchNotes) back to the client's local knowledge graph.
@@ -158,6 +158,7 @@ MyoTwin uses a black-and-white cyberpunk / HUD aesthetic with deliberate color o
 | Document | Purpose |
 |---|---|
 | [docs/PRODUCT.md](docs/PRODUCT.md) | Product specification — GenUI architecture, surface types, Motus intelligence, data model |
+| [docs/MULTI_MODEL_ARCHITECTURE.md](docs/MULTI_MODEL_ARCHITECTURE.md) | Multi-model LLM strategy — Gemma E2B + LoRA adapters (fitness, medical, biomechanics) |
 | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Visual design tokens, palette, typography, motion, widget specs |
 | [docs/MOTUS_TOOL_SPEC.md](docs/MOTUS_TOOL_SPEC.md) | Tool calling interface for Motus (calculators, database, UI orchestration) |
 | [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Architecture rules, decision log, agent instructions, commit conventions, project state |

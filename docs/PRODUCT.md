@@ -157,7 +157,7 @@ Generate response with clinical caution
 Reset adapter for next call
 ```
 
-Memory budget: **~400–600 MB total** (base model + one adapter active, Flutter + 3D ~500 MB). Well within iPhone RAM. For full architecture details, see [potential_models/MULTI_MODEL_ARCHITECTURE.md](../../potential_models/MULTI_MODEL_ARCHITECTURE.md).
+Memory budget: **~400–600 MB total** (base model + one adapter active, Flutter + 3D ~500 MB). Well within iPhone RAM. For full architecture details, see [MULTI_MODEL_ARCHITECTURE.md](./MULTI_MODEL_ARCHITECTURE.md).
 
 ### Heuristic Scheduling Engine
 
