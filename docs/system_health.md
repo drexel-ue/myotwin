@@ -35,7 +35,7 @@
 - [ ] Implement DatabaseIsolate in mobile/desktop data layer
 - [ ] Implement DatabaseExportService in mobile/desktop data layer
 - [ ] Add test scaffolds for BLoCs and use cases
-- [ ] Create system_health.md in root scope
+- [ ] Rename system_health.md to SYSTEM_HEALTH.md
 
 ## Dependencies Check
 
