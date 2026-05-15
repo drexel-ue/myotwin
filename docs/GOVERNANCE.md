@@ -68,6 +68,12 @@ Decisions are permanent architectural commitments. New decisions go here at the 
 | D43 | SafetyMargin tier boundary at 1.0 | Safety < 1.0, Performance ≥ 1.0 | 2026-05-11 |
 | D44 | Elite cue unlock requires integrity > 0.75 AND margin ≥ 0.5 | Dual gate for elite content | 2026-05-11 |
 | D45 | BodySegment enum uses anatomical IDs matching GLB mesh names | Zero-mapping, direct shader binding | 2026-05-11 |
+| D46 | Replaced MediaPipe LLM inference with llamadart (llama.cpp) | Clean Dart API, pure native assets (no CMake), better iOS/Apple Silicon integration, LoRA support, tool calling, cross-platform |
+| D47 | On-device model: Gemma 4 E2B (~2.1B params, Q4_K_M) | Fits iPhone RAM (~250–500 MB via Neural Engine), ~11 tok/s, 8K context, sufficient for real-time interaction. E4B (~5 GB) reserved for desktop/macOS only |
+| D48 | Multi-model architecture with LoRA adapters | One base model + domain-specific adapters (fitness_coach, medical_advisor, biomechanics_expert). Adapters loaded dynamically per call, not three separate models in memory |
+| D49 | Intent-driven adapter routing | Lightweight classification (~5ms) selects appropriate LoRA adapter. Routes to fitness, medical, or biomechanics expertise per query |
+| D50 | llamadart native backends: Metal/CoreML default on iOS | iOS uses Metal via llamadart consolidation (non-configurable). Server-side and Linux/Windows use Vulkan. All cross-platform, no manual native edits required |
+| D51 | Model sourcing: HuggingFace GGUF files via `hf://` protocol | llamadart downloads/models cached via `ModelSource.parse('hf://owner/repo/model-Q4_K_M.gguf')`. Bundle small LoRA adapters with app, cache base model on first run |
 
 ---
 
@@ -131,6 +137,34 @@ Motus MUST use tool calling for all biomechanical calculations. No estimating to
 - `calculate_torque_load` for force calculations.
 - `get_progression_step` for ladder navigation.
 - `calculate_safety_margin` for injury-aware difficulty scaling.
+
+### 9. Motus Inference with llamadart
+
+All local LLM inference uses **llamadart** (Flutter plugin for llama.cpp):
+
+- **On-device model**: Gemma 4 E2B Q4_K_M via `hf://ggml-org/gemma-4-E2B-it-GGUF:gemma-4-E2B-it-Q4_K_M.gguf`
+- **iOS runtime**: Metal (CoreML) via llamadart — automatic native assets, no manual CMake
+- **Minimum iOS version**: 16.4 (llamadart native compilation requirement)
+- **LoRA adapters**: Loaded dynamically per invocation — fitness, medical, biomechanics advisors
+- **Tool calling**: Built-in via llamadart's `ChatSession.create(tools: [...])`
+- **Multimodal**: Not used on iOS (E2B drops vision/audio). Reserved for desktop/E4B or server.
+- **Lifecycle**: Explicit `await engine.dispose()` — always release native resources
+- **KV-cache persistence**: `stateSaveFile`/`stateLoadFile` for fast context resume
+- **Embeddings**: `engine.embed()` for knowledge graph vector storage
+
+### 10. Model Orchestration (Multi-Model)
+
+Motus uses intent classification to route queries to specialized adapters:
+
+```
+User input → Intent Classifier → Load appropriate LoRA adapter → Generate response → Reset adapter
+```
+
+- **Classification prompt**: ~50 tokens → ~5ms on E2B
+- **Active adapter per call**: One adapter at a time (~150 MB), swapped between calls
+- **Total memory**: Base model (~250–500 MB) + one adapter (~150 MB) = ~400–650 MB
+- **Server Motus**: Multiple full models (7B–70B params) on GPU for deep research, knowledge sync
+- **Knowledge graph sync**: Motus reports patterns → Server researches → Client updates knowledge graph
 
 ---
 

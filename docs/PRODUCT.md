@@ -25,7 +25,7 @@ Over weeks and months, Motus builds a knowledge graph of *you*. Every action, de
 - Recovery patterns emerge in your data → Motus learns when you're primed for volume and when to hold back
 - Goals you set (regression from injury, progression to a skill) become tracked objects with hypotheses, feedback, and progress curves
 
-The local Motus (Gemma 4:e4b via MediaPipe) handles real-time interaction, symptom tagging, and heuristic scheduling. The server Motus (Ollama on your Unraid GPU) conducts deeper research, periodically syncing findings back to the client's local knowledge graph. The client adapts its notification cadence, surface urgency, and UI density based on what's working.
+The local Motus (Gemma 4 E2B via llamadart / llama.cpp) handles real-time interaction, symptom tagging, and heuristic scheduling. The server Motus (Ollama on your Unraid GPU) conducts deeper research, periodically syncing findings back to the client's local knowledge graph. The client adapts its notification cadence, surface urgency, and UI density based on what's working.
 
 ### The Experience in Three Layers
 
@@ -125,10 +125,39 @@ Every `CatalogItem` in the application:
 
 | | Local Motus | Server Motus |
 |---|---|---|
-| **Model** | Gemma 4:e4b via MediaPipe | Ollama (OpenAI-compatible) on Unraid GPU |
+| **Model** | Gemma 4 E2B (~2.1B params) via llamadart | Multiple full models via Ollama |
+| **Architecture** | llama.cpp backends (Metal/CoreML on iOS) | Llama.cpp server, GPU-accelerated |
 | **Role** | Real-time interaction, symptom tagging, heuristic scheduling, context window management | Deep research, pattern analysis, hypothesis formulation, Principle extraction |
 | **Access** | Always available, offline | Requires network connection to Unraid |
 | **Output** | Chat responses, symptom tags, notification schedules, surface prompts | ResearchNotes, Principles, PatternReports, new Hypotheses |
+| **Adapters** | LoRA adapters for domain specialization (fitness, medical, biomechanics) | Full fine-tuned models |
+
+### Multi-Model Architecture (Client-Side)
+
+MyoTwin uses a single base model with **LoRA adapters** for domain-specific behavior. The LoRA (Low-Rank Adaptation) approach loads one base model (~250 MB on iOS) and dynamically applies lightweight adapters (~150 MB each) at runtime:
+
+| Adapter | Domain Effect |
+|---|---|
+| Base (E2B) | General reasoning, language, tool calling |
+| Fitness Coach | Volume progression, recovery optimization, training programming |
+| Medical Advisor | Injury pathology, rehabilitation protocols, clinical caution |
+| Biomechanics Expert | Torque/leverage, joint mechanics, kinetic chains, physics |
+
+**Intent Classification** routes each user message to the appropriate adapter:
+
+```
+User: "Shoulder clicked during support hold"
+     ↓
+Classify (5ms) → IntentDomain.medical
+     ↓
+Load: medical_advisor_adapter
+     ↓
+Generate response with clinical caution
+     ↓
+Reset adapter for next call
+```
+
+Memory budget: **~400–600 MB total** (base model + one adapter active, Flutter + 3D ~500 MB). Well within iPhone RAM. For full architecture details, see [potential_models/MULTI_MODEL_ARCHITECTURE.md](../../potential_models/MULTI_MODEL_ARCHITECTURE.md).
 
 ### Heuristic Scheduling Engine
 
@@ -238,8 +267,10 @@ Source type enables confidence tracking across the system, informing Motus's cer
 | **UI Vocabulary** | `json_schema_builder` for CatalogItem schema definition |
 | **State Management** | genui `DataModel` (Reactive, path-based observable state) + BLoC for static shell state |
 | **Database** | Drift (SQLite, background isolate, JSONB via SQLite extensions) |
-| **Local LLM** | Gemma 4:e4b via MediaPipe LLM Inference |
+| **Local LLM** | Gemma 4 E2B (~2.1B params) via llamadart (llama.cpp) |
+| **Local Inference Engine** | llamadart — Cross-platform GGUF runner, LoRA adapters, tool calling, Metal/CoreML on iOS |
 | **External LLM** | Ollama (OpenAI-compatible) on Unraid GPU server |
+| **Model Sources** | HuggingFace GGUF files via `hf://` protocol, cached locally |
 | **3D Engine** | Flutter GLB/GLTF (layered mesh, shader-driven heatmap) |
 | **Communication** | `bonsoir` (mDNS/Zeroconf) for local discovery |
 | **Architecture** | Clean Architecture (3-tier monorepo via Melos) |

@@ -96,7 +96,7 @@ myotwin/
 | Generative UI | [genui](https://pub.dev/packages/genui) (A2UI protocol) |
 | Schema Builder | [json_schema_builder](https://pub.dev/packages/json_schema_builder) |
 | Database | [drift](https://pub.dev/packages/drift) (SQLite, background isolate) |
-| Local Inference | Gemma 4:e4b via MediaPipe LLM Inference |
+| Local Inference | Gemma 4 E2B (~2.1B params, Q4_K_M) via llamadart (llama.cpp) |
 | Server Inference | Ollama (OpenAI-compatible API) |
 | 3D Rendering | flutter_glTF / Layered mesh with custom shaders |
 | Device Discovery | [bonsoir](https://pub.dev/packages/bonsoir) (mDNS/Zeroconf) |
