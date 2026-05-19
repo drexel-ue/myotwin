@@ -21,7 +21,7 @@ dependencies:
   go_router: ^13.0.0
   shared_core:
     path: ../shared_core
-  speech_to_text: ^7.0.0
+  # speech_to_text: ^7.0.0
   workmanager: ^0.5.2
 
 dev_dependencies:

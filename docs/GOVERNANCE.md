@@ -5,15 +5,16 @@
 | Item | Value |
 |---|---|
 | **Phase** | Phase 1 complete (core scaffolding). Phase 2: 3D Body Map & Shader Implementation |
-| **Last Modified** | 2026-05-14 |
-| **Next Task** | 3D Body Map & Shader Implementation (Phase 2) |
-| **Confidence** | 5 — scaffolding complete, lint clean, all decisions documented |
+| **Last Modified** | 2026-05-15 |
+| **Next Task** | Phase 2: 3D Body Map & Shaders — Layered GLB rendering, vertex-group heatmap shader, X-ray dissolve |
+| **Confidence** | 5 — scaffolding complete, lint clean, docs fully restructured, model architecture finalized |
 
 ### In Progress
 <!-- Active work items. Empty means nothing is currently in-flight. -->
 
 ### Next Up
-1. **Phase 2: 3D Body Map & Shaders** — Layered GLB rendering, vertex-group heatmap shader, X-ray dissolve (ghost alpha), Manhattan tether lines, desktop floating callouts with clip-mask reveal
+1. **Phase 2: 3D Body Map & Shaders** — Install Z-Anatomy in Blender, export skeletal + muscular GLBs, implement vertex-group heatmap shader, x-ray dissolve (ghost alpha), Manhattan tether lines, desktop floating callouts with clip-mask reveal
+2. **Phase 3: GenUI Surface System** — CatalogItem builders (Chat, Context, Action surfaces), DataModel bridge, surface controller lifecycle, intent routing to adapters
 
 ---
 
@@ -295,6 +296,9 @@ Added ccc/context7 fallback hierarchy to agent instructions. Index freshness pro
 
 ### Session #7 — Documentation Consolidation (2026-05-14)
 Redesigned doc structure from 10 scattered files to 6 focused documents: README.md, PRODUCT.md, DESIGN_SYSTEM.md, MOTUS_TOOL_SPEC.md, VISION.md, GOVERNANCE.md. New proactive/adaptive UX model with IntentRecord/Goal architecture. Session ledger condensed, current state table at top of GOVERNANCE.md.
+
+### Session #8 — Multi-Model LLM Architecture + Workspace Reorg (2026-05-15)
+Evaluated local LLM providers: replaced MediaPipe with llamadart (llama.cpp) for superior Dart API, native assets, iOS Metal support, LoRA adapters, and tool calling. Migrated from Gemma to Gemma 4 E2B (~2.1B params, Q4_K_M, 250–500 MB iOS RAM, ~11 tok/s, 8K context). Implemented multi-model architecture: one base model + dynamically loaded LoRA adapters (fitness_coach, medical_advisor, biomechanics_expert), selected via 5ms intent classification per query. Created MULTI_MODEL_ARCHITECTURE.md, added D46–D51 to decisions log, added architecture rules 9–10 for llamadart integration and multi-model orchestration. Cloned llamadart repo to workspace root. Ran flutter pub get on all 5 llamadart example projects. Updated all cross-references. Workspace reorganized: llamadart.git → llamadart at root level. COMMIT: 8608746 (docs move) + f663cfc (llamadart migration) are last commits. Working tree clean.
 
 ---
 

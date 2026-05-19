@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myotwin_mobile/src/theme/myotwin_theme.dart';
+import 'package:myotwin_mobile/src/widgets/graph_paper_background_2.dart';
 
 /// Entry point for MyoTwin mobile app.
 ///
@@ -26,23 +28,29 @@ class _MyotwinAppState extends State<MyotwinApp> {
     return MaterialApp(
       title: 'MyoTwin',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: Colors.white,
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.white,
-          secondary: Colors.white10,
-          surface: Colors.black,
-        ),
-      ),
-      home: const Scaffold(
-        body: Center(child: Text('MyoTwin Mobile — Phase 1 scaffold')),
-        floatingActionButton: FloatingActionButton(
-          onPressed: null,
-          tooltip: 'Motus FAB placeholder',
-          child: Icon(Icons.add),
-        ),
+      theme: MyoTwinThemeDataFactory.build(),
+      home: Builder(
+        builder: (context) {
+          return Scaffold(
+            body: Stack(
+              fit: .expand,
+              children: [
+                const GraphPaperBackground(),
+                // TODO: place actual app content here (BLoC providers, GoRouter).
+                Center(
+                  child: Text(
+                    'MyoTwin',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: .w300,
+                      letterSpacing: 2.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
