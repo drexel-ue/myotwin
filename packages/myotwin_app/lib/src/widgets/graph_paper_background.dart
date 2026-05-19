@@ -1,196 +1,189 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
-/// A full-screen, [pi.dev](https://pi.dev)-inspired background with:
+/// A full-viewport graph paper / grid background for canvas-based UIs.
 ///
-///  1. Solid base colour
-///  2. Subtle graph-paper grid + cross-dots (single `CustomPainter` pass)
-///  3. Edge vignette via radial gradient
-///  4. Crooked perspective tilt that animates to flat on first load
+/// Renders an infinite repeating grid using [CustomPainter] and wraps it in
+/// a [RepaintBoundary] so panning/zooming the canvas it's placed on does not
+/// trigger unnecessary repaints of the rest of the tree.
 ///
-/// Usage — place it as the lowest child in a [Stack]:
-///
-/// ```dart
-/// Stack(
-///   children: [
-///     const GraphPaperBackground(),
-///     // ...your widgets…
-///   ],
-/// )
-/// ```
-class GraphPaperBackground extends StatefulWidget {
-  /// Creates a const [GraphPaperBackground].
+/// ### Design Tokens
+/// | Parameter | Default | Meaning |
+/// |---|---|---|
+/// | [backgroundColor] | `0xFF0A0A0A` | MyoTwin surface token |
+/// | [gridSpacing] | `24.0` | Base pixel spacing (24×24 square) |
+/// | [minorLineColor] | `0xFF141414` | Lighter, faint grid lines |
+/// | [majorLineColor] | `0xFF222222` | Darker every-Nth line |
+/// | [majorLineInterval] | `5` | Draw a major line every 5th square |
+class GraphPaperBackground extends StatelessWidget {
+  /// Creates an infinite graph-paper grid background.
+  ///
+  /// The grid repeats seamlessly in all directions and is panning-aware
+  /// through [offset], which shifts the grid so it visually tracks a
+  /// viewport/zoom camera.
+  ///
+  /// Example:
+  /// ```dart
+  /// GraphPaperBackground(
+  ///   offset: panOffset,
+  ///   gridSpacing: 24.0,
+  ///   majorLineInterval: 5,
+  /// )
+  /// ```
   const GraphPaperBackground({
     super.key,
-    required this.animationDuration,
+    this.offset = .zero,
+    this.gridSpacing = 24.0, // Aligns with your 24x24 design token spec
+    this.majorLineInterval = 5, // A thicker line every 5th square
+    this.backgroundColor = const Color(0xFF0A0A0A), // MyoTwin surface token
+    this.minorLineColor = const Color(0xFF141414), // Subtle minor lines
+    this.majorLineColor = const Color(0xFF222222), // Explicit major dividers
   });
 
-  /// Duration of the crooked→flat tilt animation.
-  final Duration animationDuration;
+  /// Panning offset applied to the grid origin (default [Offset.zero]).
+  final Offset offset;
 
-  @override
-  State<GraphPaperBackground> createState() => _GraphPaperBackgroundState();
-}
+  /// Spacing between adjacent grid lines in logical pixels (default `24.0`).
+  final double gridSpacing;
 
-// ── State & Animation ───────────────────────────────────────────────
+  /// Draw a thicker line every N grid cells (default `5`).
+  final int majorLineInterval;
 
-class _GraphPaperBackgroundState extends State<GraphPaperBackground> with TickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 450),
-    value: 1.0, // starts tilted
-  );
-  late final Animation<double> _angleY;
-  late final Animation<double> _angleX;
-  late final Animation<double> _scale;
-  late final Animation<double> _translateX;
+  /// Background colour behind the grid (default MyoTwin surface `0xFF0A0A0A`).
+  final Color backgroundColor;
 
-  bool _isDark(BuildContext ctx) => Theme.of(ctx).brightness == .dark;
+  /// Colour for the common (minor) grid lines (default `0xFF141414`).
+  final Color minorLineColor;
 
-  @override
-  void initState() {
-    super.initState();
-    _angleY = Tween<double>(begin: 1.2, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _angleX = Tween<double>(begin: -0.4, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _scale = Tween<double>(begin: 1.03, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _translateX = Tween<double>(begin: 50.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _controller.forward();
-    });
-  }
+  /// Colour for the periodic (major) grid lines (default `0xFF222222`).
+  final Color majorLineColor;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+  /// Builds an infinite-sized [RepaintBoundary] > [CustomPaint] layer.
+  ///
+  /// Placed behind other content to give a subtle, repeating graph-paper
+  /// backdrop that moves with the camera/viewport offset.
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, child) {
-        return Transform(
-          transform: Matrix4.identity()
-            ..translate(_translateX.value) // translateX
-            ..rotateY(_angleY.value * 0.08) // Y rotation
-            ..rotateX(_angleX.value * 0.05) // X rotation
-            ..scale(_scale.value), // slight scale
-          child: Container(
-            width: .infinity,
-            height: .infinity,
-            color: _isDark(context) ? Colors.black : const Color(0xFFF5F2ED),
-            child: const Stack(
-              fit: .passthrough,
-              children: [
-                // Grid (single paint pass)
-                CustomPaint(
-                  painter: _GridPainter(),
-                ),
-                // Vignette overlay
-                CustomPaint(
-                  painter: _VignettePainter(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    return RepaintBoundary(
+      child: CustomPaint(
+        size: .infinite,
+        painter: _GraphPaperPainter(
+          offset: offset,
+          gridSpacing: gridSpacing,
+          majorLineInterval: majorLineInterval,
+          backgroundColor: backgroundColor,
+          minorLineColor: minorLineColor,
+          majorLineColor: majorLineColor,
+        ),
+      ),
     );
   }
 }
 
-// ── Grid + Cross-dots ───────────────────────────────────────────────
+/// CustomPainter that renders the repeating graph paper grid.
+///
+/// The grid origin is anchored at the center of the viewport; [offset] shifts
+/// the grid to simulate panning without ever clipping — the pattern is
+/// periodic so it can extend "infinitely" in all directions.
+class _GraphPaperPainter extends CustomPainter {
+  _GraphPaperPainter({
+    required this.offset,
+    required this.gridSpacing,
+    required this.majorLineInterval,
+    required this.backgroundColor,
+    required Color minorLineColor,
+    required Color majorLineColor,
+  }) : minorPaint = Paint()
+         ..color = minorLineColor
+         ..strokeWidth = 1.0
+         ..style = .stroke,
+       majorPaint = Paint()
+         ..color = majorLineColor
+         ..strokeWidth =
+             1.5 // Extra thickness for mathematical anchoring
+         ..style = .stroke;
 
-class _GridPainter extends CustomPainter {
-  const _GridPainter();
+  /// Panning offset applied to the grid origin.
+  final Offset offset;
 
+  /// Distance between adjacent grid lines in logical pixels.
+  final double gridSpacing;
+
+  /// Draw a thicker line every N grid cells.
+  final int majorLineInterval;
+
+  /// Solid fill colour for the background behind the grid.
+  final Color backgroundColor;
+
+  /// Prepared [Paint] for minor (every-cell) grid lines.
+  final Paint minorPaint;
+
+  /// Prepared [Paint] for major (every-Nth-cell) grid lines.
+  final Paint majorPaint;
+
+  /// Draws the repeating graph paper grid.
+  ///
+  /// 1. Fills the canvas with [backgroundColor].
+  /// 2. Computes the viewport centre and projects the panning [offset]
+  ///    to determine the grid's visual origin.
+  /// 3. Uses modulo to find the first grid line within the viewport bounds.
+  /// 4. Iterates across X and Y, drawing minor lines every cell and
+  ///    major lines every [majorLineInterval] cells.
   @override
-  void paint(Canvas c, Size s) {
-    final minor = Paint()
-      ..color = const Color(0xFFC8D0D9)
-          .withAlpha(0x03) // ~0.9%
-      ..strokeWidth = 0.5;
-    final major = Paint()
-      ..color = const Color(0xFFC8D0D9)
-          .withAlpha(0x08) // ~2.6%
-      ..strokeWidth = 0.5;
-    final dotFill = Paint()
-      ..color = const Color(0xFFC8D0D9)
-          .withAlpha(0x13) // ~4.3%
-      ..style = PaintingStyle.fill;
-    final dotErase = Paint()
-      ..color = Colors
-          .black // matches dark bg; use bg colour for light mode
-      ..style = PaintingStyle.fill;
+  void paint(Canvas canvas, Size size) {
+    // 1. Establish background canvas surface
+    canvas.drawColor(backgroundColor, .src);
 
-    const bgErase = Color(0xFFF5F2ED); // light-mode erase colour
-    const bgColour = Colors.black;
-    final erase = Paint()
-      ..color = bgColour
-      ..style = PaintingStyle.fill;
+    // 2. Calculate the geometric midpoint of the current viewport
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
 
-    // minor grid — every 4 px
-    for (double y = 0; y < s.height + 4; y += 4) {
-      c.drawLine(Offset(0, y), Offset(s.width, y), minor);
+    // 3. Project the panning offset from the center matrix anchor
+    final originX = centerX + offset.dx;
+    final originY = centerY + offset.dy;
+
+    // 4. Compute wrapped starting boundaries using modulo tracking
+    final startX = originX % gridSpacing;
+    final startY = originY % gridSpacing;
+
+    // 5. Draw Vertical Infrastructure
+    for (var x = startX; x < size.width; x += gridSpacing) {
+      // Determine structural index relative to the moving origin axis
+      final lineIndex = ((x - originX) / gridSpacing).round();
+      final isMajor = lineIndex % majorLineInterval == 0;
+
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        isMajor ? majorPaint : minorPaint,
+      );
     }
-    for (double x = 0; x < s.width + 4; x += 4) {
-      c.drawLine(Offset(x, 0), Offset(x, s.height), minor);
-    }
-    // major grid — every 20 px
-    for (double y = 0; y < s.height + 20; y += 20) {
-      c.drawLine(Offset(0, y), Offset(s.width, y), major);
-    }
-    for (double x = 0; x < s.width + 20; x += 20) {
-      c.drawLine(Offset(x, 0), Offset(x, s.height), major);
-    }
-    // cross-dots at major intersections
-    for (double y = 0; y < s.height; y += 20) {
-      for (double x = 0; x < s.width; x += 20) {
-        c
-          ..drawCircle(Offset(x, y), 3.0, dotFill)
-          // erase centre to leave a ring (matches pi.dev trick)
-          ..drawCircle(Offset(x, y), 1.5, erase);
-      }
+
+    // 6. Draw Horizontal Infrastructure
+    for (var y = startY; y < size.height; y += gridSpacing) {
+      // Determine structural index relative to the moving origin axis
+      final lineIndex = ((y - originY) / gridSpacing).round();
+      final isMajor = lineIndex % majorLineInterval == 0;
+
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        isMajor ? majorPaint : minorPaint,
+      );
     }
   }
 
+  /// Returns `true` when any visual property has changed.
+  ///
+  /// Compares all colour and spacing parameters. [offset] is omitted from
+  /// repaint checks — panning is handled through the animation loop, not
+  /// through the widget tree, so we skip it here to reduce churn.
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ── Vignette ────────────────────────────────────────────────────────
-
-class _VignettePainter extends CustomPainter {
-  const _VignettePainter();
-
-  @override
-  void paint(Canvas c, Size s) {
-    final cx = s.width / 2;
-    final cy = s.height / 2;
-    final radius = math.sqrt(s.width * s.width + s.height * s.height) * 0.5;
-
-    final grad = RadialGradient(
-      center: const Alignment(0, -0.15), // slight top bias like pi.dev
-      radius: 1.1,
-      colors: [
-        Colors.transparent,
-        const Color(0xFF0D1116).withAlpha(0x1C), // ~12% dark edge
-      ],
-      stops: const [0.45, 1.0],
-    );
-    c.drawPaint(Paint()..shader = grad.createShader(Rect.fromLTWH(0, 0, s.width, s.height)));
+  bool shouldRepaint(covariant _GraphPaperPainter oldDelegate) {
+    return oldDelegate.offset != offset ||
+        oldDelegate.gridSpacing != gridSpacing ||
+        oldDelegate.majorLineInterval != majorLineInterval ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.minorPaint.color != minorPaint.color ||
+        oldDelegate.majorPaint.color != majorPaint.color;
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

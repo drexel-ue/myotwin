@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_mobile/src/theme/myotwin_theme.dart';
-import 'package:myotwin_mobile/src/widgets/graph_paper_background_2.dart';
+import 'package:myotwin_mobile/src/widgets/graph_paper_background.dart';
 
 /// Entry point for MyoTwin mobile app.
 ///
@@ -35,7 +35,7 @@ class _MyotwinAppState extends State<MyotwinApp> {
             body: Stack(
               fit: .expand,
               children: [
-                GraphPaperBackground(),
+                const GraphPaperBackground(),
                 // TODO: place actual app content here (BLoC providers, GoRouter).
                 Center(
                   child: Text(

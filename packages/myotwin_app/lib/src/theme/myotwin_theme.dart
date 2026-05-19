@@ -1,16 +1,49 @@
-// ignore_for_file: public_member_api_docs theme stuff.
-
 import 'package:flutter/material.dart';
 
-/// Context extension helper for seamless access to the experimental HUD design tokens.
+/// Context extension providing shortcut access to the [MyoTwinTheme]
+/// HUD design tokens stored in the current [ThemeData].
+///
+/// Usage:
+/// ```dart
+/// final t = context.myoTheme;
+/// print(t.surface);         // 0xFF0A0A0A
+/// print(t.terminal.fontFamily); // 'JetBrainsMono'
+/// print(t.motionGlitch.inMilliseconds); // 120
+/// ```
 extension MyoTwinThemeBuildContextX on BuildContext {
+  /// Retrieves the [MyoTwinTheme] extension from the nearest ancestor
+  /// [ThemeData]. Throws if the theme has not been configured with
+  /// [MyoTwinThemeDataFactory.build].
   MyoTwinTheme get myoTheme => Theme.of(this).extension<MyoTwinTheme>()!;
 }
 
-/// A type-safe, production-ready Flutter [ThemeExtension] capturing the
-/// full mechatronic, high-contrast, dark-only MyoTwin design specification.
+/// Type-safe, production-ready Flutter [ThemeExtension] that encapsulates
+/// the full MyoTwin design specification.
+///
+/// **Aesthetic**: black-and-white cyberpunk / sci-fi — HUD layout, glitch
+/// effects, terminal-inspired typography, holographic transitions.
+///
+/// **Inspiration**: Deus Ex HUD, Ghost in the Shell holographic displays,
+/// Cyberpunk 2077 navigation, CRT terminal interfaces.
+///
+/// **Core principle**: everything reads like a military or experimental
+/// system interface — clean lines, sharp contrast, monochrome depth with
+/// deliberate accent colours only for data visualisation (heatmap,
+/// error states, warnings).
+///
+/// Access from any [BuildContext] via [BuildContext.myoTheme]:
+/// ```dart
+/// final t = context.myoTheme;
+/// ```
 @immutable
 class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
+  /// Creates a MyoTwin theme extension with a fully specified design token set.
+  ///
+  /// Every parameter is required because [ThemeExtension] tokens are
+  /// expected to be complete — partial themes are considered invalid.
+  ///
+  /// Use [MyoTwinTheme.dark] for the factory-instanced default profile,
+  /// or [copyWith] to selectively override individual tokens.
   const MyoTwinTheme({
     required this.surface,
     required this.surfaceElevated,
@@ -64,7 +97,16 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
     required this.curveStepEnd,
   });
 
-  /// Master Factory configuration generating the uncompromised Dark HUD profile.
+  /// Master factory producing the uncompromised Dark HUD profile.
+  ///
+  /// Returns a fully populated [MyoTwinTheme] with:
+  ///
+  /// * **Palette** — dark surface tokens + accent / heat / link colour set
+  /// * **Typography** — SpaceMono for UI, JetBrainsMono for terminal / glitch
+  /// * **Shape** — five border-radius steps (0 / 4 / 8 / 16 / 999)
+  /// * **Motion** — seven duration tiers and four easing curves
+  ///
+  /// This is the instance injected via [MyoTwinThemeDataFactory.build].
   factory MyoTwinTheme.dark() {
     return const MyoTwinTheme(
       surface: Color(0xFF0A0A0A),
@@ -186,64 +228,118 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
   }
 
   // --- Palette & Data Accents ---
+  /// Dark background surface (base layer).
   final Color surface;
+  /// Dark background surface (elevated one step).
   final Color surfaceElevated;
+  /// Dark background surface (elevated two steps).
   final Color surfaceElevated2;
+  /// Dark background surface (elevated three steps — highest).
   final Color surfaceElevated3;
+  /// Standard border / divider line colour.
   final Color outline;
+  /// Dimmed border / divider line colour (subtle separators).
   final Color outlineDim;
+  /// Deepest inset shadow colour (pure black).
   final Color inset;
+  /// Primary text / icon colour on [surface].
   final Color onSurface;
+  /// Secondary text colour on [surface] (medium emphasis).
   final Color onSurfaceMedium;
+  /// Tertiary text colour on [surface] (dim / disabled).
   final Color onSurfaceDim;
+  /// Pure white alias.
   final Color white;
+  /// Pure black alias.
   final Color black;
+  /// Default accent / neutral highlight.
   final Color accent;
+  /// Brighter accent / hot key for emphasis.
   final Color accentHot;
+  /// Low heat indicator (cool tone).
   final Color heatLow;
+  /// Medium heat indicator (warm tone).
   final Color heatMed;
+  /// High heat indicator (hot orange / amber).
   final Color heatHigh;
+  /// Critical heat indicator (danger / error red).
   final Color heatCritical;
+  /// Faint hyperlink / reference colour.
   final Color linkFaint;
+  /// Strong hyperlink / interactive colour.
   final Color linkStrong;
+  /// Success / confirmed state.
   final Color success;
+  /// Error / failure state.
   final Color error;
 
   // --- Typography Tokens ---
+  /// Hero numbers — reps, scores, large numerals ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle displayLarge;
+  /// Section headers ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle displayMedium;
+  /// Dialog titles ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle headlineLarge;
+  /// Card titles ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle headlineMedium;
+  /// Tab labels ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle title;
+  /// Chat messages, long-form text ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle bodyLarge;
+  /// Descriptions, secondary body text ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle bodyMedium;
+  /// Metadata, timestamps ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle bodySmall;
+  /// Labels, tags ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle caption;
+  /// Section separators (uppercase) ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle overline;
+  /// Agent responses, code blocks ([JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)).
   final TextStyle terminal;
+  /// System warnings, boot screens ([JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)).
   final TextStyle glitch;
 
-  // --- Shape Radii Tokens ---
+  // --- Shape & Elevation ---
+  /// No rounding — sharp corners. Used for body map segments, HUD panels.
   final BorderRadius radiusNone;
+  /// Small radius (4 px). Used for FAB rest state, small buttons.
   final BorderRadius radiusSm;
+  /// Medium radius (8 px). Used for elevated cards, bottom sheet grabber.
   final BorderRadius radiusMd;
+  /// Large radius (16 px). Used for dialogs, chat bubbles (agent messages).
   final BorderRadius radiusLg;
+  /// Fully rounded. Used for FAB active / hot state (caps, pills).
   final BorderRadius radiusFull;
 
   // --- Motion & Duration Tokens ---
+  /// Fast transition (80 ms). Used for checkbox toggles, icon state changes.
   final Duration motionFast;
+  /// Normal transition (250 ms). Used for FAB morph on hover.
   final Duration motionNormal;
+  /// Slow transition (400 ms). Used for bottom sheet slide up.
   final Duration motionSlow;
+  /// Slower transition (600 ms). Used for hot / cold FAB state change.
   final Duration motionSlower;
+  /// Glitch transition (120 ms). Used for window open/close, boot screens.
   final Duration motionGlitch;
+  /// Holographic transition (500 ms). Used for scene transitions (scan-in effect).
   final Duration motionHolographic;
+  /// Feedback pulse (60 ms). Used for haptic response animation.
   final Duration motionFeedback;
 
+  /// Deceleration curve. Used paired with [motionFast] / [motionSlower].
   final Curve curveDecelerate;
+  /// Ease-out curve. Used paired with [motionNormal] / [motionHolographic].
   final Curve curveEaseOut;
+  /// Ease-in-out curve. Used paired with [motionSlow].
   final Curve curveEaseInOut;
+  /// Step (discrete) curve. Used paired with [motionGlitch] for scan-line reveal.
   final Curve curveStepEnd;
 
+  /// Returns a copy of this theme with some tokens replaced.
+  ///
+  /// Every parameter is nullable — pass `null` to keep the current
+  /// value, or pass a new value to override it.
   @override
   MyoTwinTheme copyWith({
     Color? surface,
@@ -351,6 +447,11 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
     );
   }
 
+  /// Linearly interpolate between two [MyoTwinTheme] instances.
+  ///
+  /// Colours and [TextStyle] values are interpolated with [.lerp].
+  /// Durations and curves use a step function (50 % midpoint) because
+  /// easing curves don't interpolate linearly.
   @override
   MyoTwinTheme lerp(ThemeExtension<MyoTwinTheme>? other, double t) {
     if (other is! MyoTwinTheme) return this;
@@ -411,12 +512,21 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
   }
 }
 
-/// A specialized parameter curve wrapper providing stepped transitions for glitch animations.
+/// A parameterised step curve producing n discrete levels over [0, 1].
+///
+/// Useful for glitch or quantised animations where a smooth curve
+/// would look out of place.
+///
+/// Example — a 3-step curve divides [0, 1] into three flat plateaux:
+/// `[0, 1/3)` → 0, mid → 1/3, `[2/3, 1]` → 2/3.
 class StepsCurve extends Curve {
+  /// Creates a step curve with [steps] discrete levels (default `1`).
   const StepsCurve({this.steps = 1});
 
+  /// A pre-configured single-step instance (identical to [Curves.linear]).
   static const Curve end = StepsCurve();
 
+  /// Number of discrete steps the curve divides `t ∈ [0, 1]` into.
   final int steps;
 
   @override
@@ -425,8 +535,17 @@ class StepsCurve extends Curve {
   }
 }
 
-/// Static construction utility injecting tokens smoothly into standard material endpoints.
+/// Produces a [ThemeData] pre-wired with MyoTwin design tokens.
+///
+/// Calls [MyoTwinTheme.dark] to get the token set and injects it as a
+/// [ThemeExtension] alongside standard Material dark properties:
+///
+/// * [ThemeData.brightness] → `.dark`
+/// * [ThemeData.scaffoldBackgroundColor] → [MyoTwinTheme.surface]
+/// * [ThemeData.dividerColor] → [MyoTwinTheme.outline]
+/// * [ThemeData.extensions] → the [MyoTwinTheme] extension
 class MyoTwinThemeDataFactory {
+  /// Builds a [ThemeData] ready to use in [MaterialApp.theme].
   static ThemeData build() {
     final extensions = MyoTwinTheme.dark();
 
