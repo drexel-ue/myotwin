@@ -31,7 +31,7 @@ class _MyotwinAppState extends State<MyotwinApp> {
       theme: MyoTwinThemeDataFactory.build(),
       home: Builder(
         builder: (context) {
-          return const Scaffold(
+          return Scaffold(
             body: Stack(
               fit: .expand,
               children: [
@@ -40,11 +40,7 @@ class _MyotwinAppState extends State<MyotwinApp> {
                 Center(
                   child: Text(
                     'MyoTwin',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: .w300,
-                      letterSpacing: 2.5,
-                    ),
+                    style: context.myoTheme.displayLarge,
                   ),
                 ),
               ],
