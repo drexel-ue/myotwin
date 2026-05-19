@@ -1,3 +1,3 @@
-# myotwin_catalog
+# widgetbook_workspace
 
-A new Flutter project.
+Widgetbook workspace

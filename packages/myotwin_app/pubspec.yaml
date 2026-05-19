@@ -19,6 +19,8 @@ dependencies:
   flutter_tts: ^4.0.0
   fpdart: ^1.2.0
   go_router: ^13.0.0
+  myotwin_ui:
+    path: ./
   shared_core:
     path: ../shared_core
   # speech_to_text: ^7.0.0

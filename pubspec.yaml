@@ -7,6 +7,7 @@ workspace:
   - packages/motus_server
   - packages/myotwin_app
   - packages/myotwin_catalog
+  - packages/myotwin_ui
   - packages/shared_core
 dev_dependencies:
   melos: ^7.0.0
