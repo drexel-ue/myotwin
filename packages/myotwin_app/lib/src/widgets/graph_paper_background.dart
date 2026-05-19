@@ -81,7 +81,7 @@ class _GraphPaperBackgroundState extends State<GraphPaperBackground> with Ticker
       builder: (_, child) {
         return Transform(
           transform: Matrix4.identity()
-            ..translate(_translateX.value, 0.0) // translateX
+            ..translate(_translateX.value) // translateX
             ..rotateY(_angleY.value * 0.08) // Y rotation
             ..rotateX(_angleX.value * 0.05) // X rotation
             ..scale(_scale.value), // slight scale

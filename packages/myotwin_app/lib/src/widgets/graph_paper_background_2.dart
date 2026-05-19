@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class GraphPaperBackground extends StatelessWidget {
   const GraphPaperBackground({
     super.key,
-    this.offset = Offset.zero,
+    this.offset = .zero,
     this.gridSpacing = 24.0, // Aligns with your 24x24 design token spec
     this.majorLineInterval = 5, // A thicker line every 5th square
     this.backgroundColor = const Color(0xFF0A0A0A), // MyoTwin surface token
@@ -22,7 +22,7 @@ class GraphPaperBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
-        size: Size.infinite,
+        size: .infinite,
         painter: _GraphPaperPainter(
           offset: offset,
           gridSpacing: gridSpacing,
@@ -37,13 +37,6 @@ class GraphPaperBackground extends StatelessWidget {
 }
 
 class _GraphPaperPainter extends CustomPainter {
-  final Offset offset;
-  final double gridSpacing;
-  final int majorLineInterval;
-  final Color backgroundColor;
-  final Paint minorPaint;
-  final Paint majorPaint;
-
   _GraphPaperPainter({
     required this.offset,
     required this.gridSpacing,
@@ -54,41 +47,61 @@ class _GraphPaperPainter extends CustomPainter {
   }) : minorPaint = Paint()
          ..color = minorLineColor
          ..strokeWidth = 1.0
-         ..style = PaintingStyle.stroke,
+         ..style = .stroke,
        majorPaint = Paint()
          ..color = majorLineColor
          ..strokeWidth =
              1.5 // Extra thickness for mathematical anchoring
-         ..style = PaintingStyle.stroke;
+         ..style = .stroke;
+
+  final Offset offset;
+  final double gridSpacing;
+  final int majorLineInterval;
+  final Color backgroundColor;
+  final Paint minorPaint;
+  final Paint majorPaint;
 
   @override
   void paint(Canvas canvas, Size size) {
     // 1. Establish background canvas surface
-    canvas.drawColor(backgroundColor, BlendMode.src);
+    canvas.drawColor(backgroundColor, .src);
 
-    // 2. Adjust for runtime tracking offsets (scrolling/panning)
-    final double startX = offset.dx % (gridSpacing * majorLineInterval);
-    final double startY = offset.dy % (gridSpacing * majorLineInterval);
+    // 2. Calculate the geometric midpoint of the current viewport
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
 
-    // 3. Draw Vertical Infrastructure
-    for (double x = startX - (gridSpacing * majorLineInterval); x < size.width; x += gridSpacing) {
-      if (x < 0) continue;
+    // 3. Project the panning offset from the center matrix anchor
+    final originX = centerX + offset.dx;
+    final originY = centerY + offset.dy;
 
-      // Compute line tracking index relative to origin matrix
-      final int lineIndex = ((x - offset.dx) / gridSpacing).round();
-      final bool isMajor = lineIndex % majorLineInterval == 0;
+    // 4. Compute wrapped starting boundaries using modulo tracking
+    final startX = originX % gridSpacing;
+    final startY = originY % gridSpacing;
 
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), isMajor ? majorPaint : minorPaint);
+    // 5. Draw Vertical Infrastructure
+    for (var x = startX; x < size.width; x += gridSpacing) {
+      // Determine structural index relative to the moving origin axis
+      final lineIndex = ((x - originX) / gridSpacing).round();
+      final isMajor = lineIndex % majorLineInterval == 0;
+
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        isMajor ? majorPaint : minorPaint,
+      );
     }
 
-    // 4. Draw Horizontal Infrastructure
-    for (double y = startY - (gridSpacing * majorLineInterval); y < size.height; y += gridSpacing) {
-      if (y < 0) continue;
+    // 6. Draw Horizontal Infrastructure
+    for (var y = startY; y < size.height; y += gridSpacing) {
+      // Determine structural index relative to the moving origin axis
+      final lineIndex = ((y - originY) / gridSpacing).round();
+      final isMajor = lineIndex % majorLineInterval == 0;
 
-      final int lineIndex = ((y - offset.dy) / gridSpacing).round();
-      final bool isMajor = lineIndex % majorLineInterval == 0;
-
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), isMajor ? majorPaint : minorPaint);
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        isMajor ? majorPaint : minorPaint,
+      );
     }
   }
 

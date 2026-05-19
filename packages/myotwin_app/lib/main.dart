@@ -31,11 +31,11 @@ class _MyotwinAppState extends State<MyotwinApp> {
       theme: MyoTwinThemeDataFactory.build(),
       home: Builder(
         builder: (context) {
-          return Scaffold(
+          return const Scaffold(
             body: Stack(
               fit: .expand,
               children: [
-                const GraphPaperBackground(),
+                GraphPaperBackground(),
                 // TODO: place actual app content here (BLoC providers, GoRouter).
                 Center(
                   child: Text(
