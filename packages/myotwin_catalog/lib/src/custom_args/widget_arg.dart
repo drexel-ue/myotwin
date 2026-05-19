@@ -7,20 +7,12 @@ class WidgetArg extends Arg<Widget> {
     super.name,
   });
 
-  static const _widget = 'widget';
-
   @override
   List<Field<dynamic>> get fields => [];
 
   @override
-  Widget valueFromQueryGroup(QueryGroup? group) {
-    return value;
-  }
+  Widget valueFromQueryGroup(QueryGroup? group) => value;
 
   @override
-  QueryGroup valueToQueryGroup(Widget value) {
-    return QueryGroup({
-      _widget: paramOf(_widget, value),
-    });
-  }
+  QueryGroup valueToQueryGroup(Widget value) => .empty;
 }

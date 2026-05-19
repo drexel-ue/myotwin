@@ -11,8 +11,8 @@ final config = Config(
       IosViewports.iPhone13,
     ]),
     MaterialThemeAddon({
-      'Light': ThemeData.light(),
-      'Dark': ThemeData.dark(),
+      'Light': MyoTwinThemeDataFactory.build(),
+      'Dark': MyoTwinThemeDataFactory.build(),
     }),
     AlignmentAddon(),
   ],
