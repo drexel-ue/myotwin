@@ -20,9 +20,9 @@ final config = Config(
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: MyoTwinThemeDataFactory.build(),
-      home: const Material(
+      home: Material(
         child: InteractiveGridHost(
-          child: SizedBox.shrink(),
+          child: child,
         ),
       ),
     );

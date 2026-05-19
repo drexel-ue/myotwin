@@ -50,12 +50,12 @@ class FrostedHUDStory extends Story<FrostedHUD, FrostedHUDArgs> {
 class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
   FrostedHUDArgs({
     Arg<Key?>? key,
-    Arg<String>? title,
+    Arg<String?>? title,
     required Arg<Widget> child,
     required Arg<Offset> impactPoint,
     Arg<double>? animationProgress,
   }) : this.keyArg = $initArg('key', key, null),
-       this.titleArg = $initArg('title', title, StringArg(''))!,
+       this.titleArg = $initArg('title', title, NullableStringArg(null))!,
        this.childArg = $initArg('child', child, null)!,
        this.impactPointArg = $initArg('impactPoint', impactPoint, null)!,
        this.animationProgressArg = $initArg(
@@ -66,19 +66,19 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
 
   FrostedHUDArgs.fixed({
     Key? key,
-    String title = '',
+    String? title = null,
     required Widget child,
     required Offset impactPoint,
     double animationProgress = 1.0,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
-       this.titleArg = Arg.fixed(title),
+       this.titleArg = title == null ? null : Arg.fixed(title),
        this.childArg = Arg.fixed(child),
        this.impactPointArg = Arg.fixed(impactPoint),
        this.animationProgressArg = Arg.fixed(animationProgress);
 
   final Arg<Key?>? keyArg;
 
-  final Arg<String> titleArg;
+  final Arg<String?>? titleArg;
 
   final Arg<Widget> childArg;
 
@@ -88,7 +88,7 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
 
   Key? get key => keyArg?.value;
 
-  String get title => titleArg.value;
+  String? get title => titleArg?.value;
 
   Widget get child => childArg.value;
 

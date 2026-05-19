@@ -11,7 +11,19 @@ const meta = Meta<FrostedHUD>();
 final $Default = _Story(
   name: 'Default',
   args: _Args(
-    impactPoint: OffsetArg(Offset.zero),
-    child: WidgetArg(const SizedBox.shrink()),
+    impactPoint: OffsetArg(.zero),
+    child: WidgetArg(
+      const SizedBox(
+        width: 300.0, // Forces the HUD to be exactly 300px wide
+        height: 150.0, // Forces the HUD to be exactly 150px tall
+        child: Text('TISSUE INTEGRITY: NOMINAL\nTORQUE LIMITS: EXCEEDED'),
+      ),
+    ),
   ),
+  builder: (context, args) {
+    return FrostedHUD(
+      impactPoint: args.impactPoint,
+      child: args.child,
+    );
+  },
 );

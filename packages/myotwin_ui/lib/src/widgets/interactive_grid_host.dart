@@ -101,15 +101,22 @@ class _InteractiveGridHostState extends State<InteractiveGridHost> with SingleTi
       child: Stack(
         children: [
           // Feed the live coordinates into the GPU painter
-          ValueListenableBuilder(
-            valueListenable: _cameraPan,
-            builder: (context, offset, _) {
-              return PrecisionGridBackground(offset: offset);
-            },
+          Positioned.fill(
+            child: ValueListenableBuilder(
+              valueListenable: _cameraPan,
+              builder: (context, offset, _) {
+                return PrecisionGridBackground(offset: offset);
+              },
+            ),
           ),
 
           // Your 3D Model or UI components would go here in the foreground
-          widget.child,
+          Align(
+            child: Padding(
+              padding: allPadding32 * 6,
+              child: widget.child,
+            ),
+          ),
         ],
       ),
     );

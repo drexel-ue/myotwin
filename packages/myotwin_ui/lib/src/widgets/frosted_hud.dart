@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -6,13 +7,13 @@ import 'package:myotwin_ui/myotwin_ui.dart';
 class FrostedHUD extends StatelessWidget {
   const FrostedHUD({
     super.key,
-    required this.title,
+    this.title,
     required this.child,
     required this.impactPoint,
     this.animationProgress = 1.0,
   });
 
-  final String title;
+  final String? title;
   final Widget child;
   final double animationProgress;
   final Offset impactPoint; // New architectural requirement
@@ -21,9 +22,9 @@ class FrostedHUD extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.surfaceElevated.withOpacity(0.85),
+        color: Colors.red,
         borderRadius: theme.radiusSm,
       ),
       child: CustomPaint(
@@ -34,17 +35,25 @@ class FrostedHUD extends StatelessWidget {
           outlineColor: theme.outline,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: allPadding16,
           // Content fades in relative to the radiating loop progress window
           child: Opacity(
             opacity: (animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: .start,
+              mainAxisSize: .min,
               children: [
-                Text(title.toUpperCase(), style: theme.headlineMedium),
-                Divider(color: theme.outline, height: 16.0),
-                child,
+                if (title case final String title when title.isNotEmpty) ...[
+                  Text(title.toUpperCase(), style: theme.headlineMedium),
+                  Divider(color: theme.outline, height: 16.0),
+                ],
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: math.min(context.screenWidth - 32.0 - 16.0, 600.0),
+                    maxHeight: math.min(context.screenHeight - 32.0 - 16.0, 600.0),
+                  ),
+                  child: child,
+                ),
               ],
             ),
           ),
@@ -69,11 +78,15 @@ class _RadiatingHUDPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // GUARD: If the layout engine passes an empty or uninitialized box size,
+    // abort immediately to prevent Iterable metric-polling crashes.
+    if (size.width <= 0.0 || size.height <= 0.0) return;
+
     // 1. Draw static inactive background guide line (outline-dim token)
     final backgroundPaint = Paint()
       ..color = outlineColor
       ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+      ..style = .stroke;
 
     final fullRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(0, 0, size.width, size.height),
@@ -87,15 +100,15 @@ class _RadiatingHUDPainter extends CustomPainter {
     final laserPaint = Paint()
       ..color = strokeColor
       ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+      ..style = .stroke;
 
     // 3. Compute full perimeter sequence path
     // For absolute mechatronic accuracy, we map the box rectangle into a 1D line loop
     final structuralPath = Path()..addRRect(fullRect);
-    final metrics = structuralPath.computeMetrics();
+    final metricsList = structuralPath.computeMetrics().toList();
 
-    if (metrics.isEmpty) return;
-    final metric = metrics.first;
+    if (metricsList.isEmpty) return;
+    final metric = metricsList.first;
     final totalPerimeter = metric.length;
 
     // 4. Find where the impact point sits on that 1D path matrix
@@ -113,12 +126,12 @@ class _RadiatingHUDPainter extends CustomPainter {
 
     if (leftStart < rightEnd) {
       // Normal continuous fragment segment block
-      activeLaserPath.addPath(metric.extractPath(leftStart, rightEnd), Offset.zero);
+      activeLaserPath.addPath(metric.extractPath(leftStart, rightEnd), .zero);
     } else {
       // Wrap-around boundary clipping condition (crosses the path origin loop point)
       activeLaserPath
-        ..addPath(metric.extractPath(leftStart, totalPerimeter), Offset.zero)
-        ..addPath(metric.extractPath(0.0, rightEnd), Offset.zero);
+        ..addPath(metric.extractPath(leftStart, totalPerimeter), .zero)
+        ..addPath(metric.extractPath(0.0, rightEnd), .zero);
     }
 
     canvas.drawPath(activeLaserPath, laserPaint);
