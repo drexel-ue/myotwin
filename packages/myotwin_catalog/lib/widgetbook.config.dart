@@ -19,13 +19,10 @@ final config = Config(
   appBuilder: (context, child) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Material(
-        child: Stack(
-          fit: .passthrough,
-          children: [
-            const GraphPaperBackground(),
-            child,
-          ],
+      theme: MyoTwinThemeDataFactory.build(),
+      home: const Material(
+        child: InteractiveGridHost(
+          child: SizedBox.shrink(),
         ),
       ),
     );
