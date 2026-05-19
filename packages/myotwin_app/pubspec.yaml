@@ -1,5 +1,5 @@
-name: myotwin_mobile
-description: Flutter mobile client for MyoTwin.
+name: myotwin_app
+description: Flutter client for MyoTwin.
 version: 0.0.1
 publish_to: none
 

@@ -31,7 +31,7 @@ extension MyoTwinThemeBuildContextX on BuildContext {
 /// deliberate accent colours only for data visualisation (heatmap,
 /// error states, warnings).
 ///
-/// Access from any [BuildContext] via [BuildContext.myoTheme]:
+/// Access from any [BuildContext] via `BuildContext.myoTheme`:
 /// ```dart
 /// final t = context.myoTheme;
 /// ```

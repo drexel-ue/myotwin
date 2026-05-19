@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:myotwin_mobile/src/theme/myotwin_theme.dart';
-import 'package:myotwin_mobile/src/widgets/graph_paper_background.dart';
+import 'package:myotwin_app/src/theme/myotwin_theme.dart';
+import 'package:myotwin_app/src/widgets/graph_paper_background.dart';
 
 /// Entry point for MyoTwin mobile app.
 ///
