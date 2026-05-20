@@ -3,20 +3,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:myotwin_ui/src/theme/myotwin_theme.dart';
 
-enum HoloState { idle, thinking, active }
+/// States that control the FAB's animation speed and glow intensity.
+enum HoloState {
+  /// Slow standby rotation with dim glow.
+  idle,
 
+  /// Fast processing rotation with half-brightness glow.
+  thinking,
+
+  /// Steady powerful rotation with full-brightness glow.
+  active,
+}
+
+/// An animated holographic FAB with three states: idle, thinking, and active.
+///
+/// The button features a rotating arc border and a moving scanline shader
+/// that responds to the provided [state]. In [HoloState.idle] the FAB
+/// rotates slowly at reduced brightness; in [HoloState.thinking] it spins
+/// rapidly at half brightness; in [HoloState.active] it reaches full speed
+/// and maximum glow.
 class AnimatedHoloFAB extends StatefulWidget {
+  /// Creates an animated holographic FAB.
+  ///
+  /// The [state], [onPressed], and [icon] parameters are required. If
+  /// [baseColor] is null the FAB uses the theme's white color.
   const AnimatedHoloFAB({
     super.key,
+
+    /// The current animation state driving speed and glow.
     required this.state,
+
+    /// Callback invoked when the FAB is pressed.
     required this.onPressed,
+
+    /// The icon widget displayed inside the FAB.
     required this.icon,
+
+    /// The base color for borders, scanline, and glow. Defaults to the
+    /// theme's [MyoTwinTheme.white] when null.
     this.baseColor,
   });
 
+  /// The current animation state driving speed and glow.
   final HoloState state;
+
+  /// Callback invoked when the FAB is pressed.
   final VoidCallback onPressed;
+
+  /// The icon widget displayed inside the FAB.
   final Widget icon;
+
+  /// The base color for borders, scanline, and glow. Defaults to the
+  /// theme's white when null.
   final Color? baseColor;
 
   @override
