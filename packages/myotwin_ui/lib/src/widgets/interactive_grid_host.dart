@@ -119,7 +119,10 @@ class _InteractiveGridHostState extends State<InteractiveGridHost> with SingleTi
         ),
 
         // Your 3D Model or UI components would go here in the foreground
-        widget.child,
+        Padding(
+          padding: allPadding32,
+          child: widget.child,
+        ),
       ],
     );
   }

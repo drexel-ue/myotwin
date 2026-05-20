@@ -20,7 +20,8 @@ final FrostedHUDComponent = Component<FrostedHUD, FrostedHUDArgs>(
   name: meta.name ?? 'FrostedHUD',
   path: meta.path ?? 'widgets',
   docsBuilder: meta.docsBuilder,
-  docComment: null,
+  docComment:
+      r'''A holographic frosted-glass HUD panel with radiating laser effects.''',
   stories: [$Default..$generatedName = 'Default'],
 );
 typedef FrostedHUDScenario = Scenario<FrostedHUD, FrostedHUDArgs>;

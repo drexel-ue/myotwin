@@ -34,11 +34,11 @@ class FrostedHUD extends StatelessWidget {
       borderRadius: theme.radiusSm,
       child: BackdropFilter(
         // This is the "holographic" glass effect
-        filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+        filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
         child: DecoratedBox(
           decoration: BoxDecoration(
             // IMPORTANT: Lower the alpha so the window is semi-transparent
-            color: theme.surfaceElevated.withValues(alpha: 0.6),
+            color: theme.surfaceElevated.withValues(alpha: 0.0),
             border: Border.all(color: theme.outline),
             borderRadius: theme.radiusSm,
           ),
