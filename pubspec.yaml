@@ -29,6 +29,11 @@ melos:
       exec: dart format -l 120 .
       packageFilters:
         dirExists: lib
+    fix:
+      description: Run `dart fix --apply` on all packages
+      exec: dart fix --apply
+      packageFilters:
+        dirExists: lib
     test:
       description: Run tests across all Dart packages
       exec: dart test --concurrency=1

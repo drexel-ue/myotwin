@@ -56,7 +56,7 @@ class AnimatedHoloFABArgs extends StoryArgs<AnimatedHoloFAB> {
     Arg<HoloState>? state,
     required Arg<void Function()> onPressed,
     required Arg<Widget> icon,
-    Arg<Color>? baseColor,
+    Arg<Color?>? baseColor,
   }) : this.keyArg = $initArg('key', key, null),
        this.stateArg = $initArg(
          'state',
@@ -68,7 +68,7 @@ class AnimatedHoloFABArgs extends StoryArgs<AnimatedHoloFAB> {
        this.baseColorArg = $initArg(
          'baseColor',
          baseColor,
-         ColorArg(Colors.cyanAccent),
+         NullableColorArg(null),
        )!;
 
   AnimatedHoloFABArgs.fixed({
@@ -76,12 +76,12 @@ class AnimatedHoloFABArgs extends StoryArgs<AnimatedHoloFAB> {
     HoloState state = HoloState.idle,
     required void Function() onPressed,
     required Widget icon,
-    Color baseColor = Colors.cyanAccent,
+    Color? baseColor = null,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.stateArg = Arg.fixed(state),
        this.onPressedArg = Arg.fixed(onPressed),
        this.iconArg = Arg.fixed(icon),
-       this.baseColorArg = Arg.fixed(baseColor);
+       this.baseColorArg = baseColor == null ? null : Arg.fixed(baseColor);
 
   final Arg<Key?>? keyArg;
 
@@ -91,7 +91,7 @@ class AnimatedHoloFABArgs extends StoryArgs<AnimatedHoloFAB> {
 
   final Arg<Widget> iconArg;
 
-  final Arg<Color> baseColorArg;
+  final Arg<Color?>? baseColorArg;
 
   Key? get key => keyArg?.value;
 
@@ -101,7 +101,7 @@ class AnimatedHoloFABArgs extends StoryArgs<AnimatedHoloFAB> {
 
   Widget get icon => iconArg.value;
 
-  Color get baseColor => baseColorArg.value;
+  Color? get baseColor => baseColorArg?.value;
 
   @override
   List<Arg?> get list => [

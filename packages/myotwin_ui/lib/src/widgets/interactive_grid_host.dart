@@ -9,6 +9,7 @@ class InteractiveGridHost extends StatefulWidget {
   /// and user-supplied child content.
   const InteractiveGridHost({
     super.key,
+
     /// The widget content rendered above the grid background.
     required this.child,
   });

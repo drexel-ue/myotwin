@@ -14,7 +14,7 @@ final $Default = _Story(
   args: _Args(
     state: HoloStateArg(),
     onPressed: VoidCallbackArg(
-      () => print('pressed'),
+      () => debugPrint('pressed'),
     ),
     icon: WidgetArg(emptyWidget),
   ),

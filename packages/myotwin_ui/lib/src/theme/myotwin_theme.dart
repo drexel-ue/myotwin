@@ -230,109 +230,154 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
   // --- Palette & Data Accents ---
   /// Dark background surface (base layer).
   final Color surface;
+
   /// Dark background surface (elevated one step).
   final Color surfaceElevated;
+
   /// Dark background surface (elevated two steps).
   final Color surfaceElevated2;
+
   /// Dark background surface (elevated three steps — highest).
   final Color surfaceElevated3;
+
   /// Standard border / divider line colour.
   final Color outline;
+
   /// Dimmed border / divider line colour (subtle separators).
   final Color outlineDim;
+
   /// Deepest inset shadow colour (pure black).
   final Color inset;
+
   /// Primary text / icon colour on [surface].
   final Color onSurface;
+
   /// Secondary text colour on [surface] (medium emphasis).
   final Color onSurfaceMedium;
+
   /// Tertiary text colour on [surface] (dim / disabled).
   final Color onSurfaceDim;
+
   /// Pure white alias.
   final Color white;
+
   /// Pure black alias.
   final Color black;
+
   /// Default accent / neutral highlight.
   final Color accent;
+
   /// Brighter accent / hot key for emphasis.
   final Color accentHot;
+
   /// Low heat indicator (cool tone).
   final Color heatLow;
+
   /// Medium heat indicator (warm tone).
   final Color heatMed;
+
   /// High heat indicator (hot orange / amber).
   final Color heatHigh;
+
   /// Critical heat indicator (danger / error red).
   final Color heatCritical;
+
   /// Faint hyperlink / reference colour.
   final Color linkFaint;
+
   /// Strong hyperlink / interactive colour.
   final Color linkStrong;
+
   /// Success / confirmed state.
   final Color success;
+
   /// Error / failure state.
   final Color error;
 
   // --- Typography Tokens ---
   /// Hero numbers — reps, scores, large numerals ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle displayLarge;
+
   /// Section headers ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle displayMedium;
+
   /// Dialog titles ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle headlineLarge;
+
   /// Card titles ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle headlineMedium;
+
   /// Tab labels ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle title;
+
   /// Chat messages, long-form text ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle bodyLarge;
+
   /// Descriptions, secondary body text ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle bodyMedium;
+
   /// Metadata, timestamps ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle bodySmall;
+
   /// Labels, tags ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle caption;
+
   /// Section separators (uppercase) ([SpaceMono](https://fonts.google.com/specimen/Space+Mono)).
   final TextStyle overline;
+
   /// Agent responses, code blocks ([JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)).
   final TextStyle terminal;
+
   /// System warnings, boot screens ([JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)).
   final TextStyle glitch;
 
   // --- Shape & Elevation ---
   /// No rounding — sharp corners. Used for body map segments, HUD panels.
   final BorderRadius radiusNone;
+
   /// Small radius (4 px). Used for FAB rest state, small buttons.
   final BorderRadius radiusSm;
+
   /// Medium radius (8 px). Used for elevated cards, bottom sheet grabber.
   final BorderRadius radiusMd;
+
   /// Large radius (16 px). Used for dialogs, chat bubbles (agent messages).
   final BorderRadius radiusLg;
+
   /// Fully rounded. Used for FAB active / hot state (caps, pills).
   final BorderRadius radiusFull;
 
   // --- Motion & Duration Tokens ---
   /// Fast transition (80 ms). Used for checkbox toggles, icon state changes.
   final Duration motionFast;
+
   /// Normal transition (250 ms). Used for FAB morph on hover.
   final Duration motionNormal;
+
   /// Slow transition (400 ms). Used for bottom sheet slide up.
   final Duration motionSlow;
+
   /// Slower transition (600 ms). Used for hot / cold FAB state change.
   final Duration motionSlower;
+
   /// Glitch transition (120 ms). Used for window open/close, boot screens.
   final Duration motionGlitch;
+
   /// Holographic transition (500 ms). Used for scene transitions (scan-in effect).
   final Duration motionHolographic;
+
   /// Feedback pulse (60 ms). Used for haptic response animation.
   final Duration motionFeedback;
 
   /// Deceleration curve. Used paired with [motionFast] / [motionSlower].
   final Curve curveDecelerate;
+
   /// Ease-out curve. Used paired with [motionNormal] / [motionHolographic].
   final Curve curveEaseOut;
+
   /// Ease-in-out curve. Used paired with [motionSlow].
   final Curve curveEaseInOut;
+
   /// Step (discrete) curve. Used paired with [motionGlitch] for scan-line reveal.
   final Curve curveStepEnd;
 

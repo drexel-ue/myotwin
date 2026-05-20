@@ -8,9 +8,9 @@ class PrecisionGridBackground extends StatelessWidget {
     super.key,
     this.offset = .zero,
   });
+
   /// The grid offset applied to the canvas, supporting panning.
   final Offset offset;
-
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +47,6 @@ class _PrecisionGridPainter extends CustomPainter {
   // Configuration for the "finer" pi.dev aesthetic
   final double gridSpacing = 12.0;
   final int majorLineInterval = 8;
-
 
   @override
   void paint(Canvas canvas, Size size) {

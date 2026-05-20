@@ -1,22 +1,23 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:myotwin_ui/src/theme/myotwin_theme.dart';
 
-enum HoloState { idle, active }
+enum HoloState { idle, thinking, active }
 
 class AnimatedHoloFAB extends StatefulWidget {
-  final HoloState state;
-  final VoidCallback onPressed;
-  final Widget icon;
-  final Color baseColor;
-
   const AnimatedHoloFAB({
     super.key,
     required this.state,
     required this.onPressed,
     required this.icon,
-    this.baseColor = Colors.cyanAccent,
+    this.baseColor,
   });
+
+  final HoloState state;
+  final VoidCallback onPressed;
+  final Widget icon;
+  final Color? baseColor;
 
   @override
   State<AnimatedHoloFAB> createState() => _AnimatedHoloFABState();
@@ -24,7 +25,7 @@ class AnimatedHoloFAB extends StatefulWidget {
 
 class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProviderStateMixin {
   late final Ticker _ticker;
-  Duration _lastTime = Duration.zero;
+  Duration _lastTime = .zero;
 
   // The engine variables
   double _phase = 0.0; // Loops continuously from 0.0 to 1.0
@@ -34,31 +35,41 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _ticker = createTicker(_onTick)..start();
+    _ticker = createTicker(_onTick)..start().ignore();
   }
 
   void _onTick(Duration elapsed) {
-    if (_lastTime == Duration.zero) {
+    if (_lastTime == .zero) {
       _lastTime = elapsed;
       return;
     }
 
-    // Hardware-agnostic delta time calculation
-    final double dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
+    final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
     _lastTime = elapsed;
 
-    // 1. Define physical targets based on the current enum state
-    final double targetSpeed = widget.state == HoloState.active ? 1.5 : 0.25;
-    final double targetIntensity = widget.state == HoloState.active ? 1.0 : 0.0;
+    // 1. Define physical targets based on the ternary state machine
+    double targetSpeed;
+    double targetIntensity;
 
-    // 2. Apply smooth acceleration/deceleration (The "Spool Up" effect)
-    // Multiplying by 8.0 dictates the transition friction.
+    switch (widget.state) {
+      case .idle:
+        targetSpeed = 0.25; // Slow standby rotation
+        targetIntensity = 0.0;
+      case .thinking:
+        targetSpeed = 3.5; // Very fast "searching/processing" spin
+        targetIntensity = 0.5; // Half-brightness to indicate spooling
+      case .active:
+        targetSpeed = 1.5; // Powerful, steady rhythm
+        targetIntensity = 1.0; // Locked in at max brightness
+    }
+
+    // 2. The friction math seamlessly handles jumping between ANY of the 3 states
     _currentSpeed += (targetSpeed - _currentSpeed) * 8.0 * dt;
     _visualIntensity += (targetIntensity - _visualIntensity) * 8.0 * dt;
 
     // 3. Accumulate continuous phase
     _phase += dt * _currentSpeed;
-    _phase %= 1.0; // Keep it looping cleanly between 0.0 and 1.0
+    _phase %= 1.0;
 
     setState(() {});
   }
@@ -77,19 +88,21 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
     // FIX 1: Normalize the sine wave so it pulses cleanly between 0.0 and 1.0
     final normalizedPulse = (math.sin(_phase * 2 * math.pi) + 1.0) / 2.0;
 
+    final baseColor = widget.baseColor ?? context.myoTheme.white;
+
     return GestureDetector(
       onTap: widget.onPressed,
       child: Container(
         width: 64.0,
         height: 64.0,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.black87,
+          shape: .circle,
+          color: context.myoTheme.surface,
           boxShadow: [
             BoxShadow(
               // FIX 2: Clamp the final opacity calculation to guarantee it never breaches 0.0 - 1.0
-              color: widget.baseColor.withOpacity(
-                (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
+              color: baseColor.withValues(
+                alpha: (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
               ),
               blurRadius: 10.0 + (10.0 * normalizedPulse) + (15.0 * _visualIntensity),
               spreadRadius: 1.0 + (3.0 * _visualIntensity * normalizedPulse),
@@ -97,14 +110,14 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
           ],
         ),
         child: Stack(
-          alignment: Alignment.center,
+          alignment: .center,
           children: [
             Transform.rotate(
               angle: rotation,
               child: CustomPaint(
-                size: const Size(64, 64),
+                size: const Size.square(64.0),
                 painter: _HoloArcPainter(
-                  color: widget.baseColor,
+                  color: baseColor,
                   intensity: _visualIntensity,
                 ),
               ),
@@ -115,15 +128,15 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
                   begin: Alignment(0.0, scanlineOffset - 0.5),
                   end: Alignment(0.0, scanlineOffset + 0.5),
                   colors: [
-                    Colors.white.withOpacity(0.2),
+                    context.myoTheme.white.withValues(alpha: 0.2),
                     // Clamp shader opacities as well
-                    Colors.white.withOpacity((0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0)),
-                    Colors.white.withOpacity(0.2),
+                    context.myoTheme.white.withValues(alpha: (0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0)),
+                    context.myoTheme.white.withValues(alpha: 0.2),
                   ],
                   stops: const [0.0, 0.5, 1.0],
                 ).createShader(bounds);
               },
-              blendMode: BlendMode.srcIn,
+              blendMode: .srcIn,
               child: widget.icon,
             ),
           ],
@@ -134,10 +147,13 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
 }
 
 class _HoloArcPainter extends CustomPainter {
+  _HoloArcPainter({
+    required this.color,
+    required this.intensity,
+  });
+
   final Color color;
   final double intensity;
-
-  _HoloArcPainter({required this.color, required this.intensity});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -147,18 +163,19 @@ class _HoloArcPainter extends CustomPainter {
 
     // Clamp outer arcs
     final outerPaint = Paint()
-      ..color = color.withOpacity((0.4 + (0.6 * intensity)).clamp(0.0, 1.0))
-      ..style = PaintingStyle.stroke
+      ..color = color.withValues(alpha: (0.4 + (0.6 * intensity)).clamp(0.0, 1.0))
+      ..style = .stroke
       ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.square;
+      ..strokeCap = .square;
 
-    canvas.drawArc(rect, 0, math.pi / 2, false, outerPaint);
-    canvas.drawArc(rect, math.pi, math.pi / 2, false, outerPaint);
+    canvas
+      ..drawArc(rect, 0, math.pi / 2, false, outerPaint)
+      ..drawArc(rect, math.pi, math.pi / 2, false, outerPaint);
 
     // Clamp inner ring
     final innerPaint = Paint()
-      ..color = color.withOpacity((0.2 + (0.3 * intensity)).clamp(0.0, 1.0))
-      ..style = PaintingStyle.stroke
+      ..color = color.withValues(alpha: (0.2 + (0.3 * intensity)).clamp(0.0, 1.0))
+      ..style = .stroke
       ..strokeWidth = 1.0;
 
     canvas.drawCircle(center, radius - 6.0, innerPaint);
