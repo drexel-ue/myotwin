@@ -3,19 +3,28 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
+/// A holographic frosted-glass HUD panel with radiating laser effects.
 class FrostedHUD extends StatelessWidget {
+  /// Creates a holographic frosted-glass HUD panel with radiating laser effects.
   const FrostedHUD({
     super.key,
+    /// Optional title text displayed in uppercase at the top of the panel.
     this.title,
     required this.child,
+    /// Offset on the box edge where the tether physically touches (used for laser computation).
     required this.impactPoint,
+    /// Normalized animation progress driving the laser spread and fade, from 0.0 to 1.0.
     this.animationProgress = 1.0,
   });
 
+  /// The HUD title text.
   final String? title;
+  /// The content widget displayed inside the HUD panel.
   final Widget child;
+  /// Offset on the box edge where the tether physically touches (used for laser computation).
+  final Offset impactPoint;
+  /// Normalized animation progress driving the laser spread and fade, from 0.0 to 1.0.
   final double animationProgress;
-  final Offset impactPoint; // New architectural requirement
 
   @override
   Widget build(BuildContext context) {

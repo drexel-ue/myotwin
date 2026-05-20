@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 class NullableAlignmentAddon extends Addon<Alignment?> with SingleFieldOnly {
-  NullableAlignmentAddon() : super(name: 'Alignment', initialValue: null);
+  NullableAlignmentAddon() : super(name: 'Alignment', initialValue: .center);
 
   static final Map<Alignment?, String> alignments = {
     null: 'None',

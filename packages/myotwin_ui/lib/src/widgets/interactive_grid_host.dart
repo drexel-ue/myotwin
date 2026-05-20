@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
+/// A pannable/flashable container that hosts a precision grid background
+/// and user-supplied child content.
 class InteractiveGridHost extends StatefulWidget {
+  /// Creates a pannable/flashable container that hosts a precision grid background
+  /// and user-supplied child content.
   const InteractiveGridHost({
     super.key,
+    /// The widget content rendered above the grid background.
     required this.child,
   });
 
+  /// The widget content rendered above the grid background.
   final Widget child;
 
+  /// Creates the mutable state for this widget.
   @override
   State<InteractiveGridHost> createState() => _InteractiveGridHostState();
 }

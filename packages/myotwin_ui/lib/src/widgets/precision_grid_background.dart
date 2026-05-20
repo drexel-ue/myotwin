@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
+/// A GPU-rendered precision-grid background with radial fade-to-darkness.
 class PrecisionGridBackground extends StatelessWidget {
+  /// Creates a GPU-rendered precision-grid background with radial fade-to-darkness.
   const PrecisionGridBackground({
     super.key,
-    this.offset = Offset.zero,
+    this.offset = .zero,
   });
-
+  /// The grid offset applied to the canvas, supporting panning.
   final Offset offset;
 
 
@@ -50,7 +52,7 @@ class _PrecisionGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // 1. Fill the deep mechatronic void
-    canvas.drawColor(backgroundColor, BlendMode.src);
+    canvas.drawColor(backgroundColor, .src);
 
     final bounds = Offset.zero & size;
 
