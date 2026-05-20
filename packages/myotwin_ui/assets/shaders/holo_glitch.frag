@@ -2,7 +2,8 @@
 
 uniform vec2 u_size;
 uniform float u_time;
-uniform float u_intensity;
+uniform float u_intensity; // The on/off spike (0.0 to 1.0)
+uniform float u_severity;  // NEW: The violence multiplier (0.0 to 1.0)
 uniform sampler2D u_texture;
 
 out vec4 fragColor;
@@ -40,44 +41,46 @@ void main() {
         return;
     }
 
-    // 1. Exaggerated Tearing
-    float tear = 0.0;
-    // Chunkier horizontal bands (12.0 instead of 24.0)
-    float lineNoise = hash(vec2(floor(uv.y * 12.0), u_time));
+    // --- THE DYNAMIC MATH ---
+    // mix(min, max, slider) smoothly interpolates between the two values
 
-    // Lowered threshold (0.7) means more bands tear at the exact same time
-    if (lineNoise > 0.7) {
-        // MASSIVE horizontal throw (0.35 multiplier)
-        tear = (hash(vec2(uv.y, u_time)) - 0.5) * 0.35 * u_intensity;
+    // 1. Band Thickness: 24.0 (thin/fine) down to 8.0 (chunky/thick)
+    float bands = mix(24.0, 8.0, u_severity);
+    float lineNoise = hash(vec2(floor(uv.y * bands), u_time));
+
+    // 2. Tear Distance: 0.05 (tiny shift) up to 0.40 (massive throw)
+    float maxTear = mix(0.05, 0.40, u_severity);
+
+    float tear = 0.0;
+
+    // 3. Frequency Threshold: Low severity = rare tears. High severity = many tears at once.
+    float threshold = mix(0.9, 0.7, u_severity);
+    if (lineNoise > threshold) {
+        tear = (hash(vec2(uv.y, u_time)) - 0.5) * maxTear * u_intensity;
     }
     vec2 uvTear = uv + vec2(tear, 0.0);
 
-    // EXAGGERATED Chromatic Aberration Split
-    float split = 0.12 * u_intensity;
+    // 4. Color Split: 0.02 (tight) up to 0.15 (wide separation)
+    float split = mix(0.02, 0.15, u_severity) * u_intensity;
 
-    // 2. Strict Bounds Checking to prevent edge-smearing
+    // Bounds Checking
     if (uvTear.x < 0.0 || uvTear.x > 1.0) {
         fragColor = vec4(0.0);
         return;
     }
 
-    // 3. Sample Textures using the massive new split distances
     vec4 colCenter = texture(u_texture, uvTear);
     vec4 colLeft = texture(u_texture, clamp(uvTear - vec2(split, 0.0), 0.0, 1.0));
     vec4 colRight = texture(u_texture, clamp(uvTear + vec2(split, 0.0), 0.0, 1.0));
 
-    // 4. Strip Premultiplied Alpha
     vec3 rgbCenter = unpremul(colCenter);
     vec3 rgbLeft = unpremul(colLeft);
     vec3 rgbRight = unpremul(colRight);
 
-    // 5. Apply YIQ Chromatic Math
     float y = rgb2yiq(rgbCenter).r;
     float i = rgb2yiq(rgbLeft).g;
     float q = rgb2yiq(rgbRight).b;
 
     vec3 glitchedRGB = yiq2rgb(vec3(y, i, q));
-
-    // 6. Re-Premultiply with the center alpha to hand safely back to Flutter
     fragColor = vec4(glitchedRGB * colCenter.a, colCenter.a);
 }

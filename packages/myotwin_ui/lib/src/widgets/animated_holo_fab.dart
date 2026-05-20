@@ -71,6 +71,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
   double _currentSpeed = 0.3; // Current cycles per second
   double _visualIntensity = 0.0; // 0.0 = Idle (Dim), 1.0 = Active (Bright)
   double _glitchIntensity = 0.0;
+  double _currentSeverity = 0.1;
 
   @override
   void initState() {
@@ -87,50 +88,42 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
     final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
     _lastTime = elapsed;
 
-    // --- 1. STATE-BASED GLITCH PROBABILITY ---
+    double targetSpeed;
+    double targetIntensity;
+    double targetSeverity; // Target for the glitch violence
     var glitchChance = 0.0;
 
     switch (widget.state) {
-      case HoloState.idle:
-        glitchChance = 0.005; // 0.5% chance per frame (~rare flicker)
-      case HoloState.thinking:
-        glitchChance = 0.025; // 2.5% chance per frame (~frequent searching pops)
-      case HoloState.active:
-        glitchChance = 0.08; // 8.0% chance per frame (Highly volatile, unstable energy)
+      case .idle:
+        targetSpeed = 0.25;
+        targetIntensity = 0.0;
+        targetSeverity = 0.1; // Very mild, tight micro-flickers
+        glitchChance = 0.005;
+      case .thinking:
+        targetSpeed = 3.5;
+        targetIntensity = 0.5;
+        targetSeverity = 0.5; // Medium thickness and tearing
+        glitchChance = 0.025;
+      case .active:
+        targetSpeed = 1.5;
+        targetIntensity = 1.0;
+        targetSeverity = 1.0; // Violent, chunky holographic tearing
+        glitchChance = 0.08;
     }
 
-    // Trigger the glitch if the random roll hits the threshold
+    // Smoothly transition the severity alongside speed and brightness
+    _currentSpeed += (targetSpeed - _currentSpeed) * 8.0 * dt;
+    _visualIntensity += (targetIntensity - _visualIntensity) * 8.0 * dt;
+    _currentSeverity += (targetSeverity - _currentSeverity) * 8.0 * dt;
+
     if (math.Random().nextDouble() < glitchChance) {
       _glitchIntensity = 1.0;
     }
 
-    // Smoothly decay the glitch.
-    // (Lowered from 4.0 to 2.5 so the exaggerated effect hangs on the screen slightly longer)
     if (_glitchIntensity > 0.0) {
       _glitchIntensity = math.max(0.0, _glitchIntensity - (dt * 2.5));
     }
 
-    // 1. Define physical targets based on the ternary state machine
-    double targetSpeed;
-    double targetIntensity;
-
-    switch (widget.state) {
-      case .idle:
-        targetSpeed = 0.25; // Slow standby rotation
-        targetIntensity = 0.0;
-      case .thinking:
-        targetSpeed = 3.5; // Very fast "searching/processing" spin
-        targetIntensity = 0.5; // Half-brightness to indicate spooling
-      case .active:
-        targetSpeed = 1.5; // Powerful, steady rhythm
-        targetIntensity = 1.0; // Locked in at max brightness
-    }
-
-    // 2. The friction math seamlessly handles jumping between ANY of the 3 states
-    _currentSpeed += (targetSpeed - _currentSpeed) * 8.0 * dt;
-    _visualIntensity += (targetIntensity - _visualIntensity) * 8.0 * dt;
-
-    // 3. Accumulate continuous phase
     _phase += dt * _currentSpeed;
     _phase %= 1.0;
 
@@ -162,19 +155,17 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
           // AnimatedSampler captures the child widget as a texture 60 times a second
           return AnimatedSampler(
             (image, size, canvas) {
-              // Feed the uniforms to the GLSL code
               shader
                 ..setFloat(0, size.width)
                 ..setFloat(1, size.height)
-                ..setFloat(2, _phase * 10.0) // Multiply phase so the noise seed moves rapidly
+                ..setFloat(2, _phase * 15.0)
                 ..setFloat(3, _glitchIntensity)
-                ..setImageSampler(0, image);
 
-              // Paint the glitched texture back onto the canvas
-              canvas.drawRect(
-                Offset.zero & size,
-                Paint()..shader = shader,
-              );
+                // THE NEW UNIFORM: Pass the dynamically lerped severity!
+                ..setFloat(4, _currentSeverity)
+
+                ..setImageSampler(0, image);
+              canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
             },
             child: Padding(
               padding: allPadding64,
