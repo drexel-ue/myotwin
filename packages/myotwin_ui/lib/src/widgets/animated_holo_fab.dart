@@ -1,16 +1,21 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+
+enum HoloState { idle, active }
 
 class AnimatedHoloFAB extends StatefulWidget {
+  final HoloState state;
   final VoidCallback onPressed;
   final Widget icon;
-  final Color activeColor;
+  final Color baseColor;
 
   const AnimatedHoloFAB({
     super.key,
+    required this.state,
     required this.onPressed,
     required this.icon,
-    this.activeColor = Colors.cyanAccent, // Holographic default
+    this.baseColor = Colors.cyanAccent,
   });
 
   @override
@@ -18,121 +23,141 @@ class AnimatedHoloFAB extends StatefulWidget {
 }
 
 class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+  late final Ticker _ticker;
+  Duration _lastTime = Duration.zero;
+
+  // The engine variables
+  double _phase = 0.0; // Loops continuously from 0.0 to 1.0
+  double _currentSpeed = 0.3; // Current cycles per second
+  double _visualIntensity = 0.0; // 0.0 = Idle (Dim), 1.0 = Active (Bright)
 
   @override
   void initState() {
     super.initState();
-    // The master timeline: 1.5 seconds for a complete rotation and scan cycle
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(); // Loops infinitely just like the video
+    _ticker = createTicker(_onTick)..start();
+  }
+
+  void _onTick(Duration elapsed) {
+    if (_lastTime == Duration.zero) {
+      _lastTime = elapsed;
+      return;
+    }
+
+    // Hardware-agnostic delta time calculation
+    final double dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
+    _lastTime = elapsed;
+
+    // 1. Define physical targets based on the current enum state
+    final double targetSpeed = widget.state == HoloState.active ? 1.5 : 0.25;
+    final double targetIntensity = widget.state == HoloState.active ? 1.0 : 0.0;
+
+    // 2. Apply smooth acceleration/deceleration (The "Spool Up" effect)
+    // Multiplying by 8.0 dictates the transition friction.
+    _currentSpeed += (targetSpeed - _currentSpeed) * 8.0 * dt;
+    _visualIntensity += (targetIntensity - _visualIntensity) * 8.0 * dt;
+
+    // 3. Accumulate continuous phase
+    _phase += dt * _currentSpeed;
+    _phase %= 1.0; // Keep it looping cleanly between 0.0 and 1.0
+
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final rotation = _phase * 2 * math.pi;
+    final scanlineOffset = (_phase * 2) - 1.0;
+
+    // FIX 1: Normalize the sine wave so it pulses cleanly between 0.0 and 1.0
+    final normalizedPulse = (math.sin(_phase * 2 * math.pi) + 1.0) / 2.0;
+
     return GestureDetector(
       onTap: widget.onPressed,
-      // AnimatedBuilder rebuilds ONLY this specific button every frame (120fps safe)
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          // 1. ROTATION: Maps 0.0 -> 1.0 to a full 360 degrees (2 * Pi)
-          final rotation = _controller.value * 2 * math.pi;
-
-          // 2. SCANLINE: Maps 0.0 -> 1.0 to an offset moving from top (-1.0) to bottom (1.0)
-          final scanlineOffset = (_controller.value * 2) - 1.0;
-
-          // 3. GLOW PULSE: Uses a sine wave to create a smooth breathing effect
-          final pulse = math.sin(_controller.value * math.pi);
-
-          return Container(
-            width: 64.0,
-            height: 64.0,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black87, // Deep core to make the glow pop
-              boxShadow: [
-                BoxShadow(
-                  // The glow expands and brightens based on the sine wave pulse
-                  color: widget.activeColor.withOpacity(0.2 + (0.3 * pulse)),
-                  blurRadius: 15.0 + (10.0 * pulse),
-                  spreadRadius: 2.0 * pulse,
-                ),
-              ],
+      child: Container(
+        width: 64.0,
+        height: 64.0,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black87,
+          boxShadow: [
+            BoxShadow(
+              // FIX 2: Clamp the final opacity calculation to guarantee it never breaches 0.0 - 1.0
+              color: widget.baseColor.withOpacity(
+                (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
+              ),
+              blurRadius: 10.0 + (10.0 * normalizedPulse) + (15.0 * _visualIntensity),
+              spreadRadius: 1.0 + (3.0 * _visualIntensity * normalizedPulse),
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // --- LAYER 1: The Rotating Mechanical Arcs ---
-                Transform.rotate(
-                  angle: rotation,
-                  child: CustomPaint(
-                    size: const Size(64, 64),
-                    painter: _HoloArcPainter(color: widget.activeColor),
-                  ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Transform.rotate(
+              angle: rotation,
+              child: CustomPaint(
+                size: const Size(64, 64),
+                painter: _HoloArcPainter(
+                  color: widget.baseColor,
+                  intensity: _visualIntensity,
                 ),
-
-                // --- LAYER 2: The Moving Scanline Mask ---
-                // This shader applies a moving bright band across whatever icon you pass in
-                ShaderMask(
-                  shaderCallback: (bounds) {
-                    return LinearGradient(
-                      begin: Alignment(0.0, scanlineOffset - 0.5),
-                      end: Alignment(0.0, scanlineOffset + 0.5),
-                      colors: [
-                        Colors.white.withOpacity(0.2), // Dim leading edge
-                        Colors.white, // Bright scanline core
-                        Colors.white.withOpacity(0.2), // Dim trailing edge
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ).createShader(bounds);
-                  },
-                  blendMode: BlendMode.srcIn,
-                  child: widget.icon,
-                ),
-              ],
+              ),
             ),
-          );
-        },
+            ShaderMask(
+              shaderCallback: (bounds) {
+                return LinearGradient(
+                  begin: Alignment(0.0, scanlineOffset - 0.5),
+                  end: Alignment(0.0, scanlineOffset + 0.5),
+                  colors: [
+                    Colors.white.withOpacity(0.2),
+                    // Clamp shader opacities as well
+                    Colors.white.withOpacity((0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0)),
+                    Colors.white.withOpacity(0.2),
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ).createShader(bounds);
+              },
+              blendMode: BlendMode.srcIn,
+              child: widget.icon,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Draws the physical geometry of the spinning FAB border
 class _HoloArcPainter extends CustomPainter {
   final Color color;
+  final double intensity;
 
-  _HoloArcPainter({required this.color});
+  _HoloArcPainter({required this.color, required this.intensity});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 4.0; // Inset slightly from the very edge
+    final radius = size.width / 2 - 4.0;
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    // 1. The Thick Outer Tracking Arcs
+    // Clamp outer arcs
     final outerPaint = Paint()
-      ..color = color
+      ..color = color.withOpacity((0.4 + (0.6 * intensity)).clamp(0.0, 1.0))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.square; // Square caps give it that rigid, technical feel
+      ..strokeCap = StrokeCap.square;
 
-    // Draw two symmetrical arcs (90 degrees each) opposite each other
     canvas.drawArc(rect, 0, math.pi / 2, false, outerPaint);
     canvas.drawArc(rect, math.pi, math.pi / 2, false, outerPaint);
 
-    // 2. The Thin Inner Precision Ring
+    // Clamp inner ring
     final innerPaint = Paint()
-      ..color = color.withOpacity(0.3)
+      ..color = color.withOpacity((0.2 + (0.3 * intensity)).clamp(0.0, 1.0))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -141,6 +166,6 @@ class _HoloArcPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _HoloArcPainter oldDelegate) {
-    return color != oldDelegate.color;
+    return color != oldDelegate.color || intensity != oldDelegate.intensity;
   }
 }

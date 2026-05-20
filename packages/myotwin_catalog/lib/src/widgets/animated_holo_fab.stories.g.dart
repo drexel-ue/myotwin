@@ -42,9 +42,10 @@ class AnimatedHoloFABStory extends Story<AnimatedHoloFAB, AnimatedHoloFABArgs> {
              builder ??
              (context, args) => AnimatedHoloFAB(
                key: args.key,
+               state: args.state,
                onPressed: args.onPressed,
                icon: args.icon,
-               activeColor: args.activeColor,
+               baseColor: args.baseColor,
              ),
        );
 }
@@ -52,44 +53,62 @@ class AnimatedHoloFABStory extends Story<AnimatedHoloFAB, AnimatedHoloFABArgs> {
 class AnimatedHoloFABArgs extends StoryArgs<AnimatedHoloFAB> {
   AnimatedHoloFABArgs({
     Arg<Key?>? key,
+    Arg<HoloState>? state,
     required Arg<void Function()> onPressed,
     required Arg<Widget> icon,
-    Arg<Color>? activeColor,
+    Arg<Color>? baseColor,
   }) : this.keyArg = $initArg('key', key, null),
+       this.stateArg = $initArg(
+         'state',
+         state,
+         EnumArg<HoloState>(HoloState.idle, values: HoloState.values),
+       )!,
        this.onPressedArg = $initArg('onPressed', onPressed, null)!,
        this.iconArg = $initArg('icon', icon, null)!,
-       this.activeColorArg = $initArg(
-         'activeColor',
-         activeColor,
+       this.baseColorArg = $initArg(
+         'baseColor',
+         baseColor,
          ColorArg(Colors.cyanAccent),
        )!;
 
   AnimatedHoloFABArgs.fixed({
     Key? key,
+    HoloState state = HoloState.idle,
     required void Function() onPressed,
     required Widget icon,
-    Color activeColor = Colors.cyanAccent,
+    Color baseColor = Colors.cyanAccent,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
+       this.stateArg = Arg.fixed(state),
        this.onPressedArg = Arg.fixed(onPressed),
        this.iconArg = Arg.fixed(icon),
-       this.activeColorArg = Arg.fixed(activeColor);
+       this.baseColorArg = Arg.fixed(baseColor);
 
   final Arg<Key?>? keyArg;
+
+  final Arg<HoloState> stateArg;
 
   final Arg<void Function()> onPressedArg;
 
   final Arg<Widget> iconArg;
 
-  final Arg<Color> activeColorArg;
+  final Arg<Color> baseColorArg;
 
   Key? get key => keyArg?.value;
+
+  HoloState get state => stateArg.value;
 
   void Function() get onPressed => onPressedArg.value;
 
   Widget get icon => iconArg.value;
 
-  Color get activeColor => activeColorArg.value;
+  Color get baseColor => baseColorArg.value;
 
   @override
-  List<Arg?> get list => [keyArg, onPressedArg, iconArg, activeColorArg];
+  List<Arg?> get list => [
+    keyArg,
+    stateArg,
+    onPressedArg,
+    iconArg,
+    baseColorArg,
+  ];
 }
