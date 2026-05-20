@@ -87,15 +87,27 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
     final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
     _lastTime = elapsed;
 
-    // --- RANDOM GLITCH TRIGGER ---
-    // roughly 2% chance to trigger per frame, but only if the system is active or thinking
-    if (widget.state != HoloState.idle && math.Random().nextDouble() > 0.98) {
-      _glitchIntensity = 1.0; // Spike the shader
+    // --- 1. STATE-BASED GLITCH PROBABILITY ---
+    var glitchChance = 0.0;
+
+    switch (widget.state) {
+      case HoloState.idle:
+        glitchChance = 0.005; // 0.5% chance per frame (~rare flicker)
+      case HoloState.thinking:
+        glitchChance = 0.025; // 2.5% chance per frame (~frequent searching pops)
+      case HoloState.active:
+        glitchChance = 0.08; // 8.0% chance per frame (Highly volatile, unstable energy)
     }
 
-    // Smoothly decay the glitch over ~250ms so it snaps in and fades out
+    // Trigger the glitch if the random roll hits the threshold
+    if (math.Random().nextDouble() < glitchChance) {
+      _glitchIntensity = 1.0;
+    }
+
+    // Smoothly decay the glitch.
+    // (Lowered from 4.0 to 2.5 so the exaggerated effect hangs on the screen slightly longer)
     if (_glitchIntensity > 0.0) {
-      _glitchIntensity = math.max(0.0, _glitchIntensity - (dt * 4.0));
+      _glitchIntensity = math.max(0.0, _glitchIntensity - (dt * 2.5));
     }
 
     // 1. Define physical targets based on the ternary state machine
@@ -165,7 +177,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
               );
             },
             child: Padding(
-              padding: allPadding32,
+              padding: allPadding64,
               child: Container(
                 width: 64.0,
                 height: 64.0,

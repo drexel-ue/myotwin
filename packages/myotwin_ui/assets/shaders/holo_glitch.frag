@@ -40,24 +40,28 @@ void main() {
         return;
     }
 
-    // 1. Tearing
+    // 1. Exaggerated Tearing
     float tear = 0.0;
-    float lineNoise = hash(vec2(floor(uv.y * 24.0), u_time));
-    if (lineNoise > 0.85) {
-        // Reduced the tear magnitude slightly so it doesn't leave the bounding box
-        tear = (hash(vec2(uv.y, u_time)) - 0.5) * 0.08 * u_intensity;
+    // Chunkier horizontal bands (12.0 instead of 24.0)
+    float lineNoise = hash(vec2(floor(uv.y * 12.0), u_time));
+
+    // Lowered threshold (0.7) means more bands tear at the exact same time
+    if (lineNoise > 0.7) {
+        // MASSIVE horizontal throw (0.35 multiplier)
+        tear = (hash(vec2(uv.y, u_time)) - 0.5) * 0.35 * u_intensity;
     }
     vec2 uvTear = uv + vec2(tear, 0.0);
 
-    float split = 0.03 * u_intensity;
+    // EXAGGERATED Chromatic Aberration Split
+    float split = 0.12 * u_intensity;
 
-    // 2. Bounds Checking (Prevents edge-smearing)
+    // 2. Strict Bounds Checking to prevent edge-smearing
     if (uvTear.x < 0.0 || uvTear.x > 1.0) {
         fragColor = vec4(0.0);
         return;
     }
 
-    // 3. Sample Textures
+    // 3. Sample Textures using the massive new split distances
     vec4 colCenter = texture(u_texture, uvTear);
     vec4 colLeft = texture(u_texture, clamp(uvTear - vec2(split, 0.0), 0.0, 1.0));
     vec4 colRight = texture(u_texture, clamp(uvTear + vec2(split, 0.0), 0.0, 1.0));
