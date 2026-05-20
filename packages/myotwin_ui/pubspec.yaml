@@ -12,10 +12,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_shaders: ^0.1.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
 flutter:
+  shaders:
+    - assets/shaders/holo_glitch.frag
   uses-material-design: true

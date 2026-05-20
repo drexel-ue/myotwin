@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:myotwin_ui/src/theme/myotwin_theme.dart';
+import 'package:flutter_shaders/flutter_shaders.dart';
+import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// States that control the FAB's animation speed and glow intensity.
 enum HoloState {
@@ -69,6 +70,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
   double _phase = 0.0; // Loops continuously from 0.0 to 1.0
   double _currentSpeed = 0.3; // Current cycles per second
   double _visualIntensity = 0.0; // 0.0 = Idle (Dim), 1.0 = Active (Bright)
+  double _glitchIntensity = 0.0;
 
   @override
   void initState() {
@@ -84,6 +86,17 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
 
     final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
     _lastTime = elapsed;
+
+    // --- RANDOM GLITCH TRIGGER ---
+    // roughly 2% chance to trigger per frame, but only if the system is active or thinking
+    if (widget.state != HoloState.idle && math.Random().nextDouble() > 0.98) {
+      _glitchIntensity = 1.0; // Spike the shader
+    }
+
+    // Smoothly decay the glitch over ~250ms so it snaps in and fades out
+    if (_glitchIntensity > 0.0) {
+      _glitchIntensity = math.max(0.0, _glitchIntensity - (dt * 4.0));
+    }
 
     // 1. Define physical targets based on the ternary state machine
     double targetSpeed;
@@ -130,55 +143,82 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
 
     return GestureDetector(
       onTap: widget.onPressed,
-      child: Container(
-        width: 64.0,
-        height: 64.0,
-        decoration: BoxDecoration(
-          shape: .circle,
-          color: context.myoTheme.surface,
-          boxShadow: [
-            BoxShadow(
-              // FIX 2: Clamp the final opacity calculation to guarantee it never breaches 0.0 - 1.0
-              color: baseColor.withValues(
-                alpha: (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
-              ),
-              blurRadius: 10.0 + (10.0 * normalizedPulse) + (15.0 * _visualIntensity),
-              spreadRadius: 1.0 + (3.0 * _visualIntensity * normalizedPulse),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: .center,
-          children: [
-            Transform.rotate(
-              angle: rotation,
-              child: CustomPaint(
-                size: const Size.square(64.0),
-                painter: _HoloArcPainter(
-                  color: baseColor,
-                  intensity: _visualIntensity,
+      // ShaderBuilder compiles the .frag file asynchronously and caches it
+      child: ShaderBuilder(
+        assetKey: 'packages/myotwin_ui/assets/shaders/holo_glitch.frag',
+        (context, shader, child) {
+          // AnimatedSampler captures the child widget as a texture 60 times a second
+          return AnimatedSampler(
+            (image, size, canvas) {
+              // Feed the uniforms to the GLSL code
+              shader
+                ..setFloat(0, size.width)
+                ..setFloat(1, size.height)
+                ..setFloat(2, _phase * 10.0) // Multiply phase so the noise seed moves rapidly
+                ..setFloat(3, _glitchIntensity)
+                ..setImageSampler(0, image);
+
+              // Paint the glitched texture back onto the canvas
+              canvas.drawRect(
+                Offset.zero & size,
+                Paint()..shader = shader,
+              );
+            },
+            child: Padding(
+              padding: allPadding32,
+              child: Container(
+                width: 64.0,
+                height: 64.0,
+                decoration: BoxDecoration(
+                  shape: .circle,
+                  color: context.myoTheme.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      // FIX 2: Clamp the final opacity calculation to guarantee it never breaches 0.0 - 1.0
+                      color: baseColor.withValues(
+                        alpha: (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
+                      ),
+                      blurRadius: 10.0 + (10.0 * normalizedPulse) + (15.0 * _visualIntensity),
+                      spreadRadius: 1.0 + (3.0 * _visualIntensity * normalizedPulse),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: .center,
+                  children: [
+                    Transform.rotate(
+                      angle: rotation,
+                      child: CustomPaint(
+                        size: const Size.square(64.0),
+                        painter: _HoloArcPainter(
+                          color: baseColor,
+                          intensity: _visualIntensity,
+                        ),
+                      ),
+                    ),
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return LinearGradient(
+                          begin: Alignment(0.0, scanlineOffset - 0.5),
+                          end: Alignment(0.0, scanlineOffset + 0.5),
+                          colors: [
+                            context.myoTheme.white.withValues(alpha: 0.2),
+                            // Clamp shader opacities as well
+                            context.myoTheme.white.withValues(alpha: (0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0)),
+                            context.myoTheme.white.withValues(alpha: 0.2),
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ).createShader(bounds);
+                      },
+                      blendMode: .srcIn,
+                      child: widget.icon,
+                    ),
+                  ],
                 ),
               ),
             ),
-            ShaderMask(
-              shaderCallback: (bounds) {
-                return LinearGradient(
-                  begin: Alignment(0.0, scanlineOffset - 0.5),
-                  end: Alignment(0.0, scanlineOffset + 0.5),
-                  colors: [
-                    context.myoTheme.white.withValues(alpha: 0.2),
-                    // Clamp shader opacities as well
-                    context.myoTheme.white.withValues(alpha: (0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0)),
-                    context.myoTheme.white.withValues(alpha: 0.2),
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ).createShader(bounds);
-              },
-              blendMode: .srcIn,
-              child: widget.icon,
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
