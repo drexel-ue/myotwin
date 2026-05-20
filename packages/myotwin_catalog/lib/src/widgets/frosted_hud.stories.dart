@@ -20,10 +20,4 @@ final $Default = _Story(
       ),
     ),
   ),
-  builder: (context, args) {
-    return FrostedHUD(
-      impactPoint: args.impactPoint,
-      child: args.child,
-    );
-  },
 );

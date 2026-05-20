@@ -94,14 +94,14 @@ class _InteractiveGridHostState extends State<InteractiveGridHost> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
-      child: Stack(
-        children: [
-          // Feed the live coordinates into the GPU painter
-          Positioned.fill(
+    return Stack(
+      children: [
+        // Feed the live coordinates into the GPU painter
+        Positioned.fill(
+          child: GestureDetector(
+            onPanStart: _onPanStart,
+            onPanUpdate: _onPanUpdate,
+            onPanEnd: _onPanEnd,
             child: ValueListenableBuilder(
               valueListenable: _cameraPan,
               builder: (context, offset, _) {
@@ -109,16 +109,11 @@ class _InteractiveGridHostState extends State<InteractiveGridHost> with SingleTi
               },
             ),
           ),
+        ),
 
-          // Your 3D Model or UI components would go here in the foreground
-          Align(
-            child: Padding(
-              padding: allPadding32 * 6,
-              child: widget.child,
-            ),
-          ),
-        ],
-      ),
+        // Your 3D Model or UI components would go here in the foreground
+        widget.child,
+      ],
     );
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -22,39 +21,40 @@ class FrostedHUD extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: theme.radiusSm,
-      ),
-      child: CustomPaint(
-        painter: _RadiatingHUDPainter(
-          progress: animationProgress,
-          impactPoint: impactPoint,
-          strokeColor: theme.white,
-          outlineColor: theme.outline,
-        ),
-        child: Padding(
-          padding: allPadding16,
-          // Content fades in relative to the radiating loop progress window
-          child: Opacity(
-            opacity: (animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
-            child: Column(
-              crossAxisAlignment: .start,
-              mainAxisSize: .min,
-              children: [
-                if (title case final String title when title.isNotEmpty) ...[
-                  Text(title.toUpperCase(), style: theme.headlineMedium),
-                  Divider(color: theme.outline, height: 16.0),
-                ],
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: math.min(context.screenWidth - 32.0 - 16.0, 600.0),
-                    maxHeight: math.min(context.screenHeight - 32.0 - 16.0, 600.0),
-                  ),
-                  child: child,
+    return ClipRRect(
+      borderRadius: theme.radiusSm,
+      child: BackdropFilter(
+        // This is the "holographic" glass effect
+        filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            // IMPORTANT: Lower the alpha so the window is semi-transparent
+            color: theme.surfaceElevated.withValues(alpha: 0.6),
+            border: Border.all(color: theme.outline),
+            borderRadius: theme.radiusSm,
+          ),
+          child: CustomPaint(
+            painter: _RadiatingHUDPainter(
+              progress: animationProgress,
+              impactPoint: impactPoint,
+              strokeColor: theme.white,
+              outlineColor: theme.outline,
+            ),
+            child: Padding(
+              padding: allPadding16,
+              child: Opacity(
+                opacity: (animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (title case final String title when title.isNotEmpty) ...[
+                      Text(title.toUpperCase(), style: theme.headlineMedium),
+                      Divider(color: theme.outline, height: 16.0),
+                    ],
+                    child,
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
