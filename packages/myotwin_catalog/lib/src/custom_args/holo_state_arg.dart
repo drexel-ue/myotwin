@@ -7,5 +7,6 @@ class HoloStateArg extends SingleArg<HoloState> {
         .idle,
         values: HoloState.values,
         style: const SegmentedSingleArgStyle(),
+        labelBuilder: (state) => state.name,
       );
 }
