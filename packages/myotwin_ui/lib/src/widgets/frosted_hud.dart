@@ -1,10 +1,12 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A holographic frosted-glass HUD panel with radiating laser effects.
-class FrostedHUD extends StatelessWidget {
+class FrostedHUD extends StatefulWidget {
   /// Creates a holographic frosted-glass HUD panel with radiating laser effects.
   const FrostedHUD({
     super.key,
@@ -18,6 +20,8 @@ class FrostedHUD extends StatelessWidget {
 
     /// Normalized animation progress driving the laser spread and fade, from 0.0 to 1.0.
     this.animationProgress = 1.0,
+
+    this.glitchIntensity = 0.5,
   });
 
   /// The HUD title text.
@@ -32,47 +36,128 @@ class FrostedHUD extends StatelessWidget {
   /// Normalized animation progress driving the laser spread and fade, from 0.0 to 1.0.
   final double animationProgress;
 
+  /// External glitch intensity amplifier (0.0–1.0). Controls the frequency and
+  /// strength of random YIQ chromatic-aberration spikes applied by the shader.
+  final double glitchIntensity;
+
+  @override
+  State<FrostedHUD> createState() => _FrostedHUDState();
+}
+
+class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateMixin {
+  late final Ticker _ticker;
+  Duration _lastTime = Duration.zero;
+
+  double _phase = 0.0;
+  double _glitchIntensity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_onTick)..start().ignore();
+  }
+
+  void _onTick(Duration elapsed) {
+    if (_lastTime == Duration.zero) {
+      _lastTime = elapsed;
+      return;
+    }
+
+    final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
+    _lastTime = elapsed;
+
+    if (math.Random().nextDouble() < (0.01 * widget.glitchIntensity)) {
+      _glitchIntensity = 1.0;
+    }
+
+    if (_glitchIntensity > 0.0) {
+      _glitchIntensity = math.max(0.0, _glitchIntensity - dt * 2.5);
+    }
+
+    _phase += dt * 0.3;
+    _phase %= 1.0;
+
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
-    return ClipRRect(
-      borderRadius: theme.radiusSm,
-      child: BackdropFilter(
-        // This is the "holographic" glass effect
-        filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            // IMPORTANT: Lower the alpha so the window is semi-transparent
-            color: theme.surfaceElevated.withValues(alpha: 0.0),
-            border: Border.all(color: theme.outline),
-            borderRadius: theme.radiusSm,
-          ),
-          child: CustomPaint(
-            painter: _RadiatingHUDPainter(
-              progress: animationProgress,
-              impactPoint: impactPoint,
-              strokeColor: theme.white,
-              outlineColor: theme.outline,
-            ),
-            child: Padding(
-              padding: allPadding16,
-              child: Opacity(
-                opacity: (animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (title case final String title when title.isNotEmpty) ...[
-                      Text(title.toUpperCase(), style: theme.headlineMedium),
-                      Divider(color: theme.outline, height: 16.0),
-                    ],
-                    child,
-                  ],
+    return Padding(
+      padding: allPadding32,
+      child: Stack(
+        clipBehavior: .none,
+        children: [
+          // --- LAYER 1: The Stable Glass ---
+          // Positioned.fill automatically sizes this glass pane to match the exact
+          // logical layout footprint of the HoloGlitch widget below it.
+          Positioned(
+            top: 32.0,
+            bottom: 32.0,
+            left: 32.0,
+            right: 32.0,
+            child: ClipRRect(
+              borderRadius: theme.radiusSm,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                child: const ColoredBox(
+                  color: Colors.transparent,
                 ),
               ),
             ),
           ),
-        ),
+
+          // --- LAYER 2: The Glitched Content ---
+          HoloGlitch(
+            phase: _phase,
+            intensity: _glitchIntensity,
+            severity: 0.5,
+            child: Padding(
+              padding: allPadding32,
+              child: ClipRRect(
+                borderRadius: theme.radiusSm,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border.all(color: theme.outline),
+                    borderRadius: theme.radiusSm,
+                  ),
+                  child: CustomPaint(
+                    painter: _RadiatingHUDPainter(
+                      progress: widget.animationProgress,
+                      impactPoint: widget.impactPoint,
+                      strokeColor: theme.white,
+                      outlineColor: theme.outline,
+                    ),
+                    child: Padding(
+                      padding: allPadding16,
+                      child: Opacity(
+                        opacity: (widget.animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.title case final String title when title.isNotEmpty) ...[
+                              Text(title.toUpperCase(), style: theme.headlineMedium),
+                              Divider(color: theme.outline, height: 16.0),
+                            ],
+                            widget.child,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
