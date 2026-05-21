@@ -9,6 +9,8 @@ enum HoloState {
   /// Slow standby rotation with dim glow.
   idle,
 
+  listening,
+
   /// Fast processing rotation with half-brightness glow.
   thinking,
 
@@ -72,6 +74,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
   double _visualIntensity = 0.0; // 0.0 = Idle (Dim), 1.0 = Active (Bright)
   double _glitchIntensity = 0.0;
   double _currentSeverity = 0.1;
+  double _pulseMultiplier = 1.0;
 
   @override
   void initState() {
@@ -91,6 +94,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
     double targetSpeed;
     double targetIntensity;
     double targetSeverity; // Target for the glitch violence
+    var targetPulse = 1.0;
     var glitchChance = 0.0;
 
     switch (widget.state) {
@@ -99,22 +103,32 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
         targetIntensity = 0.0;
         targetSeverity = 0.1; // Very mild, tight micro-flickers
         glitchChance = 0.005;
+        targetPulse = 1.0; // Normal heartbeat
+      case .listening:
+        targetSpeed = 0.8; // Smooth, deliberate sweeping pace
+        targetIntensity = 0.5; // A soft, receptive baseline glow
+        targetSeverity = 0.0; // Perfectly stable, clean channel
+        glitchChance = 0.001; // Near-zero static so it doesn't distract the user
+        targetPulse = 0.0; // Flatten the sine wave completely
       case .thinking:
         targetSpeed = 3.5;
-        targetIntensity = 0.5;
+        targetIntensity = 0.8;
         targetSeverity = 0.5; // Medium thickness and tearing
         glitchChance = 0.025;
+        targetPulse = 0.0; // Normal heartbeat
       case .active:
         targetSpeed = 1.5;
         targetIntensity = 1.0;
         targetSeverity = 1.0; // Violent, chunky holographic tearing
         glitchChance = 0.08;
+        targetPulse = 1.0; // Normal heartbeat
     }
 
     // Smoothly transition the severity alongside speed and brightness
     _currentSpeed += (targetSpeed - _currentSpeed) * 8.0 * dt;
     _visualIntensity += (targetIntensity - _visualIntensity) * 8.0 * dt;
     _currentSeverity += (targetSeverity - _currentSeverity) * 8.0 * dt;
+    _pulseMultiplier += (targetPulse - _pulseMultiplier) * 8.0 * dt;
 
     if (math.Random().nextDouble() < glitchChance) {
       _glitchIntensity = 1.0;
@@ -142,7 +156,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
     final scanlineOffset = (_phase * 2) - 1.0;
 
     // FIX 1: Normalize the sine wave so it pulses cleanly between 0.0 and 1.0
-    final normalizedPulse = (math.sin(_phase * 2 * math.pi) + 1.0) / 2.0;
+    final normalizedPulse = ((math.sin(_phase * 2 * math.pi) + 1.0) / 2.0) * _pulseMultiplier;
 
     final baseColor = widget.baseColor ?? context.myoTheme.white;
 

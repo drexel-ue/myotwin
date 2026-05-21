@@ -16,14 +16,20 @@ typedef _Scenario = AnimatedHoloFABScenario;
 typedef _Defaults = AnimatedHoloFABDefaults;
 typedef _Story = AnimatedHoloFABStory;
 typedef _Args = AnimatedHoloFABArgs;
-final AnimatedHoloFABComponent =
-    Component<AnimatedHoloFAB, AnimatedHoloFABArgs>(
-      name: meta.name ?? 'AnimatedHoloFAB',
-      path: meta.path ?? 'widgets',
-      docsBuilder: meta.docsBuilder,
-      docComment: null,
-      stories: [$Default..$generatedName = 'Default'],
-    );
+final AnimatedHoloFABComponent = Component<AnimatedHoloFAB, AnimatedHoloFABArgs>(
+  name: meta.name ?? 'AnimatedHoloFAB',
+  path: meta.path ?? 'widgets',
+  docsBuilder: meta.docsBuilder,
+  docComment:
+      r'''An animated holographic FAB with three states: idle, thinking, and active.
+
+The button features a rotating arc border and a moving scanline shader
+that responds to the provided [state]. In [HoloState.idle] the FAB
+rotates slowly at reduced brightness; in [HoloState.thinking] it spins
+rapidly at half brightness; in [HoloState.active] it reaches full speed
+and maximum glow.''',
+  stories: [$Default..$generatedName = 'Default'],
+);
 typedef AnimatedHoloFABScenario =
     Scenario<AnimatedHoloFAB, AnimatedHoloFABArgs>;
 typedef AnimatedHoloFABDefaults =
