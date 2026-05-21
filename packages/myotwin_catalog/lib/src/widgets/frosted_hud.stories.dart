@@ -16,7 +16,9 @@ final $Default = _Story(
       const SizedBox(
         width: 300.0, // Forces the HUD to be exactly 300px wide
         height: 150.0, // Forces the HUD to be exactly 150px tall
-        child: Text('TISSUE INTEGRITY: NOMINAL\nTORQUE LIMITS: EXCEEDED'),
+        child: HolographicDecryptText(
+          'TISSUE INTEGRITY: NOMINAL\nTORQUE LIMITS: EXCEEDED',
+        ),
       ),
     ),
   ),

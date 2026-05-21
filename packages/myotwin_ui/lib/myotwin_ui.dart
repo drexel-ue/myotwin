@@ -5,5 +5,6 @@ export 'src/widgets/animated_holo_fab.dart';
 export 'src/widgets/frosted_hud.dart';
 export 'src/widgets/graph_paper_background.dart';
 export 'src/widgets/holo_glitch.dart';
+export 'src/widgets/holographic_decrypt_text.dart';
 export 'src/widgets/interactive_grid_host.dart';
 export 'src/widgets/precision_grid_background.dart';
