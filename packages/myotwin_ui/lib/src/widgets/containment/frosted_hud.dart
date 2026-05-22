@@ -21,7 +21,7 @@ class FrostedHUD extends StatefulWidget {
     /// Normalized animation progress driving the laser spread and fade, from 0.0 to 1.0.
     this.animationProgress = 1.0,
 
-    this.glitchIntensity = 0.5,
+    this.glitchIntensity = 0.2,
   });
 
   /// The HUD title text.
@@ -71,7 +71,7 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
     }
 
     if (_glitchIntensity > 0.0) {
-      _glitchIntensity = math.max(0.0, _glitchIntensity - dt * 2.5);
+      _glitchIntensity = math.max(0.0, _glitchIntensity - dt * 4.5);
     }
 
     _phase += dt * 0.3;
@@ -118,7 +118,7 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
           HoloGlitch(
             phase: _phase,
             intensity: _glitchIntensity,
-            severity: 0.5,
+            severity: 0.05,
             child: Padding(
               padding: allPadding32,
               child: ClipRRect(

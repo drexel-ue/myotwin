@@ -21,18 +21,14 @@ class _MyotwinAppState extends State<MyotwinApp> {
       home: Builder(
         builder: (context) {
           return Scaffold(
-            body: Stack(
-              fit: .expand,
-              children: [
-                const GraphPaperBackground(),
-                // TODO: place actual app content here (BLoC providers, GoRouter).
-                Center(
+            body: InteractiveGridHost(
+              child: Center(
                   child: Text(
                     'MyoTwin',
                     style: context.myoTheme.displayLarge,
                   ),
                 ),
-              ],
+
             ),
           );
         },
