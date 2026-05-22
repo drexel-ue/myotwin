@@ -21,13 +21,7 @@ final AnimatedHoloFABComponent = Component<AnimatedHoloFAB, AnimatedHoloFABArgs>
   path: meta.path ?? 'widgets',
   docsBuilder: meta.docsBuilder,
   docComment:
-      r'''An animated holographic FAB with three states: idle, thinking, and active.
-
-The button features a rotating arc border and a moving scanline shader
-that responds to the provided [state]. In [HoloState.idle] the FAB
-rotates slowly at reduced brightness; in [HoloState.thinking] it spins
-rapidly at half brightness; in [HoloState.active] it reaches full speed
-and maximum glow.''',
+      r'''An animated holographic FAB with a multi-phase mechanical state machine.''',
   stories: [$Default..$generatedName = 'Default'],
 );
 typedef AnimatedHoloFABScenario =

@@ -44,6 +44,7 @@ class FrostedHUDStory extends Story<FrostedHUD, FrostedHUDArgs> {
                child: args.child,
                impactPoint: args.impactPoint,
                animationProgress: args.animationProgress,
+               glitchIntensity: args.glitchIntensity,
              ),
        );
 }
@@ -55,6 +56,7 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
     required Arg<Widget> child,
     required Arg<Offset> impactPoint,
     Arg<double>? animationProgress,
+    Arg<double>? glitchIntensity,
   }) : this.keyArg = $initArg('key', key, null),
        this.titleArg = $initArg('title', title, NullableStringArg(null))!,
        this.childArg = $initArg('child', child, null)!,
@@ -63,6 +65,11 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
          'animationProgress',
          animationProgress,
          DoubleArg(1.0),
+       )!,
+       this.glitchIntensityArg = $initArg(
+         'glitchIntensity',
+         glitchIntensity,
+         DoubleArg(0.2),
        )!;
 
   FrostedHUDArgs.fixed({
@@ -71,11 +78,13 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
     required Widget child,
     required Offset impactPoint,
     double animationProgress = 1.0,
+    double glitchIntensity = 0.2,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.titleArg = title == null ? null : Arg.fixed(title),
        this.childArg = Arg.fixed(child),
        this.impactPointArg = Arg.fixed(impactPoint),
-       this.animationProgressArg = Arg.fixed(animationProgress);
+       this.animationProgressArg = Arg.fixed(animationProgress),
+       this.glitchIntensityArg = Arg.fixed(glitchIntensity);
 
   final Arg<Key?>? keyArg;
 
@@ -87,6 +96,8 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
 
   final Arg<double> animationProgressArg;
 
+  final Arg<double> glitchIntensityArg;
+
   Key? get key => keyArg?.value;
 
   String? get title => titleArg?.value;
@@ -97,6 +108,8 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
 
   double get animationProgress => animationProgressArg.value;
 
+  double get glitchIntensity => glitchIntensityArg.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
@@ -104,5 +117,6 @@ class FrostedHUDArgs extends StoryArgs<FrostedHUD> {
     childArg,
     impactPointArg,
     animationProgressArg,
+    glitchIntensityArg,
   ];
 }
