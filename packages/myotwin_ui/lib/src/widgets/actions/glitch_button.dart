@@ -1,6 +1,4 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A button with a holographic glitch effect that triggers on state transitions
@@ -31,60 +29,15 @@ class GlitchButton extends StatefulWidget {
   State<GlitchButton> createState() => _GlitchButtonState();
 }
 
-class _GlitchButtonState extends State<GlitchButton> with SingleTickerProviderStateMixin {
-  late final Ticker _ticker;
-  Duration _lastTime = .zero;
-
-  double _phase = 0.0;
-  double _glitchIntensity = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _ticker = createTicker(_onTick)..start().ignore();
-  }
-
-  void _onTick(Duration elapsed) {
-    if (_lastTime == .zero) {
-      _lastTime = elapsed;
-      return;
-    }
-
-    final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
-    _lastTime = elapsed;
-
-    // Decay glitch intensity over time
-    if (_glitchIntensity > 0.0) {
-      setState(() {
-        _glitchIntensity = math.max(0.0, _glitchIntensity - (dt * 3.0));
-      });
-    }
-
-    // Drive the shader noise seed
-    setState(() {
-      _phase += dt * 0.5;
-      _phase %= 1.0;
-    });
-  }
-
-  void _triggerGlitch() {
-    setState(() {
-      _glitchIntensity = 1.0;
-    });
-  }
-
-  @override
-  void dispose() {
-    _ticker.dispose();
-    super.dispose();
-  }
+class _GlitchButtonState extends State<GlitchButton> 
+    with SingleTickerProviderStateMixin, HoloGlitchTickerMixin {
 
   @override
   void didUpdateWidget(covariant GlitchButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Trigger glitch on enabled/disabled transition
     if (oldWidget.enabled != widget.enabled) {
-      _triggerGlitch();
+      triggerGlitch();
     }
   }
 
@@ -109,13 +62,13 @@ class _GlitchButtonState extends State<GlitchButton> with SingleTickerProviderSt
     return GestureDetector(
       onTap: widget.enabled
           ? () {
-              _triggerGlitch();
+              triggerGlitch();
               widget.onPressed();
             }
           : null,
       child: HoloGlitch(
-        phase: _phase,
-        intensity: _glitchIntensity,
+        phase: glitchPhase,
+        intensity: glitchIntensity,
         severity: widget.enabled ? 0.2 : 0.05,
         // Padding is required to prevent shader tearing from clipping
         child: Padding(

@@ -45,7 +45,7 @@ class AnimatedHoloFAB extends StatefulWidget {
   State<AnimatedHoloFAB> createState() => _AnimatedHoloFABState();
 }
 
-class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProviderStateMixin {
+class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProviderStateMixin, HoloGlitchLogicMixin {
   late final Ticker _ticker;
   Duration _lastTime = .zero;
 
@@ -53,7 +53,6 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
   double _phase = 0.0;
   double _currentSpeed = 0.3;
   double _visualIntensity = 0.0;
-  double _glitchIntensity = 0.0;
   double _currentSeverity = 0.1;
   double _pulseMultiplier = 1.0;
 
@@ -111,12 +110,10 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
     _pulseMultiplier += (targetPulse - _pulseMultiplier) * 8.0 * dt;
 
     if (math.Random().nextDouble() < glitchChance) {
-      _glitchIntensity = 1.0;
+      triggerGlitch();
     }
 
-    if (_glitchIntensity > 0.0) {
-      _glitchIntensity = math.max(0.0, _glitchIntensity - (dt * 2.5));
-    }
+    updateGlitchState(dt);
 
     _phase += dt * _currentSpeed;
     _phase %= 1.0;
@@ -141,8 +138,8 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
       onTap: widget.onPressed,
       // The extracted optical layer
       child: HoloGlitch(
-        phase: _phase,
-        intensity: _glitchIntensity,
+        phase: glitchPhase,
+        intensity: glitchIntensity,
         severity: _currentSeverity,
         // The padding is preserved here inside the sampler to prevent bounds clipping
         child: Padding(

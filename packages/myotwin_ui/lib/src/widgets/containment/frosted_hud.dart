@@ -44,12 +44,9 @@ class FrostedHUD extends StatefulWidget {
   State<FrostedHUD> createState() => _FrostedHUDState();
 }
 
-class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateMixin {
+class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateMixin, HoloGlitchLogicMixin {
   late final Ticker _ticker;
   Duration _lastTime = Duration.zero;
-
-  double _phase = 0.0;
-  double _glitchIntensity = 0.0;
 
   @override
   void initState() {
@@ -66,16 +63,12 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
     final dt = (elapsed - _lastTime).inMicroseconds / 1000000.0;
     _lastTime = elapsed;
 
+    // Custom random glitch trigger
     if (math.Random().nextDouble() < (0.01 * widget.glitchIntensity)) {
-      _glitchIntensity = 1.0;
+      triggerGlitch();
     }
 
-    if (_glitchIntensity > 0.0) {
-      _glitchIntensity = math.max(0.0, _glitchIntensity - dt * 4.5);
-    }
-
-    _phase += dt * 0.3;
-    _phase %= 1.0;
+    updateGlitchState(dt);
 
     setState(() {});
   }
@@ -116,8 +109,8 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
 
           // --- LAYER 2: The Glitched Content ---
           HoloGlitch(
-            phase: _phase,
-            intensity: _glitchIntensity,
+            phase: glitchPhase,
+            intensity: glitchIntensity,
             severity: 0.05,
             child: Padding(
               padding: allPadding32,
