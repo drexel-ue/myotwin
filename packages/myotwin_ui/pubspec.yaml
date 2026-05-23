@@ -19,6 +19,21 @@ dev_dependencies:
     sdk: flutter
 
 flutter:
+  assets:
+    - assets/icons/health/
+    - assets/icons/health/filled/
+    - assets/icons/health/filled-24px/
+    - assets/icons/health/outline/
+    - assets/icons/health/outline-24px/
+    - assets/icons/phosphor/bold/
+    - assets/icons/phosphor/duotone/
+    - assets/icons/phosphor/fill/
+    - assets/icons/phosphor/light/
+    - assets/icons/phosphor/regular/
+    - assets/icons/phosphor/thin/
+    - assets/icons/tabler/filled/
+    - assets/icons/tabler/outline/
+
   shaders:
     - assets/shaders/holo_glitch.frag
   uses-material-design: true
