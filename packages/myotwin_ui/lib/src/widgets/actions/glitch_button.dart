@@ -29,9 +29,7 @@ class GlitchButton extends StatefulWidget {
   State<GlitchButton> createState() => _GlitchButtonState();
 }
 
-class _GlitchButtonState extends State<GlitchButton> 
-    with SingleTickerProviderStateMixin, HoloGlitchTickerMixin {
-
+class _GlitchButtonState extends State<GlitchButton> with SingleTickerProviderStateMixin, HoloGlitchTickerMixin {
   @override
   void didUpdateWidget(covariant GlitchButton oldWidget) {
     super.didUpdateWidget(oldWidget);

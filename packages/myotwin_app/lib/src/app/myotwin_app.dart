@@ -23,12 +23,11 @@ class _MyotwinAppState extends State<MyotwinApp> {
           return Scaffold(
             body: InteractiveGridHost(
               child: Center(
-                  child: Text(
-                    'MyoTwin',
-                    style: context.myoTheme.displayLarge,
-                  ),
+                child: Text(
+                  'MyoTwin',
+                  style: context.myoTheme.displayLarge,
                 ),
-
+              ),
             ),
           );
         },

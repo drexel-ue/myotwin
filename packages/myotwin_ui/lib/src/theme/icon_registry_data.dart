@@ -1,7 +1,8 @@
 // AUTO-GENERATED FILE. DO NOT MODIFY.
-// Generated on 2026-05-23T11:37:50.749471
+// Generated on 2026-05-23T12:32:54.087216
 
-// ignore_for_file: public_member_api_docs genereated file.
+// dart format off
+// ignore_for_file: type=lint
 
 class IconRegistryData {
   static const Map<String, List<String>> manifest = {

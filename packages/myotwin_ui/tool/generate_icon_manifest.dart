@@ -73,7 +73,10 @@ void main() async {
     ..writeln('// AUTO-GENERATED FILE. DO NOT MODIFY.')
     ..writeln('// Generated on ${DateTime.now().toIso8601String()}')
     ..writeln()
-    ..writeln('// ignore_for_file: public_member_api_docs genereated file.')
+    // Instructs the Dart formatter to skip this file
+    ..writeln('// dart format off')
+    // Instructs the Dart linter to ignore line lengths, missing consts, etc.
+    ..writeln('// ignore_for_file: type=lint')
     ..writeln()
     ..writeln('class IconRegistryData {')
     ..writeln('  static const Map<String, List<String>> manifest = {');
