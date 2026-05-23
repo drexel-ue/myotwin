@@ -23,9 +23,87 @@ flutter:
   assets:
     - assets/icons/health/
     - assets/icons/health/filled/
+    - assets/icons/health/filled/blood/
+    - assets/icons/health/filled/body/
+    - assets/icons/health/filled/conditions/
+    - assets/icons/health/filled/contraceptives/
+    - assets/icons/health/filled/devices/
+    - assets/icons/health/filled/diagnostics/
+    - assets/icons/health/filled/emotions/
+    - assets/icons/health/filled/exercise/
+    - assets/icons/health/filled/graphs/
+    - assets/icons/health/filled/medications/
+    - assets/icons/health/filled/nutrition/
+    - assets/icons/health/filled/objects/
+    - assets/icons/health/filled/people/
+    - assets/icons/health/filled/places/
+    - assets/icons/health/filled/ppe/
+    - assets/icons/health/filled/shapes/
+    - assets/icons/health/filled/specialties/
+    - assets/icons/health/filled/symbols/
+    - assets/icons/health/filled/typography/
+    - assets/icons/health/filled/vehicles/
+    - assets/icons/health/filled/zoonoses/
     - assets/icons/health/filled-24px/
+    - assets/icons/health/filled-24px/blood/
+    - assets/icons/health/filled-24px/body/
+    - assets/icons/health/filled-24px/conditions/
+    - assets/icons/health/filled-24px/contraceptives/
+    - assets/icons/health/filled-24px/devices/
+    - assets/icons/health/filled-24px/diagnostics/
+    - assets/icons/health/filled-24px/emotions/
+    - assets/icons/health/filled-24px/exercise/
+    - assets/icons/health/filled-24px/graphs/
+    - assets/icons/health/filled-24px/medications/
+    - assets/icons/health/filled-24px/nutrition/
+    - assets/icons/health/filled-24px/objects/
+    - assets/icons/health/filled-24px/people/
+    - assets/icons/health/filled-24px/places/
+    - assets/icons/health/filled-24px/ppe/
+    - assets/icons/health/filled-24px/symbols/
+    - assets/icons/health/filled-24px/vehicles/
+    - assets/icons/health/filled-24px/zoonoses/
     - assets/icons/health/outline/
+    - assets/icons/health/outline/blood/
+    - assets/icons/health/outline/body/
+    - assets/icons/health/outline/conditions/
+    - assets/icons/health/outline/contraceptives/
+    - assets/icons/health/outline/devices/
+    - assets/icons/health/outline/diagnostics/
+    - assets/icons/health/outline/emotions/
+    - assets/icons/health/outline/exercise/
+    - assets/icons/health/outline/graphs/
+    - assets/icons/health/outline/medications/
+    - assets/icons/health/outline/nutrition/
+    - assets/icons/health/outline/objects/
+    - assets/icons/health/outline/people/
+    - assets/icons/health/outline/places/
+    - assets/icons/health/outline/ppe/
+    - assets/icons/health/outline/shapes/
+    - assets/icons/health/outline/specialties/
+    - assets/icons/health/outline/symbols/
+    - assets/icons/health/outline/typography/
+    - assets/icons/health/outline/vehicles/
+    - assets/icons/health/outline/zoonoses/
     - assets/icons/health/outline-24px/
+    - assets/icons/health/outline-24px/blood/
+    - assets/icons/health/outline-24px/body/
+    - assets/icons/health/outline-24px/conditions/
+    - assets/icons/health/outline-24px/contraceptives/
+    - assets/icons/health/outline-24px/devices/
+    - assets/icons/health/outline-24px/diagnostics/
+    - assets/icons/health/outline-24px/emotions/
+    - assets/icons/health/outline-24px/exercise/
+    - assets/icons/health/outline-24px/graphs/
+    - assets/icons/health/outline-24px/medications/
+    - assets/icons/health/outline-24px/nutrition/
+    - assets/icons/health/outline-24px/objects/
+    - assets/icons/health/outline-24px/people/
+    - assets/icons/health/outline-24px/places/
+    - assets/icons/health/outline-24px/ppe/
+    - assets/icons/health/outline-24px/symbols/
+    - assets/icons/health/outline-24px/vehicles/
+    - assets/icons/health/outline-24px/zoonoses/
     - assets/icons/phosphor/bold/
     - assets/icons/phosphor/duotone/
     - assets/icons/phosphor/fill/

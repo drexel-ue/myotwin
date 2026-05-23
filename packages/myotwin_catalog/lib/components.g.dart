@@ -9,9 +9,11 @@ import 'package:widgetbook/widgetbook.dart' as _widgetbook;
 import 'package:myotwin_catalog/src/widgets/animated_holo_fab.stories.dart' as _myotwin_catalog_src_widgets_animated_holo_fab_stories;
 import 'package:myotwin_catalog/src/widgets/frosted_hud.stories.dart' as _myotwin_catalog_src_widgets_frosted_hud_stories;
 import 'package:myotwin_catalog/src/widgets/glitch_button.stories.dart' as _myotwin_catalog_src_widgets_glitch_button_stories;
+import 'package:myotwin_catalog/src/widgets/myo_icon.stories.dart' as _myotwin_catalog_src_widgets_myo_icon_stories;
 
 final components = <_widgetbook.Component>[
   _myotwin_catalog_src_widgets_animated_holo_fab_stories.AnimatedHoloFABComponent,
   _myotwin_catalog_src_widgets_frosted_hud_stories.FrostedHUDComponent,
   _myotwin_catalog_src_widgets_glitch_button_stories.GlitchButtonComponent,
+  _myotwin_catalog_src_widgets_myo_icon_stories.MyoIconComponent,
 ];

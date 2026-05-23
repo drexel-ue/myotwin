@@ -74,7 +74,7 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
   void _stopTicker() {
     _ticker?.stop();
     _ticker = null;
-    _lastElapsed = Duration.zero;
+    _lastElapsed = .zero;
   }
 
   void _onTick(Duration elapsed) {
@@ -100,6 +100,7 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
       // THE HAPPY PATH: Successfully resolved intent to an SVG
       return SvgPicture.asset(
         _resolvedPath!,
+        package: 'myotwin_ui',
         width: widget.size,
         height: widget.size,
         colorFilter: .mode(iconColor, .srcIn),
@@ -110,7 +111,7 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
     return HoloGlitch(
       phase: glitchPhase,
       intensity: 0.6, // Constant, moderate glitch
-      severity: 0.2, // Low severity (micro-tears, no massive horizontal shifts)
+      severity: 0.4, // Low severity (micro-tears, no massive horizontal shifts)
       child: Container(
         width: widget.size,
         height: widget.size,

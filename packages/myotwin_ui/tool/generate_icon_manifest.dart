@@ -49,7 +49,7 @@ void main() async {
 
       // Add the raw filename parts as base tags (e.g., 'shield-check' -> 'shield', 'check')
       final filenameParts = iconId.split(RegExp('[-_]'));
-      searchTags.addAll(filenameParts.map((e) => e.toLowerCase()));
+      searchTags.addAll(filenameParts.where((e) => e.length > 3).map((e) => e.toLowerCase()));
 
       // If it's a Healthicon, inject the rich metadata tags
       if (assetPath.contains('/health/')) {
