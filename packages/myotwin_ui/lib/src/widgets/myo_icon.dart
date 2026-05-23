@@ -17,6 +17,7 @@ class MyoIcon extends StatefulWidget {
     this.fallbackIntent,
     this.color,
     this.size = spacing24,
+    this.minimumConfidence = 0,
   });
 
   /// The primary semantic concept requested by the AI (e.g., 'biometric scan').
@@ -30,6 +31,9 @@ class MyoIcon extends StatefulWidget {
 
   /// The square dimensions of the icon.
   final double size;
+
+  /// The minimum relevance score required to accept a match from the [IconRegistry].
+  final int minimumConfidence;
 
   @override
   State<MyoIcon> createState() => _MyoIconState();
@@ -49,15 +53,17 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
   @override
   void didUpdateWidget(covariant MyoIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.intent != widget.intent || oldWidget.fallbackIntent != widget.fallbackIntent) {
+    if (oldWidget.intent != widget.intent || 
+        oldWidget.fallbackIntent != widget.fallbackIntent || 
+        oldWidget.minimumConfidence != widget.minimumConfidence) {
       _resolveIcon();
     }
   }
 
   void _resolveIcon() {
     _resolvedPath =
-        IconRegistry.findBestMatch(widget.intent) ??
-        (widget.fallbackIntent != null ? IconRegistry.findBestMatch(widget.fallbackIntent!) : null);
+        IconRegistry.findBestMatch(widget.intent, minimumConfidence: widget.minimumConfidence) ??
+        (widget.fallbackIntent != null ? IconRegistry.findBestMatch(widget.fallbackIntent!, minimumConfidence: widget.minimumConfidence) : null);
 
     if (_resolvedPath == null) {
       _startTicker();

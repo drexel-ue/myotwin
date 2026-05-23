@@ -3,6 +3,7 @@ import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A segment definition for [MyoSegmentedButton].
 class MyoSegment<T> {
+  /// Creates a [MyoSegment].
   const MyoSegment({
     required this.value,
     required this.label,

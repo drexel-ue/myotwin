@@ -53,6 +53,7 @@ class MyoIconStory extends Story<MyoIcon, MyoIconArgs> {
                fallbackIntent: args.fallbackIntent,
                color: args.color,
                size: args.size,
+               minimumConfidence: args.minimumConfidence,
              ),
        );
 }
@@ -64,6 +65,7 @@ class MyoIconArgs extends StoryArgs<MyoIcon> {
     Arg<String?>? fallbackIntent,
     Arg<Color?>? color,
     Arg<double>? size,
+    Arg<int>? minimumConfidence,
   }) : this.keyArg = $initArg('key', key, null),
        this.intentArg = $initArg('intent', intent, StringArg(''))!,
        this.fallbackIntentArg = $initArg(
@@ -72,7 +74,12 @@ class MyoIconArgs extends StoryArgs<MyoIcon> {
          NullableStringArg(null),
        )!,
        this.colorArg = $initArg('color', color, NullableColorArg(null))!,
-       this.sizeArg = $initArg('size', size, DoubleArg(spacing24))!;
+       this.sizeArg = $initArg('size', size, DoubleArg(spacing24))!,
+       this.minimumConfidenceArg = $initArg(
+         'minimumConfidence',
+         minimumConfidence,
+         IntArg(0),
+       )!;
 
   MyoIconArgs.fixed({
     Key? key,
@@ -80,13 +87,15 @@ class MyoIconArgs extends StoryArgs<MyoIcon> {
     String? fallbackIntent = null,
     Color? color = null,
     double size = spacing24,
+    int minimumConfidence = 0,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.intentArg = Arg.fixed(intent),
        this.fallbackIntentArg = fallbackIntent == null
            ? null
            : Arg.fixed(fallbackIntent),
        this.colorArg = color == null ? null : Arg.fixed(color),
-       this.sizeArg = Arg.fixed(size);
+       this.sizeArg = Arg.fixed(size),
+       this.minimumConfidenceArg = Arg.fixed(minimumConfidence);
 
   final Arg<Key?>? keyArg;
 
@@ -98,6 +107,8 @@ class MyoIconArgs extends StoryArgs<MyoIcon> {
 
   final Arg<double> sizeArg;
 
+  final Arg<int> minimumConfidenceArg;
+
   Key? get key => keyArg?.value;
 
   String get intent => intentArg.value;
@@ -108,6 +119,8 @@ class MyoIconArgs extends StoryArgs<MyoIcon> {
 
   double get size => sizeArg.value;
 
+  int get minimumConfidence => minimumConfidenceArg.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
@@ -115,5 +128,6 @@ class MyoIconArgs extends StoryArgs<MyoIcon> {
     fallbackIntentArg,
     colorArg,
     sizeArg,
+    minimumConfidenceArg,
   ];
 }
