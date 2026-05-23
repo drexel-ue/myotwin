@@ -145,8 +145,8 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
         child: Padding(
           padding: allPadding64,
           child: Container(
-            width: 64.0,
-            height: 64.0,
+            width: spacing64,
+            height: spacing64,
             decoration: BoxDecoration(
               shape: .circle,
               color: context.myoTheme.surface,
@@ -166,7 +166,7 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
                 Transform.rotate(
                   angle: rotation,
                   child: CustomPaint(
-                    size: const Size.square(64.0),
+                    size: const Size.square(spacing64),
                     painter: _HoloArcPainter(
                       color: baseColor,
                       intensity: _visualIntensity,

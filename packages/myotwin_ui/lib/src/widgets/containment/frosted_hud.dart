@@ -92,10 +92,10 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
           // Positioned.fill automatically sizes this glass pane to match the exact
           // logical layout footprint of the HoloGlitch widget below it.
           Positioned(
-            top: 32.0,
-            bottom: 32.0,
-            left: 32.0,
-            right: 32.0,
+            top: spacing32,
+            bottom: spacing32,
+            left: spacing32,
+            right: spacing32,
             child: ClipRRect(
               borderRadius: theme.radiusSm,
               child: BackdropFilter(
@@ -138,7 +138,7 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
                           children: [
                             if (widget.title case final String title when title.isNotEmpty) ...[
                               Text(title.toUpperCase(), style: theme.headlineMedium),
-                              Divider(color: theme.outline, height: 16.0),
+                              Divider(color: theme.outline, height: spacing16),
                             ],
                             widget.child,
                           ],
@@ -183,7 +183,7 @@ class _RadiatingHUDPainter extends CustomPainter {
 
     final fullRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(0, 0, size.width, size.height),
-      const Radius.circular(4.0), // radius-sm token
+      const Radius.circular(spacing4), // radius-sm token
     );
     canvas.drawRRect(fullRect, backgroundPaint);
 
@@ -237,7 +237,7 @@ class _RadiatingHUDPainter extends CustomPainter {
 
     // Scan the box perimeter at a precise 4px granularity to find the closest vertex index
     // This handles tethers touching the left, right, top, or bottom walls identically.
-    for (var d = 0.0; d < perimeter; d += 4.0) {
+    for (var d = 0.0; d < perimeter; d += spacing4) {
       final tangent = metric.getTangentForOffset(d);
       if (tangent != null) {
         final dist = (tangent.position - target).distanceSquared;

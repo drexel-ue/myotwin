@@ -72,7 +72,7 @@ class _GlitchButtonState extends State<GlitchButton>
         severity: widget.enabled ? 0.2 : 0.05,
         // Padding is required to prevent shader tearing from clipping
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: allPadding16,
           child: Container(
             decoration: BoxDecoration(
               color: backgroundColor,
@@ -82,7 +82,7 @@ class _GlitchButtonState extends State<GlitchButton>
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+              padding: horizontalPadding24 + verticalPadding12,
               child: DefaultTextStyle(
                 style: effectiveTextStyle,
                 child: widget.child,
