@@ -138,7 +138,7 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
                           children: [
                             if (widget.title case final String title when title.isNotEmpty) ...[
                               Text(title.toUpperCase(), style: theme.headlineMedium),
-                              Divider(color: theme.outline, height: spacing16),
+                              const MyoDivider(height: spacing16),
                             ],
                             widget.child,
                           ],
