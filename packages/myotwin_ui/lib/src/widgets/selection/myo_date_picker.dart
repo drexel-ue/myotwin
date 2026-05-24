@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
@@ -30,7 +29,7 @@ class MyoDatePicker extends StatefulWidget {
   @override
   State<MyoDatePicker> createState() => _MyoDatePickerState();
 }
- 
+
 class _MyoDatePickerState extends State<MyoDatePicker>
     with SingleTickerProviderStateMixin, HoloGlitchTickerMixin<MyoDatePicker> {
   late DateTime _visibleMonth;
@@ -64,7 +63,7 @@ class _MyoDatePickerState extends State<MyoDatePicker>
         return Theme(
           data: MyoTwinThemeDataFactory.build(),
           child: HoloGlitch(
-            phase: anim.value * 10 * math.Random().nextDouble(),
+            phase: anim.value * 10 * _rnd.nextDouble(),
             intensity: anim.isCompleted ? 0.0 : anim.value * 0.6,
             severity: 0.5,
             child: FadeTransition(
@@ -165,6 +164,10 @@ class _MyoDatePickerState extends State<MyoDatePicker>
   }
 }
 
+// --- helpers
+
+final _rnd = math.Random();
+
 // ---------------------------------------------------------------------------
 //  Calendar overlay
 // ---------------------------------------------------------------------------
@@ -223,18 +226,8 @@ class _MyoCalendarOverlayState extends State<_MyoCalendarOverlay> {
 
   static const _wdNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   static const _moNames = [
-    'JAN',
-    'FEB',
-    'MAR',
-    'APR',
-    'MAY',
-    'JUN',
-    'JUL',
-    'AUG',
-    'SEP',
-    'OCT',
-    'NOV',
-    'DEC',
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
   ];
 
   @override
@@ -258,10 +251,10 @@ class _MyoCalendarOverlayState extends State<_MyoCalendarOverlay> {
                   ),
                   child: _MyoCalendarDay(
                     day: d,
-                    isToday:
-                        d == widget.currentDate.day && mo == widget.currentDate.month && yr == widget.currentDate.year,
-                    isSelected:
-                        d == widget.selectedDate.day &&
+                    isToday: d == widget.currentDate.day &&
+                        mo == widget.currentDate.month &&
+                        yr == widget.currentDate.year,
+                    isSelected: d == widget.selectedDate.day &&
                         mo == widget.selectedDate.month &&
                         yr == widget.selectedDate.year,
                     onTap: () => widget.onDateSelected(DateTime(yr, mo, d)),
@@ -296,7 +289,11 @@ class _MyoCalendarOverlayState extends State<_MyoCalendarOverlay> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _navBtn(Icons.chevron_left, _prev, t.accentHot),
+                  _NavButton(
+                    icon: Icons.chevron_left,
+                    onPressed: _prev,
+                    color: t.accentHot,
+                  ),
                   Column(
                     children: [
                       Text(
@@ -312,13 +309,23 @@ class _MyoCalendarOverlayState extends State<_MyoCalendarOverlay> {
                       ),
                     ],
                   ),
-                  _navBtn(Icons.chevron_right, _next, t.accentHot),
+                  _NavButton(
+                    icon: Icons.chevron_right,
+                    onPressed: _next,
+                    color: t.accentHot,
+                  ),
                 ],
               ),
             ),
             // Weekday row
             Row(
-              children: List.generate(7, (i) => _wdChip(_wdNames[i], t)),
+              children: List.generate(
+                7,
+                (i) => _WeekdayLabel(
+                  label: _wdNames[i],
+                  color: t.onSurfaceMedium,
+                ),
+              ),
             ),
             // Separator
             Divider(height: 1, color: t.outline),
@@ -340,30 +347,62 @@ class _MyoCalendarOverlayState extends State<_MyoCalendarOverlay> {
       ),
     );
   }
+}
 
-  Widget _navBtn(IconData icon, VoidCallback cb, Color clr) {
+// ---------------------------------------------------------------------------
+//  Navigation button
+// ---------------------------------------------------------------------------
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    required this.icon,
+    required this.onPressed,
+    required this.color,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return InkWell(
-      onTap: cb,
+      onTap: onPressed,
       borderRadius: borderRadius4,
       child: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
           borderRadius: borderRadius4,
-          border: Border.all(color: clr),
+          border: Border.all(color: color),
         ),
-        child: Icon(icon, size: 14, color: clr),
+        child: Icon(icon, size: 14, color: color),
       ),
     );
   }
+}
 
-  Widget _wdChip(String label, MyoTwinTheme t) {
+// ---------------------------------------------------------------------------
+//  Weekday label chip
+// ---------------------------------------------------------------------------
+
+class _WeekdayLabel extends StatelessWidget {
+  const _WeekdayLabel({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: Center(
         child: Text(
           label,
-          style: t.caption.copyWith(
-            color: t.onSurfaceMedium,
+          style: context.myoTheme.caption.copyWith(
+            color: color,
             letterSpacing: 0.02,
           ),
         ),
@@ -399,8 +438,8 @@ class _MyoCalendarDay extends StatelessWidget {
         color: isSelected
             ? t.accentHot
             : isToday
-            ? t.surfaceElevated3
-            : null,
+                ? t.surfaceElevated3
+                : null,
         border: isToday && !isSelected ? Border.all(color: t.accentHot) : null,
         borderRadius: borderRadius2,
       ),
