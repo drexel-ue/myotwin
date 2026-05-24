@@ -57,7 +57,10 @@ class _MyoCheckboxState extends State<MyoCheckbox>
       intensity: glitchIntensity,
       severity: 0.3,
       child: GestureDetector(
-        onTap: () => widget.onChanged(!widget.value),
+        onTap: () {
+          triggerGlitch();
+          widget.onChanged(!widget.value);
+        },
         child: AnimatedContainer(
           duration: theme.motionFast,
           curve: theme.curveDecelerate,
