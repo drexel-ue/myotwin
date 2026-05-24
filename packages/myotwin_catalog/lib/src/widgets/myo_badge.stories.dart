@@ -33,7 +33,7 @@ class _BadgeWrapperState extends State<BadgeWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return Center( 
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
