@@ -53,8 +53,8 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
   @override
   void didUpdateWidget(covariant MyoIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.intent != widget.intent || 
-        oldWidget.fallbackIntent != widget.fallbackIntent || 
+    if (oldWidget.intent != widget.intent ||
+        oldWidget.fallbackIntent != widget.fallbackIntent ||
         oldWidget.minimumConfidence != widget.minimumConfidence) {
       _resolveIcon();
     }
@@ -63,7 +63,9 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
   void _resolveIcon() {
     _resolvedPath =
         IconRegistry.findBestMatch(widget.intent, minimumConfidence: widget.minimumConfidence) ??
-        (widget.fallbackIntent != null ? IconRegistry.findBestMatch(widget.fallbackIntent!, minimumConfidence: widget.minimumConfidence) : null);
+        (widget.fallbackIntent != null
+            ? IconRegistry.findBestMatch(widget.fallbackIntent!, minimumConfidence: widget.minimumConfidence)
+            : null);
 
     if (_resolvedPath == null) {
       _startTicker();

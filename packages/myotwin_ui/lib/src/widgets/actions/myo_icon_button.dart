@@ -37,8 +37,7 @@ class MyoIconButton extends StatefulWidget {
   State<MyoIconButton> createState() => _MyoIconButtonState();
 }
 
-class _MyoIconButtonState extends State<MyoIconButton>
-    with SingleTickerProviderStateMixin, HoloGlitchTickerMixin {
+class _MyoIconButtonState extends State<MyoIconButton> with SingleTickerProviderStateMixin, HoloGlitchTickerMixin {
   @override
   void didUpdateWidget(covariant MyoIconButton oldWidget) {
     super.didUpdateWidget(oldWidget);
