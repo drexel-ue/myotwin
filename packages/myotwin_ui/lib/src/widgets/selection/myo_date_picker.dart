@@ -3,27 +3,28 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
-/// Visual styles for the date picker trigger.
-enum MyoDatePickerStyle {
-  filled,
-  outlined,
-}
 
 /// A cyberpunk HUD-style date picker with full custom calendar rendering.
 class MyoDatePicker extends StatefulWidget {
+  /// Creates a [MyoDatePicker].
   const MyoDatePicker({
     super.key,
     required this.label,
     required this.value,
     required this.onChanged,
-    this.style = MyoDatePickerStyle.outlined,
     this.hint,
   });
 
+  /// The label displayed above the date input.
   final String label;
+
+  /// The currently selected date.
   final DateTime? value;
+
+  /// Called when the user selects a date.
   final ValueChanged<DateTime> onChanged;
-  final MyoDatePickerStyle style;
+
+  /// Optional hint text shown when no date is selected.
   final String? hint;
 
   @override
@@ -134,9 +135,7 @@ class _MyoDatePickerState extends State<MyoDatePicker>
               height: 48,
               padding: horizontalPadding12,
               decoration: BoxDecoration(
-                color: widget.style == MyoDatePickerStyle.filled ? t.surfaceElevated2
-                    : null,
-                border: widget.style == MyoDatePickerStyle.outlined ? Border.all(color: t.outline) : null,
+                border: Border.all(color: t.outline),
                 borderRadius: t.radiusSm,
               ),
               child: Row(

@@ -13,12 +13,10 @@ class DatePickerWrapper extends StatefulWidget {
     super.key,
     required this.label,
     required this.initialValue,
-    required this.style,
   });
 
   final String label;
   final DateTime initialValue;
-  final MyoDatePickerStyle style;
 
   @override
   State<DatePickerWrapper> createState() => _DatePickerWrapperState();
@@ -43,7 +41,6 @@ class _DatePickerWrapperState extends State<DatePickerWrapper> {
         child: MyoDatePicker(
           label: widget.label,
           value: _value,
-          style: widget.style,
           onChanged: (val) {
             setState(() {
               _value = val;
@@ -60,24 +57,5 @@ final $Default = _Story(
   args: _Args(
     label: StringArg('MISSION START', name: 'Label'),
     initialValue: Arg.fixed(DateTime.now()),
-    style: EnumArg(MyoDatePickerStyle.outlined, name: 'Style', values: MyoDatePickerStyle.values),
-  ),
-);
-
-final $Filled = _Story(
-  name: 'Filled',
-  args: _Args(
-    label: StringArg('MISSION START', name: 'Label'),
-    initialValue: Arg.fixed(DateTime.now()),
-    style: Arg.fixed(MyoDatePickerStyle.filled),
-  ),
-);
-
-final $Outlined = _Story(
-  name: 'Outlined',
-  args: _Args(
-    label: StringArg('MISSION START', name: 'Label'),
-    initialValue: Arg.fixed(DateTime.now()),
-    style: Arg.fixed(MyoDatePickerStyle.outlined),
   ),
 );

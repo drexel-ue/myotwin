@@ -24,11 +24,7 @@ final DatePickerWrapperComponent =
       docComment:
           r'''A stateful wrapper to allow interactive testing of [MyoDatePicker]
 within the Widgetbook.''',
-      stories: [
-        $Default..$generatedName = 'Default',
-        $Filled..$generatedName = 'Filled',
-        $Outlined..$generatedName = 'Outlined',
-      ],
+      stories: [$Default..$generatedName = 'Default'],
     );
 typedef DatePickerWrapperScenario =
     Scenario<DatePickerWrapper, DatePickerWrapperArgs>;
@@ -52,7 +48,6 @@ class DatePickerWrapperStory
                key: args.key,
                label: args.label,
                initialValue: args.initialValue,
-               style: args.style,
              ),
        );
 }
@@ -62,32 +57,21 @@ class DatePickerWrapperArgs extends StoryArgs<DatePickerWrapper> {
     Arg<Key?>? key,
     Arg<String>? label,
     Arg<DateTime>? initialValue,
-    Arg<MyoDatePickerStyle>? style,
   }) : this.keyArg = $initArg('key', key, null),
        this.labelArg = $initArg('label', label, StringArg(''))!,
        this.initialValueArg = $initArg(
          'initialValue',
          initialValue,
          DateTimeArg(DateTime.now()),
-       )!,
-       this.styleArg = $initArg(
-         'style',
-         style,
-         EnumArg<MyoDatePickerStyle>(
-           MyoDatePickerStyle.filled,
-           values: MyoDatePickerStyle.values,
-         ),
        )!;
 
   DatePickerWrapperArgs.fixed({
     Key? key,
     String label = '',
     DateTime? initialValue,
-    MyoDatePickerStyle style = MyoDatePickerStyle.filled,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.labelArg = Arg.fixed(label),
-       this.initialValueArg = Arg.fixed(initialValue ?? DateTime.now()),
-       this.styleArg = Arg.fixed(style);
+       this.initialValueArg = Arg.fixed(initialValue ?? DateTime.now());
 
   final Arg<Key?>? keyArg;
 
@@ -95,16 +79,12 @@ class DatePickerWrapperArgs extends StoryArgs<DatePickerWrapper> {
 
   final Arg<DateTime> initialValueArg;
 
-  final Arg<MyoDatePickerStyle> styleArg;
-
   Key? get key => keyArg?.value;
 
   String get label => labelArg.value;
 
   DateTime get initialValue => initialValueArg.value;
 
-  MyoDatePickerStyle get style => styleArg.value;
-
   @override
-  List<Arg?> get list => [keyArg, labelArg, initialValueArg, styleArg];
+  List<Arg?> get list => [keyArg, labelArg, initialValueArg];
 }
