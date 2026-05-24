@@ -8,6 +8,7 @@ export 'src/widgets/actions/myo_segmented_button.dart';
 export 'src/widgets/backgrounds/interactive_grid_host.dart';
 export 'src/widgets/backgrounds/precision_grid_background.dart';
 export 'src/widgets/communication/myo_badge.dart';
+export 'src/widgets/communication/myo_linear_progress_indicator.dart';
 export 'src/widgets/containment/frosted_hud.dart';
 export 'src/widgets/effects/holo_glitch.dart';
 export 'src/widgets/effects/holo_glitch_mixin.dart';
