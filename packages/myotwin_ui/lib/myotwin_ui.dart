@@ -15,4 +15,5 @@ export 'src/widgets/containment/myo_list_tile.dart';
 export 'src/widgets/effects/holo_glitch.dart';
 export 'src/widgets/effects/holo_glitch_mixin.dart';
 export 'src/widgets/myo_icon.dart';
+export 'src/widgets/selection/myo_checkbox.dart';
 export 'src/widgets/text/holographic_decrypt_text.dart';
