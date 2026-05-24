@@ -12,6 +12,7 @@ import 'package:myotwin_catalog/src/widgets/glitch_button.stories.dart' as _myot
 import 'package:myotwin_catalog/src/widgets/myo_badge.stories.dart' as _myotwin_catalog_src_widgets_myo_badge_stories;
 import 'package:myotwin_catalog/src/widgets/myo_checkbox.stories.dart' as _myotwin_catalog_src_widgets_myo_checkbox_stories;
 import 'package:myotwin_catalog/src/widgets/myo_chip.stories.dart' as _myotwin_catalog_src_widgets_myo_chip_stories;
+import 'package:myotwin_catalog/src/widgets/myo_date_picker.stories.dart' as _myotwin_catalog_src_widgets_myo_date_picker_stories;
 import 'package:myotwin_catalog/src/widgets/myo_icon.stories.dart' as _myotwin_catalog_src_widgets_myo_icon_stories;
 import 'package:myotwin_catalog/src/widgets/myo_icon_button.stories.dart' as _myotwin_catalog_src_widgets_myo_icon_button_stories;
 import 'package:myotwin_catalog/src/widgets/myo_linear_progress_indicator.stories.dart' as _myotwin_catalog_src_widgets_myo_linear_progress_indicator_stories;
@@ -25,6 +26,7 @@ final components = <_widgetbook.Component>[
   _myotwin_catalog_src_widgets_myo_badge_stories.BadgeWrapperComponent,
   _myotwin_catalog_src_widgets_myo_checkbox_stories.CheckboxWrapperComponent,
   _myotwin_catalog_src_widgets_myo_chip_stories.ChipWrapperComponent,
+  _myotwin_catalog_src_widgets_myo_date_picker_stories.DatePickerWrapperComponent,
   _myotwin_catalog_src_widgets_myo_icon_stories.MyoIconComponent,
   _myotwin_catalog_src_widgets_myo_icon_button_stories.MyoIconButtonComponent,
   _myotwin_catalog_src_widgets_myo_linear_progress_indicator_stories.ProgressIndicatorWrapperComponent,
