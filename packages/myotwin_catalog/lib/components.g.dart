@@ -19,6 +19,7 @@ import 'package:myotwin_catalog/src/widgets/myo_linear_progress_indicator.storie
 import 'package:myotwin_catalog/src/widgets/myo_list_tile.stories.dart' as _myotwin_catalog_src_widgets_myo_list_tile_stories;
 import 'package:myotwin_catalog/src/widgets/myo_segmented_button.stories.dart' as _myotwin_catalog_src_widgets_myo_segmented_button_stories;
 import 'package:myotwin_catalog/src/widgets/myo_slider.stories.dart' as _myotwin_catalog_src_widgets_myo_slider_stories;
+import 'package:myotwin_catalog/src/widgets/myo_switch.stories.dart' as _myotwin_catalog_src_widgets_myo_switch_stories;
 
 final components = <_widgetbook.Component>[
   _myotwin_catalog_src_widgets_animated_holo_fab_stories.AnimatedHoloFABComponent,
@@ -34,4 +35,5 @@ final components = <_widgetbook.Component>[
   _myotwin_catalog_src_widgets_myo_list_tile_stories.ListTileWrapperComponent,
   _myotwin_catalog_src_widgets_myo_segmented_button_stories.SegmentedButtonWrapperComponent,
   _myotwin_catalog_src_widgets_myo_slider_stories.MyoSliderWrapperComponent,
+  _myotwin_catalog_src_widgets_myo_switch_stories.SwitchWrapperComponent,
 ];

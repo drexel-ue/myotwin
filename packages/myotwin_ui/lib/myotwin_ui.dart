@@ -19,4 +19,5 @@ export 'src/widgets/selection/myo_checkbox.dart';
 export 'src/widgets/selection/myo_chip.dart';
 export 'src/widgets/selection/myo_date_picker.dart';
 export 'src/widgets/selection/myo_slider.dart';
+export 'src/widgets/selection/myo_switch.dart';
 export 'src/widgets/text/holographic_decrypt_text.dart';
