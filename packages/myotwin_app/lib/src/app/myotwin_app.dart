@@ -20,14 +20,8 @@ class _MyotwinAppState extends State<MyotwinApp> {
       theme: MyoTwinThemeDataFactory.build(),
       home: Builder(
         builder: (context) {
-          return Scaffold(
-            body: InteractiveGridHost(
-              child: Center(
-                child: Text(
-                  'MyoTwin',
-                  style: context.myoTheme.displayLarge,
-                ),
-              ),
+          return const Scaffold(
+            body: InteractiveGrid(
             ),
           );
         },

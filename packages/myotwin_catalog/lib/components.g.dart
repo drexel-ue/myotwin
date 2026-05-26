@@ -10,6 +10,7 @@ import 'package:myotwin_catalog/src/widgets/animated_holo_fab.stories.dart' as _
 import 'package:myotwin_catalog/src/widgets/frosted_hud.stories.dart' as _myotwin_catalog_src_widgets_frosted_hud_stories;
 import 'package:myotwin_catalog/src/widgets/glitch_button.stories.dart' as _myotwin_catalog_src_widgets_glitch_button_stories;
 import 'package:myotwin_catalog/src/widgets/myo_badge.stories.dart' as _myotwin_catalog_src_widgets_myo_badge_stories;
+import 'package:myotwin_catalog/src/widgets/myo_canvas.stories.dart' as _myotwin_catalog_src_widgets_myo_canvas_stories;
 import 'package:myotwin_catalog/src/widgets/myo_checkbox.stories.dart' as _myotwin_catalog_src_widgets_myo_checkbox_stories;
 import 'package:myotwin_catalog/src/widgets/myo_checkbox_tile.stories.dart' as _myotwin_catalog_src_widgets_myo_checkbox_tile_stories;
 import 'package:myotwin_catalog/src/widgets/myo_chip.stories.dart' as _myotwin_catalog_src_widgets_myo_chip_stories;
@@ -27,6 +28,7 @@ final components = <_widgetbook.Component>[
   _myotwin_catalog_src_widgets_frosted_hud_stories.FrostedHUDComponent,
   _myotwin_catalog_src_widgets_glitch_button_stories.GlitchButtonComponent,
   _myotwin_catalog_src_widgets_myo_badge_stories.BadgeWrapperComponent,
+  _myotwin_catalog_src_widgets_myo_canvas_stories.MyoCanvasWrapperComponent,
   _myotwin_catalog_src_widgets_myo_checkbox_stories.CheckboxWrapperComponent,
   _myotwin_catalog_src_widgets_myo_checkbox_tile_stories.CheckboxTileWrapperComponent,
   _myotwin_catalog_src_widgets_myo_chip_stories.ChipWrapperComponent,

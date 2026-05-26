@@ -18,7 +18,7 @@ class PrecisionGridBackground extends StatelessWidget {
 
     return RepaintBoundary(
       child: CustomPaint(
-        size: Size.infinite,
+        size: .infinite,
         painter: _PrecisionGridPainter(
           offset: offset,
           backgroundColor: theme.surface,

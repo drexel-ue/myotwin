@@ -4,25 +4,17 @@ import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A pannable/flashable container that hosts a precision grid background
 /// and user-supplied child content.
-class InteractiveGridHost extends StatefulWidget {
+class InteractiveGrid extends StatefulWidget {
   /// Creates a pannable/flashable container that hosts a precision grid background
   /// and user-supplied child content.
-  const InteractiveGridHost({
-    super.key,
-
-    /// The widget content rendered above the grid background.
-    required this.child,
-  });
-
-  /// The widget content rendered above the grid background.
-  final Widget child;
+  const InteractiveGrid({super.key});
 
   /// Creates the mutable state for this widget.
   @override
-  State<InteractiveGridHost> createState() => _InteractiveGridHostState();
+  State<InteractiveGrid> createState() => _InteractiveGridState();
 }
 
-class _InteractiveGridHostState extends State<InteractiveGridHost> with SingleTickerProviderStateMixin {
+class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProviderStateMixin {
   final _cameraPan = ValueNotifier<Offset>(.zero);
   Offset _velocity = .zero;
 
@@ -102,29 +94,16 @@ class _InteractiveGridHostState extends State<InteractiveGridHost> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Feed the live coordinates into the GPU painter
-        Positioned.fill(
-          child: GestureDetector(
-            onPanStart: _onPanStart,
-            onPanUpdate: _onPanUpdate,
-            onPanEnd: _onPanEnd,
-            child: ValueListenableBuilder(
-              valueListenable: _cameraPan,
-              builder: (context, offset, _) {
-                return PrecisionGridBackground(offset: offset);
-              },
-            ),
-          ),
-        ),
-
-        // Your 3D Model or UI components would go here in the foreground
-        Padding(
-          padding: allPadding32,
-          child: widget.child,
-        ),
-      ],
+    return GestureDetector(
+      onPanStart: _onPanStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: ValueListenableBuilder(
+        valueListenable: _cameraPan,
+        builder: (context, offset, _) {
+          return PrecisionGridBackground(offset: offset);
+        },
+      ),
     );
   }
 }
