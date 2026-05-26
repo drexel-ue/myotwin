@@ -7,11 +7,14 @@ import 'package:myotwin_ui/myotwin_ui.dart';
 class InteractiveGrid extends StatefulWidget {
   /// Creates a pannable/flashable container that hosts a precision grid background
   /// and user-supplied child content.
+  ///
+  /// {@macro myotwin_ui.widgets.InteractiveGrid.child}
   const InteractiveGrid({
     super.key,
     required this.child,
   });
 
+  /// The widget contained inside the [InteractiveGrid].
   final Widget child;
 
   /// Creates the mutable state for this widget.

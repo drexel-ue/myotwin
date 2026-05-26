@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
+/// A composable background canvas that layers draggable precision grid
+/// workspace content with an animated chat panel and FAB.
 class MyoCanvas extends StatefulWidget {
+  /// A composable background canvas that layers draggable precision grid
+  /// workspace content with an animated chat panel and FAB.
+  ///
+  /// {@template myo_canvas.background_child}
+  /// The widget to display on the precision grid background.
+  /// {@endtemplate}
   const MyoCanvas({
     super.key,
     required this.backgroundChild,
@@ -9,10 +17,15 @@ class MyoCanvas extends StatefulWidget {
     required this.onShowChatChanged,
   });
 
+  /// {@macro myo_canvas.background_child}
   final Widget backgroundChild;
 
+  /// {@template myo_canvas.chat_child}
+  /// The chat widget that slides up from the bottom when activated.
+  /// {@endtemplate}
   final Widget chatChild;
 
+  /// {@macro myo_canvas.chat_child}
   final ValueChanged<bool> onShowChatChanged;
 
   @override
@@ -39,6 +52,11 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
       await _chatOffsetController.reverse();
       _fabState.value = .idle;
     }
+  }
+
+  Future<void> _onFabPressed() async {
+    await _toggleChat();
+    widget.onShowChatChanged(_showChat);
   }
 
   @override
@@ -85,10 +103,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
               builder: (context, state, child) {
                 return AnimatedHoloFAB(
                   state: state,
-                  onPressed: () {
-                    _toggleChat();
-                    widget.onShowChatChanged(_showChat);
-                  },
+                  onPressed: _onFabPressed,
                   icon: emptyWidget,
                 );
               },
