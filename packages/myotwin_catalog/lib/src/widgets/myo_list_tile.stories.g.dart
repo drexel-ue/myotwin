@@ -16,19 +16,18 @@ typedef _Scenario = ListTileWrapperScenario;
 typedef _Defaults = ListTileWrapperDefaults;
 typedef _Story = ListTileWrapperStory;
 typedef _Args = ListTileWrapperArgs;
-final ListTileWrapperComponent =
-    Component<ListTileWrapper, ListTileWrapperArgs>(
-      name: meta.name ?? 'ListTileWrapper',
-      path: meta.path ?? 'widgets',
-      docsBuilder: meta.docsBuilder,
-      docComment:
-          r'''A stateful wrapper to allow interactive testing of [MyoListTile]
-within the Widgetbook.''',
-      stories: [
-        $Default..$generatedName = 'Default',
-        $Selected..$generatedName = 'Selected',
-      ],
-    );
+final ListTileWrapperComponent = Component<ListTileWrapper, ListTileWrapperArgs>(
+  name: meta.name ?? 'ListTileWrapper',
+  path: meta.path ?? 'widgets',
+  docsBuilder: meta.docsBuilder,
+  docComment:
+      r'''A stateful wrapper to allow interactive testing of [MyoListTile].''',
+  stories: [
+    $Default..$generatedName = 'Default',
+    $Selected..$generatedName = 'Selected',
+    $IconLeading..$generatedName = 'IconLeading',
+  ],
+);
 typedef ListTileWrapperScenario =
     Scenario<ListTileWrapper, ListTileWrapperArgs>;
 typedef ListTileWrapperDefaults =
@@ -59,28 +58,32 @@ class ListTileWrapperArgs extends StoryArgs<ListTileWrapper> {
   ListTileWrapperArgs({
     Arg<Key?>? key,
     Arg<String>? title,
-    Arg<String>? subtitle,
+    Arg<String?>? subtitle,
     Arg<bool>? isSelected,
   }) : this.keyArg = $initArg('key', key, null),
        this.titleArg = $initArg('title', title, StringArg(''))!,
-       this.subtitleArg = $initArg('subtitle', subtitle, StringArg(''))!,
+       this.subtitleArg = $initArg(
+         'subtitle',
+         subtitle,
+         NullableStringArg(null),
+       )!,
        this.isSelectedArg = $initArg('isSelected', isSelected, BoolArg(false))!;
 
   ListTileWrapperArgs.fixed({
     Key? key,
     String title = '',
-    String subtitle = '',
+    String? subtitle = null,
     bool isSelected = false,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.titleArg = Arg.fixed(title),
-       this.subtitleArg = Arg.fixed(subtitle),
+       this.subtitleArg = subtitle == null ? null : Arg.fixed(subtitle),
        this.isSelectedArg = Arg.fixed(isSelected);
 
   final Arg<Key?>? keyArg;
 
   final Arg<String> titleArg;
 
-  final Arg<String> subtitleArg;
+  final Arg<String?>? subtitleArg;
 
   final Arg<bool> isSelectedArg;
 
@@ -88,7 +91,7 @@ class ListTileWrapperArgs extends StoryArgs<ListTileWrapper> {
 
   String get title => titleArg.value;
 
-  String get subtitle => subtitleArg.value;
+  String? get subtitle => subtitleArg?.value;
 
   bool get isSelected => isSelectedArg.value;
 

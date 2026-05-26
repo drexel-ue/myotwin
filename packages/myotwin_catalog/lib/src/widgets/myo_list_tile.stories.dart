@@ -6,8 +6,7 @@ part 'myo_list_tile.stories.g.dart';
 
 const meta = Meta<ListTileWrapper>(name: 'MyoListTile');
 
-/// A stateful wrapper to allow interactive testing of [MyoListTile]
-/// within the Widgetbook.
+/// A stateful wrapper to allow interactive testing of [MyoListTile].
 class ListTileWrapper extends StatefulWidget {
   const ListTileWrapper({
     super.key,
@@ -16,8 +15,13 @@ class ListTileWrapper extends StatefulWidget {
     required this.isSelected,
   });
 
+  /// Primary text for the tile.
   final String title;
-  final String subtitle;
+
+  /// Secondary text for the tile.
+  final String? subtitle;
+
+  /// Whether the tile starts in selected state.
   final bool isSelected;
 
   @override
@@ -43,8 +47,8 @@ class _ListTileWrapperState extends State<ListTileWrapper> {
           title: widget.title,
           subtitle: widget.subtitle,
           isSelected: _selected,
-          leading: const Icon(Icons.info_outline, size: 16, color: Colors.white),
-          trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.white),
+          leading: const Icon(Icons.info_outline, size: 16, color: Color(0xFFFFFFFF)),
+          trailing: const Icon(Icons.chevron_right, size: 16, color: Color(0xFFFFFFFF)),
           onTap: () {
             setState(() {
               _selected = !_selected;
@@ -71,5 +75,14 @@ final $Selected = _Story(
     title: StringArg('Active Process', name: 'Title'),
     subtitle: StringArg('Analyzing...', name: 'Subtitle'),
     isSelected: BoolArg(true, name: 'Selected'),
+  ),
+);
+
+final $IconLeading = _Story(
+  name: 'Icon Leading',
+  args: _Args(
+    title: StringArg('Network Connection', name: 'Title'),
+    subtitle: StringArg('Ethernet active', name: 'Subtitle'),
+    isSelected: BoolArg(false, name: 'Selected'),
   ),
 );
