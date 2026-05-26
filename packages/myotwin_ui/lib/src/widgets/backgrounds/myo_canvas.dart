@@ -55,7 +55,8 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     }
   }
 
-  Future<void> _onFabPressed() async {
+  Future<void> _onFabPressed(ArcSliderMode mode) async {
+    print('tapped with mode: $mode');
     await _toggleChat();
     widget.onShowChatChanged(_showChat);
   }

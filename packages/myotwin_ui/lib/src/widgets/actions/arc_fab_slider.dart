@@ -8,6 +8,8 @@ enum ArcSliderMode {
   text,
 }
 
+typedef ArcSliderModeCallback = void Function(ArcSliderMode mode);
+
 class ArcFABSlider extends StatefulWidget {
   const ArcFABSlider({
     super.key,
@@ -16,8 +18,11 @@ class ArcFABSlider extends StatefulWidget {
     required this.onModeChanged,
   });
 
+  static const arcDropDistance = 40.0;
+  static const trackHeight = spacing64 + arcDropDistance;
+
   final HoloState fabState;
-  final VoidCallback onFabPressed;
+  final ArcSliderModeCallback onFabPressed;
   final ValueChanged<ArcSliderMode> onModeChanged;
 
   @override
@@ -26,8 +31,7 @@ class ArcFABSlider extends StatefulWidget {
 
 class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderStateMixin {
   // Physical Constraints
-  double maxSlideDistance = 120.0; // How far left/right it moves in pixels
-  final double arcDropDistance = 40.0; // How far it dips downward at the edges
+  double maxSlideDistance = 120.0; // How far left/right it moves in pixelss
 
   // State: -1.0 (Left), 0.0 (Center), 1.0 (Right)
   final _slideProgress = ValueNotifier<double>(0.0);
@@ -35,6 +39,9 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
   // Physics engine for snapping when the user lets go
   late final AnimationController _snapController;
   late Animation<double> _snapAnimation;
+
+  // Slider mode.
+  ArcSliderMode _mode = .centered;
 
   @override
   void initState() {
@@ -71,15 +78,14 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
 
     // 2. Predict the target based on position AND flick velocity
     var target = 0.0;
-    var mode = ArcSliderMode.centered;
 
     // If they dragged past 30%, OR flicked it hard, commit to the side
     if (current + (velocity * 0.1) < -0.3) {
       target = -1.0;
-      mode = .voice; // Voice
+      _mode = .voice; // Voice
     } else if (current + (velocity * 0.1) > 0.3) {
       target = 1.0;
-      mode = .text; // Text
+      _mode = .text; // Text
     }
 
     // 3. Setup the spring animation to the target
@@ -92,7 +98,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
 
     await _snapController.forward(from: 0.0);
     if (target != 0.0) await HapticFeedback.heavyImpact(); // Hardware lock-in feel
-    widget.onModeChanged(mode);
+    widget.onModeChanged(_mode);
   }
 
   @override
@@ -106,12 +112,8 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 1. Define your FAB size
         const fabSize = spacing64;
         maxSlideDistance = (constraints.maxWidth - fabSize) / 2.0;
-
-        // 2. The track must be tall enough to hold the FAB + the drop distance
-        final trackHeight = fabSize + arcDropDistance;
 
         return GestureDetector(
           onPanUpdate: _onPanUpdate,
@@ -119,8 +121,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
           behavior: HitTestBehavior.translucent,
           child: Container(
             width: constraints.maxWidth,
-            height: trackHeight, // Give it physical height
-            // 3. Align to the top. The Transform will push the visual down into the empty space.
+            height: ArcFABSlider.trackHeight,
             alignment: .topCenter,
 
             child: ValueListenableBuilder(
@@ -128,7 +129,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
               builder: (context, progress, _) {
                 // --- THE MATH ---
                 final xPos = progress * maxSlideDistance;
-                final yPos = (progress * progress) * arcDropDistance;
+                final yPos = (progress * progress) * ArcFABSlider.arcDropDistance;
                 final scale = 1.0 - (0.5 * progress.abs());
 
                 return Transform.translate(
@@ -137,7 +138,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                     scale: scale,
                     child: AnimatedHoloFAB(
                       state: widget.fabState,
-                      onPressed: widget.onFabPressed,
+                      onPressed: () => widget.onFabPressed(_mode),
                       icon: emptyWidget,
                     ),
                   ),

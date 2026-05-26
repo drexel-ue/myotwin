@@ -196,6 +196,9 @@ class _MyoSliderPainter extends CustomPainter {
     required this.thumbHeight,
   });
 
+  /// Track thickness used by [MyoSlider] and [_MyoSliderPainter].
+  static const double trackHeight = 2.0;
+
   final double value;
   final double min;
   final double max;
@@ -303,5 +306,4 @@ class _MyoSliderPainter extends CustomPainter {
   }
 }
 
-/// Track thickness used by [MyoSlider] and [_MyoSliderPainter].
-const double trackHeight = 2.0;
+
