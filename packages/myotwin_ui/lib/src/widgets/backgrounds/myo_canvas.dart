@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
+import 'package:myotwin_ui/src/widgets/actions/arc_fab_slider.dart';
 
 /// A composable background canvas that layers draggable precision grid
 /// workspace content with an animated chat panel and FAB.
@@ -96,15 +97,17 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
         Positioned(
           left: spacing16,
           right: spacing16,
-          bottom: spacing16,
+          bottom: 0,
           child: Center(
             child: ValueListenableBuilder(
               valueListenable: _fabState,
               builder: (context, state, child) {
-                return AnimatedHoloFAB(
-                  state: state,
-                  onPressed: _onFabPressed,
-                  icon: emptyWidget,
+                return ArcFABSlider(
+                  fabState: state,
+                  onFabPressed: _onFabPressed,
+                  onModeChanged: (value) {
+                    print('New arc slider mode: $value');
+                  },
                 );
               },
             ),

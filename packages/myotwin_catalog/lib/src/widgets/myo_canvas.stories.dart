@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print test file.
+
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:widgetbook/widgetbook.dart';
