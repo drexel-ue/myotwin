@@ -83,65 +83,66 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
-    return Padding(
-      padding: allPadding32,
-      child: Stack(
-        clipBehavior: .none,
-        children: [
-          // --- LAYER 1: The Stable Glass ---
-          // Positioned.fill automatically sizes this glass pane to match the exact
-          // logical layout footprint of the HoloGlitch widget below it.
-          Positioned(
-            top: spacing32,
-            bottom: spacing32,
-            left: spacing32,
-            right: spacing32,
-            child: ClipRRect(
-              borderRadius: theme.radiusSm,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
-                child: const ColoredBox(
-                  color: Colors.transparent,
-                ),
+    return Stack(
+      clipBehavior: .none,
+      children: [
+        // --- LAYER 1: The Stable Glass ---
+        // Positioned.fill automatically sizes this glass pane to match the exact
+        // logical layout footprint of the HoloGlitch widget below it.
+        Positioned(
+          top: spacing32,
+          bottom: spacing32,
+          left: spacing32,
+          right: spacing32,
+          child: ClipRRect(
+            borderRadius: theme.radiusSm,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+              child: const ColoredBox(
+                color: Colors.transparent,
               ),
             ),
           ),
+        ),
 
-          // --- LAYER 2: The Glitched Content ---
-          HoloGlitch(
-            phase: glitchPhase,
-            intensity: glitchIntensity,
-            severity: 0.05,
-            child: Padding(
-              padding: allPadding32,
-              child: ClipRRect(
-                borderRadius: theme.radiusSm,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    border: Border.all(color: theme.outline),
-                    borderRadius: theme.radiusSm,
-                  ),
-                  child: CustomPaint(
-                    painter: _RadiatingHUDPainter(
-                      progress: widget.animationProgress,
-                      impactPoint: widget.impactPoint,
-                      strokeColor: theme.white,
-                      outlineColor: theme.outline,
+        // --- LAYER 2: The Glitched Content ---
+        HoloGlitch(
+          phase: glitchPhase,
+          intensity: glitchIntensity,
+          severity: 0.05,
+          child: Padding(
+            padding: allPadding8,
+            child: IntrinsicWidth(
+              child: IntrinsicHeight(
+                child: ClipRRect(
+                  borderRadius: theme.radiusSm,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      border: Border.all(color: theme.outline),
+                      borderRadius: theme.radiusSm,
                     ),
-                    child: Padding(
-                      padding: allPadding16,
-                      child: Opacity(
-                        opacity: (widget.animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.title case final String title when title.isNotEmpty) ...[
-                              Text(title.toUpperCase(), style: theme.headlineMedium),
-                              const MyoDivider(height: spacing16),
+                    child: CustomPaint(
+                      painter: _RadiatingHUDPainter(
+                        progress: widget.animationProgress,
+                        impactPoint: widget.impactPoint,
+                        strokeColor: theme.white,
+                        outlineColor: theme.outline,
+                      ),
+                      child: Padding(
+                        padding: allPadding16,
+                        child: Opacity(
+                          opacity: (widget.animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.title case final String title when title.isNotEmpty) ...[
+                                Text(title.toUpperCase(), style: theme.headlineMedium),
+                                const MyoDivider(height: spacing16),
+                              ],
+                              widget.child,
                             ],
-                            widget.child,
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -150,8 +151,8 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

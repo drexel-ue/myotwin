@@ -20,7 +20,7 @@ class _MyoCanvasWrapperState extends State<MyoCanvasWrapper> {
   Widget build(BuildContext context) {
     return MyoCanvas(
       backgroundChild: Center(child: Text('Background', style: context.myoTheme.bodyLarge)),
-      chatChild: Center(child: Text('Chat child', style: context.myoTheme.bodyMedium)),
+      chatChild: const MyoChatList(),
       onShowChatChanged: (value) {
         print('on show chnaged: $value');
       },
