@@ -37,6 +37,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   late final AnimationController _chatOffsetController;
   bool _showChat = false;
   final _fabState = ValueNotifier<HoloState>(.idle);
+  final _sliderMode = ValueNotifier<ArcSliderMode>(.centered);
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   void dispose() {
     _chatOffsetController.dispose();
     _fabState.dispose();
+    _sliderMode.dispose();
     super.dispose();
   }
 
@@ -91,7 +93,21 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                   ),
                 ),
             child: MyoChat(
-              child: widget.chatChild,
+              child: ValueListenableBuilder(
+                valueListenable: _sliderMode,
+                builder: (context, mode, child) {
+                  return AnimatedPadding(
+                    padding: EdgeInsets.only(
+                      bottom: mode == .centered
+                          ? ArcFABSlider.trackHeight + spacing16
+                          : (ArcFABSlider.trackHeight / 2.0) + spacing16,
+                    ),
+                    duration: context.myoTheme.motionNormal,
+                    curve: Curves.easeOut,
+                    child: widget.chatChild,
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -107,7 +123,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                   fabState: state,
                   onFabPressed: _onFabPressed,
                   onModeChanged: (value) {
-                    print('New arc slider mode: $value');
+                    _sliderMode.value = value;
                   },
                 );
               },

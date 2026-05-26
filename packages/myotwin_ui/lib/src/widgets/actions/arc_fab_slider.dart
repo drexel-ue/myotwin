@@ -56,7 +56,7 @@ class ArcFABSlider extends StatefulWidget {
 
   /// Total height of the track, computed from the base spacing plus the
   /// arc drop. Matches the container height so touch targets are consistent.
-  static const double trackHeight = spacing64 + arcDropDistance;
+  static const double trackHeight = spacing72 + arcDropDistance;
 
   /// The current animation state (idle, listening, active) controlling the
   /// internal holographic FAB's speed and glow intensity.
@@ -124,6 +124,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
 
     // 2. Predict the target based on position AND flick velocity
     var target = 0.0;
+    _mode = .centered;
 
     // If they dragged past 30%, OR flicked it hard, commit to the side
     if (current + (velocity * 0.1) < -0.3) {

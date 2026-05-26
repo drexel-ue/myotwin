@@ -140,66 +140,63 @@ class _AnimatedHoloFABState extends State<AnimatedHoloFAB> with SingleTickerProv
       child: SizedBox.square(
         dimension: spacing64,
         child: OverflowBox(
-          maxWidth: spacing64 * 2,
-          maxHeight: spacing64 * 2,
-          child: SizedBox.square(
-            dimension: spacing64 * 2,
-            child: HoloGlitch(
-              phase: glitchPhase,
-              intensity: glitchIntensity,
-              severity: _currentSeverity,
-              // The padding is preserved here inside the sampler to prevent bounds clipping
-              child: Padding(
-                padding: allPadding32,
-                child: Container(
-                  width: spacing64,
-                  height: spacing64,
-                  decoration: BoxDecoration(
-                    shape: .circle,
-                    color: context.myoTheme.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: baseColor.withValues(
-                          alpha: (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
-                        ),
-                        blurRadius: 10.0 + (10.0 * normalizedPulse) + (15.0 * _visualIntensity),
-                        spreadRadius: 1.0 + (3.0 * _visualIntensity * normalizedPulse),
+          maxWidth: .infinity,
+          maxHeight: .infinity,
+          child: HoloGlitch(
+            phase: glitchPhase,
+            intensity: glitchIntensity,
+            severity: _currentSeverity,
+            // The padding is preserved here inside the sampler to prevent bounds clipping
+            child: Padding(
+              padding: allPadding48,
+              child: Container(
+                width: spacing72,
+                height: spacing72,
+                decoration: BoxDecoration(
+                  shape: .circle,
+                  color: context.myoTheme.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      color: baseColor.withValues(
+                        alpha: (0.1 + (0.2 * normalizedPulse) + (0.4 * _visualIntensity)).clamp(0.0, 1.0),
                       ),
-                    ],
-                  ),
-                  child: Stack(
-                    alignment: .center,
-                    children: [
-                      Transform.rotate(
-                        angle: rotation,
-                        child: CustomPaint(
-                          size: const Size.square(spacing64),
-                          painter: _HoloArcPainter(
-                            color: baseColor,
-                            intensity: _visualIntensity,
-                          ),
+                      blurRadius: 10.0 + (10.0 * normalizedPulse) + (15.0 * _visualIntensity),
+                      spreadRadius: 1.0 + (3.0 * _visualIntensity * normalizedPulse),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: .center,
+                  children: [
+                    Transform.rotate(
+                      angle: rotation,
+                      child: CustomPaint(
+                        size: const Size.square(spacing64),
+                        painter: _HoloArcPainter(
+                          color: baseColor,
+                          intensity: _visualIntensity,
                         ),
                       ),
-                      ShaderMask(
-                        shaderCallback: (bounds) {
-                          return LinearGradient(
-                            begin: Alignment(0.0, scanlineOffset - 0.5),
-                            end: Alignment(0.0, scanlineOffset + 0.5),
-                            colors: [
-                              context.myoTheme.white.withValues(alpha: 0.2),
-                              context.myoTheme.white.withValues(
-                                alpha: (0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0),
-                              ),
-                              context.myoTheme.white.withValues(alpha: 0.2),
-                            ],
-                            stops: const [0.0, 0.5, 1.0],
-                          ).createShader(bounds);
-                        },
-                        blendMode: .srcIn,
-                        child: widget.icon,
-                      ),
-                    ],
-                  ),
+                    ),
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return LinearGradient(
+                          begin: Alignment(0.0, scanlineOffset - 0.5),
+                          end: Alignment(0.0, scanlineOffset + 0.5),
+                          colors: [
+                            context.myoTheme.white.withValues(alpha: 0.2),
+                            context.myoTheme.white.withValues(
+                              alpha: (0.2 + (0.8 * _visualIntensity)).clamp(0.0, 1.0),
+                            ),
+                            context.myoTheme.white.withValues(alpha: 0.2),
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ).createShader(bounds);
+                      },
+                      blendMode: .srcIn,
+                      child: widget.icon,
+                    ),
+                  ],
                 ),
               ),
             ),
