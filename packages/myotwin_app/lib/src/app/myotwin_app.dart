@@ -22,7 +22,9 @@ class _MyotwinAppState extends State<MyotwinApp> {
         builder: (context) {
           return const Scaffold(
             body: InteractiveGrid(
+              child: emptyWidget,
             ),
+
           );
         },
       ),

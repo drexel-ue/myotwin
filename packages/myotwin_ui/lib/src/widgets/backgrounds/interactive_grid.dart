@@ -7,7 +7,12 @@ import 'package:myotwin_ui/myotwin_ui.dart';
 class InteractiveGrid extends StatefulWidget {
   /// Creates a pannable/flashable container that hosts a precision grid background
   /// and user-supplied child content.
-  const InteractiveGrid({super.key});
+  const InteractiveGrid({
+    super.key,
+    required this.child,
+  });
+
+  final Widget child;
 
   /// Creates the mutable state for this widget.
   @override
@@ -94,16 +99,24 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
-      child: ValueListenableBuilder(
-        valueListenable: _cameraPan,
-        builder: (context, offset, _) {
-          return PrecisionGridBackground(offset: offset);
-        },
-      ),
+    return Stack(
+      fit: .passthrough,
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            onPanStart: _onPanStart,
+            onPanUpdate: _onPanUpdate,
+            onPanEnd: _onPanEnd,
+            child: ValueListenableBuilder(
+              valueListenable: _cameraPan,
+              builder: (context, offset, _) {
+                return PrecisionGridBackground(offset: offset);
+              },
+            ),
+          ),
+        ),
+        Positioned.fill(child: widget.child),
+      ],
     );
   }
 }
