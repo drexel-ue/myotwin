@@ -2,15 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
+/// Input mode for the [ArcFABSlider].
+///
+/// {@template arc_fab_slider.mode}
+/// - `centered`: Default neutral position, used when the slider returns
+///   to the middle.
+/// - `voice`: Left snapped position, indicating voice input mode.
+/// - `text`: Right snapped position, indicating text input mode.
+/// {@endtemplate}
 enum ArcSliderMode {
+  /// Neutral / default state.
   centered,
+
+  /// Voice input mode.
   voice,
+
+  /// Text input mode.
   text,
 }
 
+/// A callback that receives the current [ArcSliderMode] snapped to by
+/// the slider after a drag or flick gesture.
 typedef ArcSliderModeCallback = void Function(ArcSliderMode mode);
 
+/// A horizontal arc-track gesture widget where the FAB slides along a
+/// parabolic arc path and snaps between interaction modes with velocity-
+/// based flick prediction and haptic feedback.
+///
+/// The FAB drops downward as it moves left or right (arc shape), scales
+/// down proportionally, and snaps back to one of three modes — `centered`,
+/// `voice`, or `text` — using a spring animation with an ease-out-back
+/// curve for a mechanical "thunk" feel.
 class ArcFABSlider extends StatefulWidget {
+  /// Creates a horizontal arc-track gesture slider.
+  ///
+  /// {@template arc_fab_slider.constructor}
+  /// The slider responds to drag and flick gestures. A flick past 30 % of
+  /// the track distance, or a sustained drag past that threshold, commits
+  /// the user to the nearest side mode ([ArcSliderMode.voice] or
+  /// [ArcSliderMode.text]). Snapping back to [ArcSliderMode.centered] only
+  /// happens when the slider is released near the middle.
+  /// {@endtemplate}
   const ArcFABSlider({
     super.key,
     required this.fabState,
@@ -18,11 +50,25 @@ class ArcFABSlider extends StatefulWidget {
     required this.onModeChanged,
   });
 
-  static const arcDropDistance = 40.0;
-  static const trackHeight = spacing64 + arcDropDistance;
+  /// Vertical drop in pixels from the track baseline to the arc's
+  /// lowest point (when the FAB is at either extreme).
+  static const double arcDropDistance = 40.0;
 
+  /// Total height of the track, computed from the base spacing plus the
+  /// arc drop. Matches the container height so touch targets are consistent.
+  static const double trackHeight = spacing64 + arcDropDistance;
+
+  /// The current animation state (idle, listening, active) controlling the
+  /// internal holographic FAB's speed and glow intensity.
   final HoloState fabState;
+
+  /// Callback invoked when the FAB is pressed within a particular mode.
+  /// Passes the current [ArcSliderMode] so callers can act on the
+  /// selected input mode.
   final ArcSliderModeCallback onFabPressed;
+
+  /// Callback invoked whenever the slider snaps to a new mode.
+  /// Receives the new [ArcSliderMode] value.
   final ValueChanged<ArcSliderMode> onModeChanged;
 
   @override

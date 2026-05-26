@@ -305,5 +305,3 @@ class _MyoSliderPainter extends CustomPainter {
         oldDelegate.tickColor != tickColor;
   }
 }
-
-
