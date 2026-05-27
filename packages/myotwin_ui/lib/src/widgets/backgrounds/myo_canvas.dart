@@ -99,8 +99,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                   return AnimatedPadding(
                     padding: EdgeInsets.only(
                       bottom: mode == .centered
-                          ? ArcFABSlider.trackHeight + spacing16
-                          : (ArcFABSlider.trackHeight / 2.0) + spacing16,
+                          ? ArcFABSlider.trackHeight : (ArcFABSlider.trackHeight / 2.0),
                     ),
                     duration: context.myoTheme.motionNormal,
                     curve: Curves.easeOut,

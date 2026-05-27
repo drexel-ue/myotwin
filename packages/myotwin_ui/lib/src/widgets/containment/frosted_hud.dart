@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
+import 'package:myotwin_ui/src/widgets/effects/bleed_margin.dart';
 
 /// A holographic frosted-glass HUD panel with radiating laser effects.
 class FrostedHUD extends StatefulWidget {
@@ -83,17 +84,17 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
+    // Define the runway needed for the glitch shader
+    const bleedValue = 32.0;
+    const bleedInsets = EdgeInsets.all(bleedValue);
+
     return Stack(
-      clipBehavior: .none,
+      clipBehavior: Clip.none, // Critical: Allows the BleedMargin to overflow the Stack
       children: [
         // --- LAYER 1: The Stable Glass ---
-        // Positioned.fill automatically sizes this glass pane to match the exact
-        // logical layout footprint of the HoloGlitch widget below it.
-        Positioned(
-          top: spacing32,
-          bottom: spacing32,
-          left: spacing32,
-          right: spacing32,
+        // Because BleedMargin hides the 32px padding from the Stack's layout,
+        // Positioned.fill will perfectly hug the HUD content without manual insets.
+        Positioned.fill(
           child: ClipRRect(
             borderRadius: theme.radiusSm,
             child: BackdropFilter(
@@ -106,42 +107,47 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
         ),
 
         // --- LAYER 2: The Glitched Content ---
-        HoloGlitch(
-          phase: glitchPhase,
-          intensity: glitchIntensity,
-          severity: 0.05,
-          child: Padding(
-            padding: allPadding8,
-            child: IntrinsicWidth(
-              child: IntrinsicHeight(
-                child: ClipRRect(
-                  borderRadius: theme.radiusSm,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      border: Border.all(color: theme.outline),
-                      borderRadius: theme.radiusSm,
-                    ),
-                    child: CustomPaint(
-                      painter: _RadiatingHUDPainter(
-                        progress: widget.animationProgress,
-                        impactPoint: widget.impactPoint,
-                        strokeColor: theme.white,
-                        outlineColor: theme.outline,
+        BleedMargin(
+          margin: bleedInsets, // Tells layout engine: "Hide this much size from the parent"
+          child: HoloGlitch(
+            phase: glitchPhase,
+            intensity: glitchIntensity,
+            severity: 0.05,
+
+            // We STILL need the physical padding here so the shader has texture pixels to warp
+            child: Padding(
+              padding: bleedInsets,
+              child: IntrinsicWidth(
+                child: IntrinsicHeight(
+                  child: ClipRRect(
+                    borderRadius: theme.radiusSm,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        border: Border.all(color: theme.outline),
+                        borderRadius: theme.radiusSm,
                       ),
-                      child: Padding(
-                        padding: allPadding16,
-                        child: Opacity(
-                          opacity: (widget.animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (widget.title case final String title when title.isNotEmpty) ...[
-                                Text(title.toUpperCase(), style: theme.headlineMedium),
-                                const MyoDivider(height: spacing16),
+                      child: CustomPaint(
+                        painter: _RadiatingHUDPainter(
+                          progress: widget.animationProgress,
+                          impactPoint: widget.impactPoint,
+                          strokeColor: theme.white,
+                          outlineColor: theme.outline,
+                        ),
+                        child: Padding(
+                          padding: allPadding16,
+                          child: Opacity(
+                            opacity: (widget.animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (widget.title case final String title when title.isNotEmpty) ...[
+                                  Text(title.toUpperCase(), style: theme.headlineMedium),
+                                  const MyoDivider(height: spacing16),
+                                ],
+                                widget.child,
                               ],
-                              widget.child,
-                            ],
+                            ),
                           ),
                         ),
                       ),
