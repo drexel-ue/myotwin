@@ -4,36 +4,39 @@ import 'package:flutter/rendering.dart';
 /// A widget that allows its child to paint outside its layout bounds.
 /// Perfect for dropping shadows or shaders into adjacent layout space.
 class BleedMargin extends SingleChildRenderObjectWidget {
-  final EdgeInsets margin;
-
+  /// Creates a [BleedMargin].
   const BleedMargin({
     super.key,
     required this.margin,
     super.child,
   });
 
+  /// The amount of space by which the child can bleed outside its layout bounds.
+  final EdgeInsets margin;
+
   @override
-  // EXPLICIT TYPE: Tell the framework this is a RenderBox so it wires up BoxParentData correctly
   RenderBox createRenderObject(BuildContext context) {
-    return _RenderBleedMargin(margin: margin);
+    return RenderBleedMargin(margin: margin);
   }
 
   @override
-  void updateRenderObject(BuildContext context, covariant _RenderBleedMargin renderObject) {
+  void updateRenderObject(BuildContext context, covariant RenderBleedMargin renderObject) {
     renderObject.margin = margin;
   }
 }
 
-// 2. INHERIT FROM RenderShiftedBox: This handles the painting and hit-testing offsets for us.
-class _RenderBleedMargin extends RenderShiftedBox {
-  _RenderBleedMargin({
+/// The [RenderObject] for [BleedMargin].
+class RenderBleedMargin extends RenderShiftedBox {
+  /// Creates a [RenderBleedMargin].
+  RenderBleedMargin({
     required EdgeInsets margin,
     RenderBox? child,
-  }) : _margin = margin,
-       super(child);
+  })  : _margin = margin,
+        super(child);
 
   EdgeInsets _margin;
 
+  /// The amount of space by which the child can bleed outside its layout bounds.
   set margin(EdgeInsets value) {
     if (_margin == value) return;
     _margin = value;

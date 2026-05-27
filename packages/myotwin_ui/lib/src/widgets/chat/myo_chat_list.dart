@@ -3,7 +3,9 @@ import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:uuid/uuid.dart';
 
+/// A scrollable list of chat messages with velocity tracking.
 class MyoChatList extends StatefulWidget {
+  /// Creates a [MyoChatList].
   const MyoChatList({super.key});
 
   @override
