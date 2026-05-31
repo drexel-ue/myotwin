@@ -14,11 +14,13 @@ class OscilloscopeWrapper extends StatefulWidget {
     required this.isListening,
     required this.strokeWidth,
     required this.showMirroredWave,
+    required this.mirroredWaveSpeed,
   });
 
   final bool isListening;
   final double strokeWidth;
   final bool showMirroredWave;
+  final double mirroredWaveSpeed;
 
   @override
   State<OscilloscopeWrapper> createState() => _OscilloscopeWrapperState();
@@ -65,6 +67,7 @@ class _OscilloscopeWrapperState extends State<OscilloscopeWrapper> {
           isListening: widget.isListening,
           strokeWidth: widget.strokeWidth,
           showMirroredWave: widget.showMirroredWave,
+          mirroredWaveSpeed: widget.mirroredWaveSpeed,
         ),
       ),
     );
@@ -76,6 +79,7 @@ final $Default = _Story(
   args: _Args(
     isListening: BoolArg(true, name: 'Is Listening'),
     strokeWidth: DoubleArg(2.0, name: 'Stroke Width'),
-    showMirroredWave: BoolArg(false, name: 'Show Mirrored Wave'),
+    showMirroredWave: BoolArg(true, name: 'Show Mirrored Wave'),
+    mirroredWaveSpeed: DoubleArg(0.5, name: 'Mirrored Speed'),
   ),
 );

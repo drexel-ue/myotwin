@@ -47,6 +47,7 @@ class OscilloscopeWrapperStory
                isListening: args.isListening,
                strokeWidth: args.strokeWidth,
                showMirroredWave: args.showMirroredWave,
+               mirroredWaveSpeed: args.mirroredWaveSpeed,
              ),
        );
 }
@@ -57,6 +58,7 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
     Arg<bool>? isListening,
     Arg<double>? strokeWidth,
     Arg<bool>? showMirroredWave,
+    Arg<double>? mirroredWaveSpeed,
   }) : this.keyArg = $initArg('key', key, null),
        this.isListeningArg = $initArg(
          'isListening',
@@ -72,6 +74,11 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
          'showMirroredWave',
          showMirroredWave,
          BoolArg(false),
+       )!,
+       this.mirroredWaveSpeedArg = $initArg(
+         'mirroredWaveSpeed',
+         mirroredWaveSpeed,
+         DoubleArg(0.0),
        )!;
 
   OscilloscopeWrapperArgs.fixed({
@@ -79,10 +86,12 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
     bool isListening = false,
     double strokeWidth = 0.0,
     bool showMirroredWave = false,
+    double mirroredWaveSpeed = 0.0,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.isListeningArg = Arg.fixed(isListening),
        this.strokeWidthArg = Arg.fixed(strokeWidth),
-       this.showMirroredWaveArg = Arg.fixed(showMirroredWave);
+       this.showMirroredWaveArg = Arg.fixed(showMirroredWave),
+       this.mirroredWaveSpeedArg = Arg.fixed(mirroredWaveSpeed);
 
   final Arg<Key?>? keyArg;
 
@@ -92,6 +101,8 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
 
   final Arg<bool> showMirroredWaveArg;
 
+  final Arg<double> mirroredWaveSpeedArg;
+
   Key? get key => keyArg?.value;
 
   bool get isListening => isListeningArg.value;
@@ -100,11 +111,14 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
 
   bool get showMirroredWave => showMirroredWaveArg.value;
 
+  double get mirroredWaveSpeed => mirroredWaveSpeedArg.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
     isListeningArg,
     strokeWidthArg,
     showMirroredWaveArg,
+    mirroredWaveSpeedArg,
   ];
 }
