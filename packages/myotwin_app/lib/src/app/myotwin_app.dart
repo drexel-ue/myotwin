@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:myotwin_app/src/app/boot_screen.dart';
 import 'package:myotwin_app/src/infrastructure/ai/local_motus_agent.dart';
@@ -36,46 +39,92 @@ class _MyoStartupOrchestrator extends StatefulWidget {
   final LocalMotusAgent agent;
 
   @override
-  State<_MyoStartupOrchestrator> createState() => _MyoStartupOrchestratorState();
+  State<_MyoStartupOrchestrator> createState() =>
+      _MyoStartupOrchestratorState();
 }
 
 class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
-    with SingleTickerProviderStateMixin, HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
-  bool _wasInitialized = false;
+    with TickerProviderStateMixin, HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
+  late final AnimationController _perceivedController;
+  bool _readyToTransition = false;
+  String _status = 'INITIALIZING_MOTUS_CORE...';
 
   @override
   void initState() {
     super.initState();
-    _wasInitialized = widget.agent.isInitialized;
+    _perceivedController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _perceivedController.addListener(_checkHandoff);
+    widget.agent.addListener(_checkHandoff);
+
+    // Start the cinematic boot "scan"
+    unawaited(_perceivedController.forward());
   }
 
-  void _checkInitialization() {
-    if (widget.agent.isInitialized && !_wasInitialized) {
-      _wasInitialized = true;
-      triggerGlitch();
+  @override
+  void dispose() {
+    _perceivedController.dispose();
+    widget.agent.removeListener(_checkHandoff);
+    super.dispose();
+  }
+
+  void _checkHandoff() {
+    if (_readyToTransition) return;
+
+    // We only transition when:
+    // 1. The actual model is loaded.
+    // 2. The perceived cinematic "scan" animation is finished.
+    if (widget.agent.isInitialized && _perceivedController.isCompleted) {
+      setState(() {
+        _status = 'SYSTEM_READY_FOR_INPUT';
+      });
+
+      // Brief cinematic hold at "100%" before ignition
+      Timer(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        setState(() {
+          _readyToTransition = true;
+        });
+        triggerGlitch();
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    _checkInitialization();
     final theme = context.myoTheme;
 
     return HoloGlitch(
       phase: glitchPhase,
       intensity: glitchIntensity,
-      severity: 0.2, // Stronger glitch for boot-up success
+      severity: 0.2,
       child: AnimatedSwitcher(
         duration: theme.motionHolographic,
         switchInCurve: theme.curveEaseOut,
         switchOutCurve: theme.curveDecelerate,
-        child: !widget.agent.isInitialized
-            ? ListenableBuilder(
+        child: !_readyToTransition
+            ? AnimatedBuilder(
                 key: const ValueKey('boot_screen'),
-                listenable: widget.agent.loadingProgress,
-                builder: (context, _) => BootScreen(
-                  progress: widget.agent.loadingProgress.value,
-                ),
+                animation: Listenable.merge([
+                  _perceivedController,
+                  widget.agent.loadingProgress,
+                ]),
+                builder: (context, _) {
+                  // The UI shows whichever is higher: the real download or the cinematic scan.
+                  // This masks instant loads while still respecting slow downloads.
+                  final progress = math.max(
+                    _perceivedController.value,
+                    widget.agent.loadingProgress.value,
+                  );
+
+                  return BootScreen(
+                    progress: progress,
+                    status: _status,
+                  );
+                },
               )
             : const MyoCanvas(
                 key: ValueKey('myo_canvas'),
