@@ -65,8 +65,14 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     _sliderMode.addListener(_handleModeChange);
   }
 
-  void _handleModeChange() {
+  Future<void> _handleModeChange() async {
     final mode = _sliderMode.value;
+    
+    // Auto-open chat when sliding to either side
+    if (mode != ArcSliderMode.centered && !_showChat) {
+      await _toggleChat();
+      widget.onShowChatChanged(_showChat);
+    }
     
     // Only manage stub timer if no external amplitudes are provided
     if (widget.voiceAmplitudes == null) {
