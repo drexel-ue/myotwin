@@ -54,8 +54,6 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   // Stub animation state
   Timer? _stubTimer;
   double _stubPhase = 0.0;
-  double _pluckIntensity = 0.0;
-  final math.Random _random = math.Random();
 
   @override
   void initState() {
@@ -90,49 +88,41 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   void _stopStubTimer() {
     _stubTimer?.cancel();
     _stubTimer = null;
-    _pluckIntensity = 0.0;
     // Reset to flat line when stopping
     _internalVoiceAmplitudes.value = List.filled(128, 0.0);
   }
 
   void _updateStubAmplitudes() {
-    // 1. Decaying physics
-    if (_pluckIntensity > 0.01) {
-      _pluckIntensity *= 0.94; // Exponential decay
-    } else {
-      _pluckIntensity = 0.0;
-    }
+    // Steady phase progression for the traveling wave
+    _stubPhase += 0.15;
+    
+    // Cycle repeats periodically. Pulse moves from 0 (center) to 1.5 (past edge).
+    final beatTime = (_stubPhase * 0.25) % 1.5;
 
-    // 2. Randomly "pluck" the string
-    if (_random.nextDouble() > 0.97) {
-      _pluckIntensity = 0.5 + (_random.nextDouble() * 0.5);
-    }
-
-    // 3. Update phase for rapid vibration
-    _stubPhase += 0.8;
-
-    // 4. Generate standing wave data
     const count = 128;
     final newData = List.generate(count, (index) {
-      if (_pluckIntensity == 0.0) return 0.0;
-
       // Spatial progress: 0.0 at center (index 0), 1.0 at edge (index 127)
       final progress = index / (count - 1);
       
-      // Standing wave vibration: Oscillation(time) * Shape(space)
-      // Fundamental spatial shape (antinode at center, node at edge)
-      final fundamentalShape = math.cos(progress * (math.pi / 2));
-      final fundamental = math.sin(_stubPhase) * fundamentalShape;
+      // 1. Primary Pulse ("Dub")
+      final distance1 = (progress - beatTime).abs();
+      // Gaussian curve: creates a highly localized sharp peak
+      final envelope1 = math.exp(-(distance1 * distance1) * 80.0);
+      // Traveling carrier wave inside the pulse
+      final wave1 = math.sin((progress - _stubPhase) * math.pi * 12) * envelope1;
       
-      // High-frequency ripple (9th harmonic)
-      final rippleShape1 = math.cos(progress * 9 * (math.pi / 2));
-      final ripple1 = math.sin(_stubPhase * 5.0) * rippleShape1 * 0.5;
+      // 2. Secondary Pulse ("Lub") - trailing slightly behind
+      final distance2 = (progress - (beatTime - 0.15)).abs();
+      final envelope2 = math.exp(-(distance2 * distance2) * 120.0);
+      final wave2 = math.sin((progress - _stubPhase) * math.pi * 18) * envelope2 * 0.4;
       
-      // Ultra-high-frequency ripple (15th harmonic)
-      final rippleShape2 = math.cos(progress * 15 * (math.pi / 2));
-      final ripple2 = math.sin(_stubPhase * 8.0) * rippleShape2 * 0.4;
-      
-      return (fundamental + ripple1 + ripple2) * _pluckIntensity * 1.2;
+      // 3. Ambient baseline (very subtle constant vibration)
+      final ambient = math.sin(_stubPhase * 2 + progress * math.pi * 8) * 0.01;
+
+      // 4. Spatial Taper to ensure it stays locked at the sides
+      final edgeTaper = math.cos(progress * (math.pi / 2));
+
+      return (wave1 + wave2 + ambient) * edgeTaper * 1.6;
     });
 
     _internalVoiceAmplitudes.value = newData;
