@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:myotwin_ui/src/widgets/actions/arc_fab_slider.dart';
@@ -16,6 +19,7 @@ class MyoCanvas extends StatefulWidget {
     required this.backgroundChild,
     required this.chatChild,
     required this.onShowChatChanged,
+    this.voiceAmplitudes,
   });
 
   /// {@macro myo_canvas.background_child}
@@ -29,6 +33,9 @@ class MyoCanvas extends StatefulWidget {
   /// {@macro myo_canvas.chat_child}
   final ValueChanged<bool> onShowChatChanged;
 
+  /// A listenable list of normalized amplitude values for the voice visualizer.
+  final ValueNotifier<List<double>>? voiceAmplitudes;
+
   @override
   State<MyoCanvas> createState() => _MyoCanvasState();
 }
@@ -39,11 +46,60 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   final _fabState = ValueNotifier<HoloState>(.idle);
   final _sliderMode = ValueNotifier<ArcSliderMode>(.centered);
   final _textGlitchTrigger = ValueNotifier<int>(0);
+  final _voiceGlitchTrigger = ValueNotifier<int>(0);
+
+  // Fallback for voice visualizer if none provided
+  late final ValueNotifier<List<double>> _internalVoiceAmplitudes;
+
+  // Stub animation state
+  Timer? _stubTimer;
+  double _stubPhase = 0.0;
 
   @override
   void initState() {
     super.initState();
     _chatOffsetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _internalVoiceAmplitudes = widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(32, 0.0));
+    
+    // Listen for mode changes to manage the stub timer
+    _sliderMode.addListener(_handleModeChange);
+  }
+
+  void _handleModeChange() {
+    final mode = _sliderMode.value;
+    
+    // Only manage stub timer if no external amplitudes are provided
+    if (widget.voiceAmplitudes == null) {
+      if (mode == ArcSliderMode.voice) {
+        _startStubTimer();
+      } else {
+        _stopStubTimer();
+      }
+    }
+  }
+
+  void _startStubTimer() {
+    _stubTimer?.cancel();
+    _stubTimer = Timer.periodic(const Duration(milliseconds: 32), (_) {
+      _updateStubAmplitudes();
+    });
+  }
+
+  void _stopStubTimer() {
+    _stubTimer?.cancel();
+    _stubTimer = null;
+    // Reset to flat line when stopping
+    _internalVoiceAmplitudes.value = List.filled(32, 0.0);
+  }
+
+  void _updateStubAmplitudes() {
+    _stubPhase += 0.2;
+    final newData = List.generate(32, (index) {
+      // Complex wave: sum of two sines for a realistic HUD look
+      return (math.sin(_stubPhase + index * 0.3) * 0.4) +
+             (math.sin(_stubPhase * 0.5 + index * 0.6) * 0.2);
+    });
+    _internalVoiceAmplitudes.value = newData;
   }
 
   Future<void> _toggleChat() async {
@@ -64,10 +120,16 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
+    _sliderMode.removeListener(_handleModeChange);
     _chatOffsetController.dispose();
     _fabState.dispose();
     _sliderMode.dispose();
     _textGlitchTrigger.dispose();
+    _voiceGlitchTrigger.dispose();
+    _stubTimer?.cancel();
+    if (widget.voiceAmplitudes == null) {
+      _internalVoiceAmplitudes.dispose();
+    }
     super.dispose();
   }
 
@@ -99,7 +161,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                 builder: (context, mode, child) {
                   return AnimatedPadding(
                     padding: EdgeInsets.only(
-                      bottom: mode == .centered
+                      bottom: mode == ArcSliderMode.centered
                           ? ArcFABSlider.trackHeight : (ArcFABSlider.trackHeight / 2.0),
                     ),
                     duration: context.myoTheme.motionNormal,
@@ -112,17 +174,56 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
           ),
         ),
         Positioned(
-          left: spacing16,
-          right: spacing64 + spacing24, // Space for scaled FAB
+          left: spacing64 + spacing24, // Space for scaled FAB on left
+          right: spacing16,
           bottom: spacing16, // Align perfectly with the dropped FAB's center
           child: ValueListenableBuilder(
             valueListenable: _sliderMode,
             builder: (context, mode, child) {
-              final isTextMode = mode == .text;
+              final isVoiceMode = mode == ArcSliderMode.voice;
               return AnimatedSlide(
-                offset: isTextMode ? .zero : const Offset(1.2, 0),
+                offset: isVoiceMode ? Offset.zero : const Offset(-1.2, 0),
                 duration: context.myoTheme.motionNormal,
-                curve: Curves.easeOutExpo,
+                curve: Curves.easeOutBack,
+                onEnd: () {
+                  if (isVoiceMode) {
+                    _voiceGlitchTrigger.value++;
+                  }
+                },
+                child: AnimatedOpacity(
+                  opacity: isVoiceMode ? 1.0 : 0.0,
+                  duration: context.myoTheme.motionFast,
+                  curve: Curves.easeOut,
+                  child: IgnorePointer(
+                    ignoring: !isVoiceMode,
+                    child: ValueListenableBuilder(
+                      valueListenable: _voiceGlitchTrigger,
+                      builder: (context, glitchKey, child) {
+                        return MyoAudioOscilloscope(
+                          glitchKey: glitchKey,
+                          amplitudes: _internalVoiceAmplitudes,
+                          isListening: isVoiceMode,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Positioned(
+          left: spacing16,
+          right: spacing64 + spacing24, // Space for scaled FAB on right
+          bottom: spacing16, // Align perfectly with the dropped FAB's center
+          child: ValueListenableBuilder(
+            valueListenable: _sliderMode,
+            builder: (context, mode, child) {
+              final isTextMode = mode == ArcSliderMode.text;
+              return AnimatedSlide(
+                offset: isTextMode ? Offset.zero : const Offset(1.2, 0),
+                duration: context.myoTheme.motionNormal,
+                curve: Curves.easeOutBack,
                 onEnd: () {
                   if (isTextMode) {
                     _textGlitchTrigger.value++;

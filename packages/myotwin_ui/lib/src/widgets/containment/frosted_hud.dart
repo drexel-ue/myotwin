@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
-import 'package:myotwin_ui/src/widgets/effects/bleed_margin.dart';
 
 /// A holographic frosted-glass HUD panel with radiating laser effects.
 class FrostedHUD extends StatefulWidget {
