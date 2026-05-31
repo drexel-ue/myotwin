@@ -54,6 +54,8 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   // Stub animation state
   Timer? _stubTimer;
   double _stubPhase = 0.0;
+  double _pluckIntensity = 0.0;
+  final math.Random _random = math.Random();
 
   @override
   void initState() {
@@ -80,7 +82,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
 
   void _startStubTimer() {
     _stubTimer?.cancel();
-    _stubTimer = Timer.periodic(const Duration(milliseconds: 32), (_) {
+    _stubTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
       _updateStubAmplitudes();
     });
   }
@@ -88,17 +90,44 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   void _stopStubTimer() {
     _stubTimer?.cancel();
     _stubTimer = null;
+    _pluckIntensity = 0.0;
     // Reset to flat line when stopping
     _internalVoiceAmplitudes.value = List.filled(32, 0.0);
   }
 
   void _updateStubAmplitudes() {
-    _stubPhase += 0.2;
-    final newData = List.generate(32, (index) {
-      // Complex wave: sum of two sines for a realistic HUD look
-      return (math.sin(_stubPhase + index * 0.3) * 0.4) +
-             (math.sin(_stubPhase * 0.5 + index * 0.6) * 0.2);
+    // 1. Decaying physics
+    if (_pluckIntensity > 0.01) {
+      _pluckIntensity *= 0.94; // Exponential decay
+    } else {
+      _pluckIntensity = 0.0;
+    }
+
+    // 2. Randomly "pluck" the string
+    if (_random.nextDouble() > 0.97) {
+      _pluckIntensity = 0.5 + (_random.nextDouble() * 0.5);
+    }
+
+    // 3. Update phase for rapid vibration
+    _stubPhase += 0.8;
+
+    // 4. Generate standing wave data
+    const count = 32;
+    final newData = List.generate(count, (index) {
+      if (_pluckIntensity == 0.0) return 0.0;
+
+      // Spatial envelope: 1.0 at center (index 0), 0.0 at edge (index 31)
+      final progress = index / (count - 1);
+      final envelope = math.cos(progress * (math.pi / 2));
+      
+      // Standing wave vibration: Oscillation(time) * Shape(space)
+      // Fundamental freq + some high-freq jitter for the "pluck" feel
+      final fundamental = math.sin(_stubPhase) * math.sin(index * 0.15);
+      final harmonic = math.sin(_stubPhase * 2.5) * math.sin(index * 0.45) * 0.3;
+      
+      return (fundamental + harmonic) * envelope * _pluckIntensity;
     });
+
     _internalVoiceAmplitudes.value = newData;
   }
 
