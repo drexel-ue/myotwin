@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:llamadart/llamadart.dart';
 import 'package:myotwin_app/src/app/myotwin_app.dart';
 import 'package:myotwin_app/src/infrastructure/ai/local_motus_agent.dart';
+import 'package:myotwin_app/src/infrastructure/persistence/myotwin_database.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_core/shared_core.dart';
 
@@ -14,13 +15,16 @@ import 'package:shared_core/shared_core.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Instantiate the local LLM agent.
+  // 1. Instantiate the local LLM agent and database.
   final motusAgent = LocalMotusAgent();
+  final database = MyoTwinDatabase();
 
   // 2. Wrap the app with MultiProvider for DI.
   runApp(
     MultiProvider(
       providers: [
+        // Provide the persistence layer
+        Provider<MyoTwinDatabase>.value(value: database),
         // Provide the concrete implementation for app-level state/initialization
         ChangeNotifierProvider<LocalMotusAgent>.value(value: motusAgent),
         // Provide the base interface for domain logic via a ProxyProvider
