@@ -29,6 +29,7 @@ class MyoTextField extends StatefulWidget {
     this.enabled = true,
     this.autofocus = false,
     this.readOnly = false,
+    this.glitchKey,
   });
 
   /// The controller for the text being edited.
@@ -76,6 +77,9 @@ class MyoTextField extends StatefulWidget {
   /// Whether the text field is read-only.
   final bool readOnly;
 
+  /// An optional key that, when changed, triggers a glitch effect.
+  final Object? glitchKey;
+
   @override
   State<MyoTextField> createState() => _MyoTextFieldState();
 }
@@ -90,6 +94,14 @@ class _MyoTextFieldState extends State<MyoTextField>
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant MyoTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.glitchKey != oldWidget.glitchKey && widget.glitchKey != null) {
+      triggerGlitch();
+    }
   }
 
   @override

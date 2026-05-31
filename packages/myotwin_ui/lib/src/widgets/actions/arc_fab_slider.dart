@@ -177,7 +177,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                 // --- THE MATH ---
                 final xPos = progress * maxSlideDistance;
                 final yPos = (progress * progress) * ArcFABSlider.arcDropDistance;
-                final scale = 1.0 - (0.5 * progress.abs());
+                final scale = 1.0 - (0.25 * progress.abs());
 
                 return Transform.translate(
                   offset: Offset(xPos, yPos),

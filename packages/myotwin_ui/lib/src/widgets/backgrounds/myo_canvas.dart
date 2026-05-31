@@ -38,6 +38,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   bool _showChat = false;
   final _fabState = ValueNotifier<HoloState>(.idle);
   final _sliderMode = ValueNotifier<ArcSliderMode>(.centered);
+  final _textGlitchTrigger = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -66,6 +67,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     _chatOffsetController.dispose();
     _fabState.dispose();
     _sliderMode.dispose();
+    _textGlitchTrigger.dispose();
     super.dispose();
   }
 
@@ -107,6 +109,48 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                 },
               ),
             ),
+          ),
+        ),
+        Positioned(
+          left: spacing16,
+          right: spacing64 + spacing24, // Space for scaled FAB
+          bottom: spacing16, // Align perfectly with the dropped FAB's center
+          child: ValueListenableBuilder(
+            valueListenable: _sliderMode,
+            builder: (context, mode, child) {
+              final isTextMode = mode == .text;
+              return AnimatedSlide(
+                offset: isTextMode ? .zero : const Offset(1.2, 0),
+                duration: context.myoTheme.motionNormal,
+                curve: Curves.easeOutExpo,
+                onEnd: () {
+                  if (isTextMode) {
+                    _textGlitchTrigger.value++;
+                  }
+                },
+                child: AnimatedOpacity(
+                  opacity: isTextMode ? 1.0 : 0.0,
+                  duration: context.myoTheme.motionFast,
+                  curve: Curves.easeOut,
+                  child: IgnorePointer(
+                    ignoring: !isTextMode,
+                    child: ValueListenableBuilder(
+                      valueListenable: _textGlitchTrigger,
+                      builder: (context, glitchKey, child) {
+                        return MyoTextField(
+                          glitchKey: glitchKey,
+                          hint: 'ENTER_COMMAND...',
+                          prefixIcon: const MyoIcon(intent: 'terminal', size: 18),
+                          onSubmitted: (value) {
+                            debugPrint('Submitted: $value');
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         Positioned(
