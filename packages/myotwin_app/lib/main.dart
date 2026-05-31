@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:llamadart/llamadart.dart';
 import 'package:myotwin_app/src/app/myotwin_app.dart';
 import 'package:myotwin_app/src/infrastructure/ai/local_motus_agent.dart';
@@ -15,6 +16,11 @@ import 'package:shared_core/shared_core.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Disable the provider safety check that prevents providing Listenables
+  // as non-listenable types. This allows us to expose the MotusAgent interface
+  // while the underlying LocalMotusAgent is a ChangeNotifier.
+  Provider.debugCheckInvalidValueType = null;
+
   // 1. Instantiate the local LLM agent and database.
   final motusAgent = LocalMotusAgent();
   final database = MyoTwinDatabase();
@@ -23,14 +29,12 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // Provide the persistence layer
-        Provider<MyoTwinDatabase>.value(value: database),
+        // Provide the persistence layer using RepositoryProvider
+        RepositoryProvider<MyoTwinDatabase>.value(value: database),
         // Provide the concrete implementation for app-level state/initialization
         ChangeNotifierProvider<LocalMotusAgent>.value(value: motusAgent),
-        // Provide the base interface for domain logic via a ProxyProvider
-        ProxyProvider<LocalMotusAgent, MotusAgent>(
-          update: (_, agent, _) => agent,
-        ),
+        // Provide the base interface for domain logic.
+        Provider<MotusAgent>.value(value: motusAgent),
       ],
       child: const MyotwinApp(),
     ),

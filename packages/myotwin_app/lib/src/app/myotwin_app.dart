@@ -2,10 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myotwin_app/src/app/boot_screen.dart';
+import 'package:myotwin_app/src/application/chat/chat_cubit.dart';
 import 'package:myotwin_app/src/infrastructure/ai/local_motus_agent.dart';
+import 'package:myotwin_app/src/infrastructure/chat/chat_repository.dart';
+import 'package:myotwin_app/src/infrastructure/persistence/myotwin_database.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
-import 'package:provider/provider.dart';
+import 'package:shared_core/shared_core.dart';
 
 /// Top-level MyoTwin application widget.
 class MyotwinApp extends StatefulWidget {
@@ -26,7 +30,19 @@ class _MyotwinAppState extends State<MyotwinApp> {
       debugShowCheckedModeBanner: false,
       theme: MyoTwinThemeDataFactory.build(),
       home: Material(
-        child: _MyoStartupOrchestrator(agent: agent),
+        child: BlocProvider(
+          create: (context) {
+            final cubit = ChatCubit(
+              repository: ChatRepository(
+                database: context.read<MyoTwinDatabase>(),
+                agent: context.read<MotusAgent>(),
+              ),
+            );
+            unawaited(cubit.initialize());
+            return cubit;
+          },
+          child: _MyoStartupOrchestrator(agent: agent),
+        ),
       ),
     );
   }
@@ -126,12 +142,19 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                   );
                 },
               )
-            : const MyoCanvas(
-                key: ValueKey('myo_canvas'),
-                backgroundChild: InteractiveGrid(
+            : MyoCanvas(
+                key: const ValueKey('myo_canvas'),
+                backgroundChild: const InteractiveGrid(
                   child: emptyWidget,
                 ),
-                chatChild: MyoChatList(),
+                chatChild: BlocBuilder<ChatCubit, ChatState>(
+                  builder: (context, state) {
+                    return MyoChatList(messages: state.messages);
+                  },
+                ),
+                onMessageSubmitted: (value) {
+                  unawaited(context.read<ChatCubit>().submit(value));
+                },
                 onShowChatChanged: _handleShowChatChanged,
               ),
       ),

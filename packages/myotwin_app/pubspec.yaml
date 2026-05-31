@@ -28,6 +28,7 @@ dependencies:
   shared_core:
     path: ../shared_core
   sqlite3_flutter_libs: ^0.5.20
+  uuid: ^4.3.3
   # speech_to_text: ^7.0.0
   workmanager: ^0.5.2
 
