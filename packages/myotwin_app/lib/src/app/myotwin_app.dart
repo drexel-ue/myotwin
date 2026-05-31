@@ -22,26 +22,28 @@ class _MyotwinAppState extends State<MyotwinApp> {
       title: 'MyoTwin',
       debugShowCheckedModeBanner: false,
       theme: MyoTwinThemeDataFactory.build(),
-      home: ListenableBuilder(
-        listenable: agent.loadingProgress,
-        builder: (context, _) {
-          final progress = agent.loadingProgress.value;
-          final isReady = agent.isInitialized;
+      home: Material(
+        child: ListenableBuilder(
+          listenable: agent.loadingProgress,
+          builder: (context, _) {
+            final progress = agent.loadingProgress.value;
+            final isReady = agent.isInitialized;
 
-          if (!isReady) {
-            return BootScreen(progress: progress);
-          }
+            if (!isReady) {
+              return BootScreen(progress: progress);
+            }
 
-          return MyoCanvas(
-            backgroundChild: const InteractiveGrid(
-              child: emptyWidget,
-            ),
-            chatChild: const MyoChatList(),
-            onShowChatChanged: (visible) {
-              // TODO: Handle chat visibility state if needed
-            },
-          );
-        },
+            return MyoCanvas(
+              backgroundChild: const InteractiveGrid(
+                child: emptyWidget,
+              ),
+              chatChild: const MyoChatList(),
+              onShowChatChanged: (visible) {
+                // TODO: Handle chat visibility state if needed
+              },
+            );
+          },
+        ),
       ),
     );
   }

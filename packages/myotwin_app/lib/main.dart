@@ -21,10 +21,12 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        // Provide the base interface for domain logic
-        Provider<MotusAgent>.value(value: motusAgent),
         // Provide the concrete implementation for app-level state/initialization
-        Provider<LocalMotusAgent>.value(value: motusAgent),
+        ChangeNotifierProvider<LocalMotusAgent>.value(value: motusAgent),
+        // Provide the base interface for domain logic via a ProxyProvider
+        ProxyProvider<LocalMotusAgent, MotusAgent>(
+          update: (_, agent, _) => agent,
+        ),
       ],
       child: const MyotwinApp(),
     ),

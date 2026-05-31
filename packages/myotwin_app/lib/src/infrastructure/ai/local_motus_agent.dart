@@ -12,7 +12,7 @@ import 'package:shared_core/shared_core.dart';
 
 /// A concrete implementation of [MotusAgent] that uses the `llamadart`
 /// engine for high-performance local LLM inference.
-class LocalMotusAgent implements MotusAgent {
+class LocalMotusAgent extends ChangeNotifier implements MotusAgent {
   /// Creates a [LocalMotusAgent].
   LocalMotusAgent({
     LlamaEngine? engine,
@@ -50,6 +50,7 @@ class LocalMotusAgent implements MotusAgent {
     _session = ChatSession(_engine, systemPrompt: systemPrompt);
     _isInitialized = true;
     loadingProgress.value = 1.0;
+    notifyListeners();
   }
 
   @override
@@ -79,8 +80,9 @@ class LocalMotusAgent implements MotusAgent {
     throw UnimplementedError('Heuristic session evaluation not yet implemented.');
   }
 
-  /// Releases native resources allocated by the LLM engine.
+  @override
   Future<void> dispose() async {
     await _engine.dispose();
+    super.dispose();
   }
 }
