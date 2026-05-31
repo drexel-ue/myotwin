@@ -14,6 +14,7 @@ class MyoAudioOscilloscope extends StatefulWidget {
     this.isListening = true,
     this.strokeWidth = 2.0,
     this.glitchKey,
+    this.showMirroredWave = false,
   });
 
   /// A listenable list of normalized amplitude values (-1.0 to 1.0 or 0.0 to 1.0).
@@ -28,6 +29,9 @@ class MyoAudioOscilloscope extends StatefulWidget {
 
   /// An optional key that, when changed, triggers a glitch effect.
   final Object? glitchKey;
+
+  /// Whether to draw a vertically mirrored secondary waveform.
+  final bool showMirroredWave;
 
   @override
   State<MyoAudioOscilloscope> createState() => _MyoAudioOscilloscopeState();
@@ -87,6 +91,7 @@ class _MyoAudioOscilloscopeState extends State<MyoAudioOscilloscope>
                           amplitudes: data,
                           color: widget.isListening ? theme.accentHot : theme.onSurfaceDim,
                           strokeWidth: widget.strokeWidth,
+                          showMirroredWave: widget.showMirroredWave,
                         ),
                       );
                     },
@@ -106,11 +111,13 @@ class _WaveformPainter extends CustomPainter {
     required this.amplitudes,
     required this.color,
     required this.strokeWidth,
+    required this.showMirroredWave,
   });
 
   final List<double> amplitudes;
   final Color color;
   final double strokeWidth;
+  final bool showMirroredWave;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -156,34 +163,39 @@ class _WaveformPainter extends CustomPainter {
 
     canvas.drawPath(path, paint);
 
-    // Optional: Draw a symmetrical bottom half for a richer HUD look
-    final bottomPath = Path();
-    for (var i = 0; i < amplitudes.length; i++) {
-      final x = centerX + (i * stepX);
-      final y = midY + (amplitudes[i] * midY * 0.8);
+    if (showMirroredWave) {
+      // Optional: Draw a symmetrical bottom half for a richer HUD look
+      final bottomPath = Path();
+      for (var i = 0; i < amplitudes.length; i++) {
+        final x = centerX + (i * stepX);
+        final y = midY + (amplitudes[i] * midY * 0.8);
 
-      if (i == 0) {
-        bottomPath.moveTo(x, y);
-      } else {
-        bottomPath.lineTo(x, y);
+        if (i == 0) {
+          bottomPath.moveTo(x, y);
+        } else {
+          bottomPath.lineTo(x, y);
+        }
       }
-    }
-    for (var i = 0; i < amplitudes.length; i++) {
-      final x = centerX - (i * stepX);
-      final y = midY + (amplitudes[i] * midY * 0.8);
+      for (var i = 0; i < amplitudes.length; i++) {
+        final x = centerX - (i * stepX);
+        final y = midY + (amplitudes[i] * midY * 0.8);
 
-      if (i == 0) {
-        bottomPath.moveTo(x, y);
-      } else {
-        bottomPath.lineTo(x, y);
+        if (i == 0) {
+          bottomPath.moveTo(x, y);
+        } else {
+          bottomPath.lineTo(x, y);
+        }
       }
-    }
 
-    canvas.drawPath(bottomPath, paint..color = color.withValues(alpha: 0.5));
+      canvas.drawPath(bottomPath, paint..color = color.withValues(alpha: 0.5));
+    }
   }
 
   @override
   bool shouldRepaint(covariant _WaveformPainter oldDelegate) {
-    return amplitudes != oldDelegate.amplitudes || color != oldDelegate.color || strokeWidth != oldDelegate.strokeWidth;
+    return amplitudes != oldDelegate.amplitudes ||
+        color != oldDelegate.color ||
+        strokeWidth != oldDelegate.strokeWidth ||
+        showMirroredWave != oldDelegate.showMirroredWave;
   }
 }

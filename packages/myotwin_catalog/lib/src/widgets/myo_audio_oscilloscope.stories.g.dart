@@ -46,6 +46,7 @@ class OscilloscopeWrapperStory
                key: args.key,
                isListening: args.isListening,
                strokeWidth: args.strokeWidth,
+               showMirroredWave: args.showMirroredWave,
              ),
        );
 }
@@ -55,6 +56,7 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
     Arg<Key?>? key,
     Arg<bool>? isListening,
     Arg<double>? strokeWidth,
+    Arg<bool>? showMirroredWave,
   }) : this.keyArg = $initArg('key', key, null),
        this.isListeningArg = $initArg(
          'isListening',
@@ -65,15 +67,22 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
          'strokeWidth',
          strokeWidth,
          DoubleArg(0.0),
+       )!,
+       this.showMirroredWaveArg = $initArg(
+         'showMirroredWave',
+         showMirroredWave,
+         BoolArg(false),
        )!;
 
   OscilloscopeWrapperArgs.fixed({
     Key? key,
     bool isListening = false,
     double strokeWidth = 0.0,
+    bool showMirroredWave = false,
   }) : this.keyArg = key == null ? null : Arg.fixed(key),
        this.isListeningArg = Arg.fixed(isListening),
-       this.strokeWidthArg = Arg.fixed(strokeWidth);
+       this.strokeWidthArg = Arg.fixed(strokeWidth),
+       this.showMirroredWaveArg = Arg.fixed(showMirroredWave);
 
   final Arg<Key?>? keyArg;
 
@@ -81,12 +90,21 @@ class OscilloscopeWrapperArgs extends StoryArgs<OscilloscopeWrapper> {
 
   final Arg<double> strokeWidthArg;
 
+  final Arg<bool> showMirroredWaveArg;
+
   Key? get key => keyArg?.value;
 
   bool get isListening => isListeningArg.value;
 
   double get strokeWidth => strokeWidthArg.value;
 
+  bool get showMirroredWave => showMirroredWaveArg.value;
+
   @override
-  List<Arg?> get list => [keyArg, isListeningArg, strokeWidthArg];
+  List<Arg?> get list => [
+    keyArg,
+    isListeningArg,
+    strokeWidthArg,
+    showMirroredWaveArg,
+  ];
 }
