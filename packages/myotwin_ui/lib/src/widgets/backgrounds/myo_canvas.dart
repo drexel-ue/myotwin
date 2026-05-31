@@ -215,8 +215,8 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
               final isVoiceMode = mode == ArcSliderMode.voice;
               return AnimatedSlide(
                 offset: isVoiceMode ? Offset.zero : const Offset(-1.2, 0),
-                duration: context.myoTheme.motionNormal,
-                curve: Curves.easeOutBack,
+                duration: context.myoTheme.motionHolographic,
+                curve: Curves.easeOutExpo,
                 onEnd: () {
                   if (isVoiceMode) {
                     _voiceGlitchTrigger.value++;
@@ -224,7 +224,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                 },
                 child: AnimatedOpacity(
                   opacity: isVoiceMode ? 1.0 : 0.0,
-                  duration: context.myoTheme.motionFast,
+                  duration: context.myoTheme.motionNormal,
                   curve: Curves.easeOut,
                   child: IgnorePointer(
                     ignoring: !isVoiceMode,
@@ -254,8 +254,8 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
               final isTextMode = mode == ArcSliderMode.text;
               return AnimatedSlide(
                 offset: isTextMode ? Offset.zero : const Offset(1.2, 0),
-                duration: context.myoTheme.motionNormal,
-                curve: Curves.easeOutBack,
+                duration: context.myoTheme.motionHolographic,
+                curve: Curves.easeOutExpo,
                 onEnd: () {
                   if (isTextMode) {
                     _textGlitchTrigger.value++;
@@ -263,7 +263,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                 },
                 child: AnimatedOpacity(
                   opacity: isTextMode ? 1.0 : 0.0,
-                  duration: context.myoTheme.motionFast,
+                  duration: context.myoTheme.motionNormal,
                   curve: Curves.easeOut,
                   child: IgnorePointer(
                     ignoring: !isTextMode,
