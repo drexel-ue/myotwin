@@ -116,16 +116,23 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     final newData = List.generate(count, (index) {
       if (_pluckIntensity == 0.0) return 0.0;
 
-      // Spatial envelope: 1.0 at center (index 0), 0.0 at edge (index 31)
+      // Spatial progress: 0.0 at center (index 0), 1.0 at edge (index 31)
       final progress = index / (count - 1);
-      final envelope = math.cos(progress * (math.pi / 2));
       
       // Standing wave vibration: Oscillation(time) * Shape(space)
-      // Fundamental freq + some high-freq jitter for the "pluck" feel
-      final fundamental = math.sin(_stubPhase) * math.sin(index * 0.15);
-      final harmonic = math.sin(_stubPhase * 2.5) * math.sin(index * 0.45) * 0.3;
+      // Fundamental spatial shape (antinode at center, node at edge)
+      final fundamentalShape = math.cos(progress * (math.pi / 2));
+      final fundamental = math.sin(_stubPhase) * fundamentalShape;
       
-      return (fundamental + harmonic) * envelope * _pluckIntensity;
+      // High-frequency ripple (9th harmonic)
+      final rippleShape1 = math.cos(progress * 9 * (math.pi / 2));
+      final ripple1 = math.sin(_stubPhase * 5.0) * rippleShape1 * 0.4;
+      
+      // Ultra-high-frequency ripple (15th harmonic)
+      final rippleShape2 = math.cos(progress * 15 * (math.pi / 2));
+      final ripple2 = math.sin(_stubPhase * 8.0) * rippleShape2 * 0.25;
+      
+      return (fundamental + ripple1 + ripple2) * _pluckIntensity;
     });
 
     _internalVoiceAmplitudes.value = newData;
