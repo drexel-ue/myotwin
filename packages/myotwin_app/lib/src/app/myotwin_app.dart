@@ -23,28 +23,73 @@ class _MyotwinAppState extends State<MyotwinApp> {
       debugShowCheckedModeBanner: false,
       theme: MyoTwinThemeDataFactory.build(),
       home: Material(
-        child: ListenableBuilder(
-          listenable: agent.loadingProgress,
-          builder: (context, _) {
-            final progress = agent.loadingProgress.value;
-            final isReady = agent.isInitialized;
-
-            if (!isReady) {
-              return BootScreen(progress: progress);
-            }
-
-            return MyoCanvas(
-              backgroundChild: const InteractiveGrid(
-                child: emptyWidget,
-              ),
-              chatChild: const MyoChatList(),
-              onShowChatChanged: (visible) {
-                // TODO: Handle chat visibility state if needed
-              },
-            );
-          },
-        ),
+        child: _MyoStartupOrchestrator(agent: agent),
       ),
     );
+  }
+}
+
+/// Orchestrates the visual transition between the boot sequence and the HUD.
+class _MyoStartupOrchestrator extends StatefulWidget {
+  const _MyoStartupOrchestrator({required this.agent});
+
+  final LocalMotusAgent agent;
+
+  @override
+  State<_MyoStartupOrchestrator> createState() => _MyoStartupOrchestratorState();
+}
+
+class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
+    with SingleTickerProviderStateMixin, HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
+  bool _wasInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasInitialized = widget.agent.isInitialized;
+  }
+
+  void _checkInitialization() {
+    if (widget.agent.isInitialized && !_wasInitialized) {
+      _wasInitialized = true;
+      triggerGlitch();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _checkInitialization();
+    final theme = context.myoTheme;
+
+    return HoloGlitch(
+      phase: glitchPhase,
+      intensity: glitchIntensity,
+      severity: 0.2, // Stronger glitch for boot-up success
+      child: AnimatedSwitcher(
+        duration: theme.motionHolographic,
+        switchInCurve: theme.curveEaseOut,
+        switchOutCurve: theme.curveDecelerate,
+        child: !widget.agent.isInitialized
+            ? ListenableBuilder(
+                key: const ValueKey('boot_screen'),
+                listenable: widget.agent.loadingProgress,
+                builder: (context, _) => BootScreen(
+                  progress: widget.agent.loadingProgress.value,
+                ),
+              )
+            : const MyoCanvas(
+                key: ValueKey('myo_canvas'),
+                backgroundChild: InteractiveGrid(
+                  child: emptyWidget,
+                ),
+                chatChild: MyoChatList(),
+                onShowChatChanged: _handleShowChatChanged,
+              ),
+      ),
+    );
+  }
+
+  static void _handleShowChatChanged(bool visible) {
+    // Top-level global visibility tracking if needed.
   }
 }
