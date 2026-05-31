@@ -72,5 +72,5 @@ final $Password = _Story(
     hint: StringArg('ENTER_KEY...', name: 'Hint'),
     enabled: BoolArg(true, name: 'Enabled'),
     obscureText: BoolArg(true, name: 'Obscure Text'),
-  ),
+  ), 
 );

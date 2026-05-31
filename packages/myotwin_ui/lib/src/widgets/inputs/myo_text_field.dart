@@ -118,105 +118,115 @@ class _MyoTextFieldState extends State<MyoTextField>
     final theme = context.myoTheme;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: .start,
+      mainAxisSize: .min,
       children: [
         if (widget.label != null) ...[
           Text(
             widget.label!,
             style: theme.caption.copyWith(
-              color: widget.enabled ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium) : theme.onSurfaceDim,
+              color: widget.enabled
+                  ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium)
+                  : theme.onSurfaceDim,
               letterSpacing: 0.03,
             ),
           ),
           verticalMargin8,
         ],
-        HoloGlitch(
-          phase: glitchPhase,
-          intensity: glitchIntensity,
-          severity: 0.1,
-          child: AnimatedContainer(
-            duration: theme.motionFast,
-            curve: theme.curveEaseOut,
-            decoration: BoxDecoration(
-              color: widget.enabled ? theme.surfaceElevated : theme.surface,
-              borderRadius: theme.radiusSm,
-              border: Border.all(
-                color: widget.enabled ? (_isFocused ? theme.accentHot : theme.outline) : theme.outlineDim,
-                width: _isFocused ? 1.5 : 1.0,
-              ),
-              boxShadow: _isFocused
-                  ? [
-                      BoxShadow(
-                        color: theme.accentHot.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              enabled: widget.enabled,
-              obscureText: widget.obscureText,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmitted,
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              maxLines: widget.maxLines,
-              autofocus: widget.autofocus,
-              readOnly: widget.readOnly,
-              style: theme.bodyMedium.copyWith(
-                color: widget.enabled ? theme.onSurface : theme.onSurfaceDim,
-                fontFamily: 'JetBrainsMono',
-              ),
-              cursorColor: theme.accentHot,
-              decoration: InputDecoration(
-                hintText: widget.hint,
-                hintStyle: theme.bodyMedium.copyWith(
-                  color: theme.onSurfaceDim,
-                  fontFamily: 'JetBrainsMono',
-                ),
-                contentPadding: horizontalPadding12 + verticalPadding12,
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                prefixIcon: widget.prefixIcon != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 8.0, right: 4.0),
-                        child: IconTheme(
-                          data: IconThemeData(
-                            color: widget.enabled
-                                ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium)
-                                : theme.onSurfaceDim,
-                            size: 20,
+        BleedMargin(
+          margin: const .symmetric(horizontal: spacing24),
+          child: HoloGlitch(
+            phase: glitchPhase,
+            intensity: glitchIntensity,
+            severity: 0.1,
+            child: Padding(
+              padding: horizontalPadding24,
+              child: AnimatedContainer(
+                duration: theme.motionFast,
+                curve: theme.curveEaseOut,
+                decoration: BoxDecoration(
+                  color: widget.enabled ? theme.surfaceElevated : theme.surface,
+                  borderRadius: theme.radiusSm,
+                  border: .all(
+                    color: widget.enabled
+                        ? (_isFocused ? theme.accentHot : theme.outline)
+                        : theme.outlineDim,
+                    width: _isFocused ? 1.5 : 1.0,
+                  ),
+                  boxShadow: _isFocused
+                      ? [
+                          BoxShadow(
+                            color: theme.accentHot.withValues(alpha: 0.1),
+                            blurRadius: 8,
                           ),
-                          child: widget.prefixIcon!,
-                        ),
-                      )
-                    : null,
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 32,
-                  minHeight: 32,
+                        ]
+                      : null,
                 ),
-                suffixIcon: widget.suffixIcon != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 4.0, right: 8.0),
-                        child: IconTheme(
-                          data: IconThemeData(
-                            color: widget.enabled
-                                ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium)
-                                : theme.onSurfaceDim,
-                            size: 20,
-                          ),
-                          child: widget.suffixIcon!,
-                        ),
-                      )
-                    : null,
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: 32,
-                  minHeight: 32,
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: _focusNode,
+                  enabled: widget.enabled,
+                  obscureText: widget.obscureText,
+                  onChanged: widget.onChanged,
+                  onSubmitted: widget.onSubmitted,
+                  keyboardType: widget.keyboardType,
+                  textInputAction: widget.textInputAction,
+                  maxLines: widget.maxLines,
+                  autofocus: widget.autofocus,
+                  readOnly: widget.readOnly,
+                  style: theme.bodyMedium.copyWith(
+                    color: widget.enabled ? theme.onSurface : theme.onSurfaceDim,
+                    fontFamily: 'JetBrainsMono',
+                  ),
+                  cursorColor: theme.accentHot,
+                  decoration: InputDecoration(
+                    hintText: widget.hint,
+                    hintStyle: theme.bodyMedium.copyWith(
+                      color: theme.onSurfaceDim,
+                      fontFamily: 'JetBrainsMono',
+                    ),
+                    contentPadding: horizontalPadding12 + verticalPadding12,
+                    isDense: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    prefixIcon: widget.prefixIcon != null
+                        ? Padding(
+                            padding: const EdgeInsets.only(left: 8.0, right: 4.0),
+                            child: IconTheme(
+                              data: IconThemeData(
+                                color: widget.enabled
+                                    ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium)
+                                    : theme.onSurfaceDim,
+                                size: 20,
+                              ),
+                              child: widget.prefixIcon!,
+                            ),
+                          )
+                        : null,
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    suffixIcon: widget.suffixIcon != null
+                        ? Padding(
+                            padding: const .only(left: 4.0, right: 8.0),
+                            child: IconTheme(
+                              data: IconThemeData(
+                                color: widget.enabled
+                                    ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium)
+                                    : theme.onSurfaceDim,
+                                size: 20,
+                              ),
+                              child: widget.suffixIcon!,
+                            ),
+                          )
+                        : null,
+                    suffixIconConstraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                  ),
                 ),
               ),
             ),
