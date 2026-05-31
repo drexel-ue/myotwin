@@ -177,7 +177,18 @@ Message: "$message"
 Respond with ONLY the domain name.
 ```
 
-**Performance:** 50 → 10 token generation, ~5ms on E2B. Negligible overhead.
+- **Performance:** 50 → 10 token generation, ~5ms on E2B. Negligible overhead.
+
+---
+
+## Unstructured Data Shaping & GenUI
+
+Motus is not just a conversationalist; it is a **Data Architect**. The agent is responsible for:
+
+1.  **Shaping Metadata**: When Motus identifies new biomechanical patterns, it stores them in unstructured `JSONB` blobs wrapped by **Dart Extension Types**. This allows the knowledge graph to evolve semantically without database schema changes.
+2.  **Defining UI Schemas**: Instead of the app having rigid screens, Motus emits GenUI payloads (`A2uiMessage`). The agent decides which widgets (e.g., `InjuryDetailCard`, `RegressionLadder`) are necessary based on the current context and populates their data schemas at runtime.
+
+This approach ensures the system remains highly adaptive and can support new biomechanical insights or UI components simply by updating the agent's instructions and the widget catalog.
 
 ---
 

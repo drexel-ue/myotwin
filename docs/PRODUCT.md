@@ -217,26 +217,21 @@ The user is the principal investigator. Motus is the data analyst.
 
 ## 4. Data Architecture
 
-### Evolving Schema with JSONB
+### Unstructured Intelligence: Extension Types & JSONB
 
-Not everything Motus discovers fits a rigid table. MyoTwin leverages:
+MyoTwin avoids rigid relational schemas for AI-driven data. Instead of constant migrations, the system leverages a "flexible core" approach:
 
-- **Structured tables** for core entities with known schemas (Symptom, Injury, Equipment, WorkoutLog, Hypothesis, etc.)
-- **JSONB columns** for evolving, Motus-shaped data (Goal.metadata, IntentRecord.payload patterns, user preference profiles)
-- **Dart extension types** for runtime type safety on flexible data
-- **json_schema_builder** for validation of complex nested structures in the CatalogItem payloads
-
-This means Motus can:
-- Discover new attributes about user behavior and store them in flexible fields without migrations
-- Shape Goal metadata over time as understanding deepens (e.g., adding `recovery_rate_estimate`, `preferred_time_window`, `dismissal_patterns`)
-- Maintain schema stability for core relations while allowing semantic growth in derived data
+- **Relational Anchor**: Core entities (Goal, IntentRecord, Hypothesis) maintain strict, indexed SQL columns for metadata that requires fast relational querying (IDs, timestamps, foreign keys, status enums).
+- **JSONB Blobs**: Evolving, Motus-shaped data lives in `JSONB` columns (using SQLite's JSON1 extension). This allows the agent to discover and track new attributes (e.g., `shoulder_click_frequency`) without database changes.
+- **Dart Extension Types**: Zero-cost abstractions that wrap raw `Map<String, dynamic>` JSON blobs with strongly-typed Dart APIs. This provides compile-time safety and IDE autocomplete without the overhead of heavy model classes or `fromJson` boilerplate.
+- **Agent-Defined Schemas**: Motus is responsible for shaping its own data and defining GenUI payloads. The `IntentRecord.payload` is an unstructured map that the UI layer dynamically inflates into widgets using the `genui` registry.
 
 ### Data Model Bridge
 
 A `DataModelBridge` maps Drift database entities to genui `DataModel` paths, establishing a reactive pipeline:
 
 ```
-Drift Database → Repository → DataModel → GenUI Surface → User Interaction
+Drift Database (JSONB) → Repository → Extension Type → DataModel → GenUI Surface
                                                                         ↓
                                                           State changes feed back to DataModel
                                                                         ↓
