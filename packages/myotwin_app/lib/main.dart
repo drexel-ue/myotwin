@@ -35,7 +35,7 @@ Future<void> main() async {
   unawaited(
     motusAgent.initialize(
       ModelSource.parse(
-        'hf://ggml-org/gemma-4-E2B-it-GGUF:gemma-4-E2B-it-Q4_K_M.gguf',
+        'hf://ggml-org/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q8_0.gguf',
       ),
     ),
   );
