@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:myotwin_app/src/app/boot_screen.dart';
+import 'package:myotwin_app/src/infrastructure/ai/local_motus_agent.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
+import 'package:provider/provider.dart';
 
 /// Top-level MyoTwin application widget.
 class MyotwinApp extends StatefulWidget {
@@ -13,18 +16,30 @@ class MyotwinApp extends StatefulWidget {
 class _MyotwinAppState extends State<MyotwinApp> {
   @override
   Widget build(BuildContext context) {
-    // Placeholder — will be scaffolded with BLoC providers and GoRouter.
+    final agent = context.watch<LocalMotusAgent>();
+
     return MaterialApp(
       title: 'MyoTwin',
       debugShowCheckedModeBanner: false,
       theme: MyoTwinThemeDataFactory.build(),
-      home: Builder(
-        builder: (context) {
-          return const Scaffold(
-            body: InteractiveGrid(
+      home: ListenableBuilder(
+        listenable: agent.loadingProgress,
+        builder: (context, _) {
+          final progress = agent.loadingProgress.value;
+          final isReady = agent.isInitialized;
+
+          if (!isReady) {
+            return BootScreen(progress: progress);
+          }
+
+          return MyoCanvas(
+            backgroundChild: const InteractiveGrid(
               child: emptyWidget,
             ),
-
+            chatChild: const MyoChatList(),
+            onShowChatChanged: (visible) {
+              // TODO: Handle chat visibility state if needed
+            },
           );
         },
       ),
