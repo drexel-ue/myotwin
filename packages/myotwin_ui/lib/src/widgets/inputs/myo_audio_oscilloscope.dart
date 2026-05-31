@@ -125,13 +125,27 @@ class _WaveformPainter extends CustomPainter {
 
     final path = Path();
     final midY = size.height / 2.0;
-    final stepX = size.width / (amplitudes.length - 1);
+    final centerX = size.width / 2.0;
 
+    // We only use half the width for each side of the radiation
+    final stepX = (size.width / 2.0) / (amplitudes.length - 1);
+
+    // Draw right side
     for (var i = 0; i < amplitudes.length; i++) {
-      final x = i * stepX;
-      // Map normalized -1.0..1.0 or 0.0..1.0 to the vertical space
-      // We assume -1.0 to 1.0 for a true waveform centered at midY
-      final y = midY - (amplitudes[i] * midY * 0.8); // 0.8 to keep it within bounds comfortably
+      final x = centerX + (i * stepX);
+      final y = midY - (amplitudes[i] * midY * 0.8);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    // Draw left side (mirrored)
+    for (var i = 0; i < amplitudes.length; i++) {
+      final x = centerX - (i * stepX);
+      final y = midY - (amplitudes[i] * midY * 0.8);
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -141,6 +155,31 @@ class _WaveformPainter extends CustomPainter {
     }
 
     canvas.drawPath(path, paint);
+
+    // Optional: Draw a symmetrical bottom half for a richer HUD look
+    final bottomPath = Path();
+    for (var i = 0; i < amplitudes.length; i++) {
+      final x = centerX + (i * stepX);
+      final y = midY + (amplitudes[i] * midY * 0.8);
+
+      if (i == 0) {
+        bottomPath.moveTo(x, y);
+      } else {
+        bottomPath.lineTo(x, y);
+      }
+    }
+    for (var i = 0; i < amplitudes.length; i++) {
+      final x = centerX - (i * stepX);
+      final y = midY + (amplitudes[i] * midY * 0.8);
+
+      if (i == 0) {
+        bottomPath.moveTo(x, y);
+      } else {
+        bottomPath.lineTo(x, y);
+      }
+    }
+
+    canvas.drawPath(bottomPath, paint..color = color.withValues(alpha: 0.5));
   }
 
   @override
