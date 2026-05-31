@@ -61,7 +61,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _chatOffsetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _internalVoiceAmplitudes = widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(32, 0.0));
+    _internalVoiceAmplitudes = widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(128, 0.0));
     
     // Listen for mode changes to manage the stub timer
     _sliderMode.addListener(_handleModeChange);
@@ -92,7 +92,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     _stubTimer = null;
     _pluckIntensity = 0.0;
     // Reset to flat line when stopping
-    _internalVoiceAmplitudes.value = List.filled(32, 0.0);
+    _internalVoiceAmplitudes.value = List.filled(128, 0.0);
   }
 
   void _updateStubAmplitudes() {
@@ -112,11 +112,11 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     _stubPhase += 0.8;
 
     // 4. Generate standing wave data
-    const count = 32;
+    const count = 128;
     final newData = List.generate(count, (index) {
       if (_pluckIntensity == 0.0) return 0.0;
 
-      // Spatial progress: 0.0 at center (index 0), 1.0 at edge (index 31)
+      // Spatial progress: 0.0 at center (index 0), 1.0 at edge (index 127)
       final progress = index / (count - 1);
       
       // Standing wave vibration: Oscillation(time) * Shape(space)
@@ -126,13 +126,13 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
       
       // High-frequency ripple (9th harmonic)
       final rippleShape1 = math.cos(progress * 9 * (math.pi / 2));
-      final ripple1 = math.sin(_stubPhase * 5.0) * rippleShape1 * 0.4;
+      final ripple1 = math.sin(_stubPhase * 5.0) * rippleShape1 * 0.5;
       
       // Ultra-high-frequency ripple (15th harmonic)
       final rippleShape2 = math.cos(progress * 15 * (math.pi / 2));
-      final ripple2 = math.sin(_stubPhase * 8.0) * rippleShape2 * 0.25;
+      final ripple2 = math.sin(_stubPhase * 8.0) * rippleShape2 * 0.4;
       
-      return (fundamental + ripple1 + ripple2) * _pluckIntensity;
+      return (fundamental + ripple1 + ripple2) * _pluckIntensity * 1.2;
     });
 
     _internalVoiceAmplitudes.value = newData;
