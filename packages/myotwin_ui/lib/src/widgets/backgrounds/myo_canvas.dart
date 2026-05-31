@@ -20,6 +20,7 @@ class MyoCanvas extends StatefulWidget {
     required this.chatChild,
     required this.onShowChatChanged,
     this.voiceAmplitudes,
+    this.onMessageSubmitted,
   });
 
   /// {@macro myo_canvas.background_child}
@@ -35,6 +36,9 @@ class MyoCanvas extends StatefulWidget {
 
   /// A listenable list of normalized amplitude values for the voice visualizer.
   final ValueNotifier<List<double>>? voiceAmplitudes;
+
+  /// Called when a message is submitted from the text input.
+  final ValueChanged<String>? onMessageSubmitted;
 
   @override
   State<MyoCanvas> createState() => _MyoCanvasState();
@@ -275,7 +279,7 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                           hint: 'ENTER_COMMAND...',
                           prefixIcon: const MyoIcon(intent: 'terminal', size: 18),
                           onSubmitted: (value) {
-                            debugPrint('Submitted: $value');
+                            widget.onMessageSubmitted?.call(value);
                           },
                         );
                       },

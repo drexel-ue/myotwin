@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:uuid/uuid.dart';
+import 'package:shared_core/shared_core.dart';
 
 /// A scrollable list of chat messages with velocity tracking.
 class MyoChatList extends StatefulWidget {
   /// Creates a [MyoChatList].
-  const MyoChatList({super.key});
+  const MyoChatList({
+    super.key,
+    required this.messages,
+  });
+
+  /// The list of [IntentRecord]s to display.
+  final List<IntentRecord> messages;
 
   @override
   State<MyoChatList> createState() => _MyoChatListState();
@@ -18,53 +24,6 @@ class _MyoChatListState extends State<MyoChatList> {
 
   // 2. The Actuator (Controls the scrolling imperative actions)
   final ItemScrollController chatScrollController = ItemScrollController();
-
-  static final _entries = <String>[
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-    const Uuid().v4(),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -108,14 +67,19 @@ class _MyoChatListState extends State<MyoChatList> {
               itemScrollController: chatScrollController, // Attach the motor
               shrinkWrap: true,
               reverse: true, // Crucial for chat apps (bottom-up layout)
-              padding: const EdgeInsets.only(bottom: spacing32, left: spacing16, right: spacing16),
-              itemCount: _entries.length,
+              padding: const EdgeInsets.only(
+                bottom: spacing32,
+                left: spacing16,
+                right: spacing16,
+              ),
+              itemCount: widget.messages.length,
               itemBuilder: (context, index) {
+                final message = widget.messages[index];
                 return Padding(
                   padding: topPadding16,
                   child: _ChatEntry(
                     index: index,
-                    message: _entries[index],
+                    intent: message,
                     // Pass the velocity tracker down so the bubble can stretch itself
                     velocityTracker: scrollVelocity,
                   ),
@@ -133,25 +97,48 @@ class _ChatEntry extends StatelessWidget {
   const _ChatEntry({
     super.key,
     required this.index,
-    required this.message,
+    required this.intent,
     required this.velocityTracker,
   });
 
   final int index;
-  final String message;
+  final IntentRecord intent;
   final ValueNotifier<double> velocityTracker;
 
   @override
   Widget build(BuildContext context) {
-    return FrostedHUD(
-      impactPoint: .zero,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          '($index): $message',
-          style: context.myoTheme.bodyLarge,
-        ),
-      ),
+    // Basic GenUI Dispatcher: Initially just renders terminal text
+    final items = intent.payload.catalogItems ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: items.map((item) {
+        final type = item['type'] as String?;
+        final data = item['data'] as Map<String, dynamic>? ?? {};
+
+        if (type == 'terminal_text') {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: FrostedHUD(
+              impactPoint: .zero,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  data['text'] as String? ?? 'EMPTY_NODE',
+                  style: context.myoTheme.terminal.copyWith(
+                    color: intent.reason == 'USER_INPUT'
+                        ? context.myoTheme.onSurfaceMedium
+                        : context.myoTheme.accentHot,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return emptyWidget;
+      }).toList(),
     );
   }
 }

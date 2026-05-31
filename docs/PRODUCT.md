@@ -225,6 +225,7 @@ MyoTwin avoids rigid relational schemas for AI-driven data. Instead of constant 
 - **JSONB Blobs**: Evolving, Motus-shaped data lives in `JSONB` columns (using SQLite's JSON1 extension). This allows the agent to discover and track new attributes (e.g., `shoulder_click_frequency`) without database changes.
 - **Dart Extension Types**: Zero-cost abstractions that wrap raw `Map<String, dynamic>` JSON blobs with strongly-typed Dart APIs. This provides compile-time safety and IDE autocomplete without the overhead of heavy model classes or `fromJson` boilerplate.
 - **Agent-Defined Schemas**: Motus is responsible for shaping its own data and defining GenUI payloads. The `IntentRecord.payload` is an unstructured map that the UI layer dynamically inflates into widgets using the `genui` registry.
+- **Unified Chat Model**: All user/agent communications are stored as `IntentRecord` entities (with `IntentType.chat`). This ensures the full conversation history is stored alongside proactive notifications and biomechanical decisions in a single, searchable timeline.
 
 ### Data Model Bridge
 
