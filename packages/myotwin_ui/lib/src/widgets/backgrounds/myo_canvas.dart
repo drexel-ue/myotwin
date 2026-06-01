@@ -379,70 +379,22 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
                         widget.onCommandNodeSelected?.call(selectedNode);
                       }
                     },
-                    child: ArcFABSlider(
-                      fabState: state,
-                      slideProgress: _slideProgress,
-                      onFabPressed: _onFabPressed,
-                      onModeChanged: (value) {
-                        _sliderMode.value = value;
-                      },
-                    ),
+                      child: ArcFABSlider(
+                        fabState: state,
+                        slideProgress: _slideProgress,
+                        onFabPressed: _onFabPressed,
+                        onModeChanged: (value) {
+                          _sliderMode.value = value;
+                        },
+                      ),
                   );
                 },
               ),
             ),
           ),
-          if (_isShowingCommandMenu)
-            ValueListenableBuilder(
-              valueListenable: _sliderMode,
-              builder: (context, mode, _) {
-                return ValueListenableBuilder(
-                  valueListenable: _slideProgress,
-                  builder: (context, progress, _) {
-                    // 1. Calculate FAB's current physical origin
-                    final xPos = progress * maxSlideDistance;
-                    final yPos =
-                        (progress * progress) * ArcFABSlider.arcDropDistance;
-
-                    // 2. Define angular boundaries based on FAB position (negated for Flutter)
-                    final (double startAngle, double endAngle) = switch (mode) {
-                      ArcSliderMode.voice => (
-                          -5 * math.pi / 6,
-                          0.0
-                        ), // 150 deg to 0 deg
-                      ArcSliderMode.text => (
-                          -math.pi,
-                          -math.pi / 6
-                        ), // 180 deg to 30 deg
-                      ArcSliderMode.centered => (
-                          -5 * math.pi / 6,
-                          -math.pi / 6
-                        ), // 150 deg to 30 deg
-                    };
-
-                    return Positioned(
-                      // Shift Positioned box by xPos to center it on the FAB
-                      left: xPos,
-                      right: -xPos,
-                      // Anchor to the same vertical baseline as the track
-                      bottom: ArcFABSlider.trackHeight / 2 - yPos,
-                      child: Center(
-                        child: QuickCommandMenu(
-                          startAngle: startAngle,
-                          endAngle: endAngle,
-                          dragPosition: _commandMenuDragPosition,
-                          onNodeHighlighted: (node) {
-                            _highlightedNode = node;
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-        ],
-      );
-    });
+          ],
+        );
+      },
+    );
   }
 }

@@ -191,10 +191,37 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                   offset: Offset(xPos, yPos),
                   child: Transform.scale(
                     scale: scale,
-                    child: AnimatedHoloFAB(
-                      state: widget.fabState,
-                      onPressed: () => widget.onFabPressed(_mode),
-                      icon: emptyWidget,
+                    child: QuickCommandMenu(
+                      itemCount: 10,
+                      radius: 120.0,
+                      itemSize: 56.0,
+                      onItemSelected: (index) {
+                        print("Action $index selected via GenUI path");
+                      },
+                      itemBuilder: (context, index, isHovered) {
+                        // Return whatever node or widget styling fits your digital twin surface design
+                        return Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isHovered ? Colors.white : Colors.black87,
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Icon(
+                            switch (index) {
+                              0 => Icons.mic,
+                              1 => Icons.keyboard,
+                              2 => Icons.settings,
+                              _ => Icons.help,
+                            },
+                            color: isHovered ? Colors.black : Colors.white,
+                          ),
+                        );
+                      },
+                      child: AnimatedHoloFAB(
+                        state: widget.fabState,
+                        onPressed: () => widget.onFabPressed(_mode),
+                        icon: emptyWidget,
+                      ),
                     ),
                   ),
                 );
