@@ -1,23 +1,35 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
-enum QuickMenuPosition { left, center, right }
+/// The relative position of the quick menu on the screen.
+enum QuickMenuPosition {
+  /// Left-aligned menu.
+  left,
 
-typedef QuickMenuItemBuilder = Widget Function(BuildContext context, int index, {required bool isHovered});
+  /// Center-aligned menu.
+  center,
+
+  /// Right-aligned menu.
+  right
+}
+
+/// A builder for a single menu item in the [QuickCommandMenu].
+typedef QuickMenuItemBuilder =
+    Widget Function(
+      BuildContext context,
+      int index, {
+      required bool isHovered,
+    });
+
+/// A builder for the tooltip text shown when an item is hovered.
 typedef QuickMenuTooltipBuilder = String Function(int index);
 
+/// A radial "Stem and Bloom" command menu anchored to a center point.
 class QuickCommandMenu extends StatefulWidget {
-  final int itemCount;
-  final QuickMenuItemBuilder itemBuilder;
-  final QuickMenuTooltipBuilder? tooltipBuilder; // NEW: Provides the text for the HUD
-  final ValueChanged<int> onItemSelected;
-  final Widget child;
-  final double radius;
-  final double itemSize;
-  final double preferredSpacing;
-
+  /// Creates a [QuickCommandMenu].
   const QuickCommandMenu({
     super.key,
     required this.itemCount,
@@ -30,14 +42,41 @@ class QuickCommandMenu extends StatefulWidget {
     this.preferredSpacing = math.pi / 4,
   });
 
+  /// The number of items in the menu.
+  final int itemCount;
+
+  /// The builder for each menu item.
+  final QuickMenuItemBuilder itemBuilder;
+
+  /// Provides the text for the HUD tooltip.
+  final QuickMenuTooltipBuilder? tooltipBuilder;
+
+  /// Callback for when an item is selected.
+  final ValueChanged<int> onItemSelected;
+
+  /// The child widget to anchor the menu to.
+  final Widget child;
+
+  /// The radius of the radial arc.
+  final double radius;
+
+  /// The size of each menu item.
+  final double itemSize;
+
+  /// The preferred spacing between items in radians.
+  final double preferredSpacing;
+
   @override
   State<QuickCommandMenu> createState() => _QuickCommandMenuState();
 }
 
-class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProviderStateMixin {
-  late AnimationController _menuController;
-  late AnimationController _tooltipController; // NEW: Controls the stem and bloom
-  late Animation<double> _menuAnimation;
+class _QuickCommandMenuState extends State<QuickCommandMenu>
+    with TickerProviderStateMixin {
+  late final AnimationController _menuController;
+
+  /// Controls the stem and bloom animations.
+  late final AnimationController _tooltipController;
+  late final Animation<double> _menuAnimation;
 
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
@@ -48,7 +87,9 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
   Timer? _tooltipDwellTimer;
 
   int? _hoveredIndex;
-  int? _activeTooltipIndex; // Keeps track of the last hovered item for smooth exit animations
+
+  /// Keeps track of the last hovered item for smooth exit animations.
+  int? _activeTooltipIndex;
 
   QuickMenuPosition _currentPosition = QuickMenuPosition.center;
   Offset? _fabCenterGlobal;
@@ -64,7 +105,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutBack);
+    _menuAnimation =
+        CurvedAnimation(parent: _menuController, curve: Curves.easeOutBack);
 
     _tooltipController = AnimationController(
       vsync: this,
@@ -85,7 +127,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
   // --- Spatial Math & Anchors ---
 
   void _calculatePosition() {
-    final RenderBox? box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
 
     final offset = box.localToGlobal(Offset.zero);
@@ -107,32 +149,26 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
   }
 
   double _getMidpoint() {
-    switch (_currentPosition) {
-      case QuickMenuPosition.left:
-        return 15 * math.pi / 8;
-      case QuickMenuPosition.center:
-        return 3 * math.pi / 2;
-      case QuickMenuPosition.right:
-        return 9 * math.pi / 8;
-    }
+    return switch (_currentPosition) {
+      QuickMenuPosition.left => 15 * math.pi / 8,
+      QuickMenuPosition.center => 3 * math.pi / 2,
+      QuickMenuPosition.right => 9 * math.pi / 8,
+    };
   }
 
   double _getMaxSpread() {
-    switch (_currentPosition) {
-      case QuickMenuPosition.left:
-        return 3 * math.pi / 4;
-      case QuickMenuPosition.center:
-        return math.pi;
-      case QuickMenuPosition.right:
-        return 3 * math.pi / 4;
-    }
+    return switch (_currentPosition) {
+      QuickMenuPosition.left => 3 * math.pi / 4,
+      QuickMenuPosition.center => math.pi,
+      QuickMenuPosition.right => 3 * math.pi / 4,
+    };
   }
 
   double _getFingerAngle(Offset globalPosition) {
     if (_fabCenterGlobal == null) return 0.0;
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
-    double angle = math.atan2(dy, dx);
+    var angle = math.atan2(dy, dx);
     if (angle < 0) angle += 2 * math.pi;
     return angle;
   }
@@ -146,22 +182,24 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
       Overlay.of(context).insert(_overlayEntry!);
     }
     _isOpen = true;
-    _menuController.forward();
+    unawaited(_menuController.forward());
   }
 
   void _closeMenu() {
     _closeTimer?.cancel();
     _tooltipDwellTimer?.cancel();
     _isOpen = false;
-    _tooltipController.reverse(); // Ensure HUD closes
-    _menuController.reverse().then((_) {
-      if (!_isOpen && _overlayEntry != null) {
-        _overlayEntry!.remove();
-        _overlayEntry = null;
-        _hoveredIndex = null;
-        _activeTooltipIndex = null;
-      }
-    });
+    unawaited(_tooltipController.reverse()); // Ensure HUD closes
+    unawaited(
+      _menuController.reverse().then((_) {
+        if (!_isOpen && _overlayEntry != null) {
+          _overlayEntry!.remove();
+          _overlayEntry = null;
+          _hoveredIndex = null;
+          _activeTooltipIndex = null;
+        }
+      }),
+    );
   }
 
   void _startTimer() {
@@ -184,10 +222,6 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     _lastFingerAngle = _getFingerAngle(globalPosition);
     _isDragging = false;
     _updateHover(globalPosition);
-
-
-
-
   }
 
   bool _isOutsideActiveArea(Offset globalPosition) {
@@ -203,14 +237,13 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
 
   void _updateInteraction(Offset globalPosition) {
     if (!_isOpen || _fabCenterGlobal == null) return;
-    if (_fabCenterGlobal == null) return;
 
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
 
-    double currentAngle = _getFingerAngle(globalPosition);
-    double delta = currentAngle - _lastFingerAngle;
+    final currentAngle = _getFingerAngle(globalPosition);
+    var delta = currentAngle - _lastFingerAngle;
 
     if (delta > math.pi) delta -= 2 * math.pi;
     if (delta < -math.pi) delta += 2 * math.pi;
@@ -218,11 +251,11 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     if (distance > widget.radius * 0.4) {
       if (delta.abs() > 0.01) {
         _isDragging = true;
-        final double visibleSpread = _getMaxSpread();
-        final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+        final visibleSpread = _getMaxSpread();
+        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
 
         if (totalSweep > visibleSpread) {
-          double maxScroll = totalSweep - visibleSpread;
+          final maxScroll = totalSweep - visibleSpread;
           _scrollAngle += delta;
           _scrollAngle = _scrollAngle.clamp(-maxScroll, 0.0);
         }
@@ -241,13 +274,13 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
       _onItemTapped(_hoveredIndex!);
     } else {
       _hoveredIndex = null;
-      _tooltipController.reverse(); // Retract stem
+      unawaited(_tooltipController.reverse()); // Retract stem
       _overlayEntry?.markNeedsBuild();
       _startTimer();
     }
   }
 
-void _updateHover(Offset globalPosition) {
+  void _updateHover(Offset globalPosition) {
     if (_fabCenterGlobal == null) return;
 
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
@@ -258,23 +291,23 @@ void _updateHover(Offset globalPosition) {
     if ((distance - widget.radius).abs() > widget.itemSize * 1.5) {
       if (_hoveredIndex != null) {
         _hoveredIndex = null;
-        _tooltipController.reverse();
+        unawaited(_tooltipController.reverse());
       }
       return;
     }
 
-    double fingerAngle = _getFingerAngle(globalPosition);
-    final double midpoint = _getMidpoint();
-    final double visibleSpread = _getMaxSpread();
-    final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-    final double startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+    final fingerAngle = _getFingerAngle(globalPosition);
+    final midpoint = _getMidpoint();
+    final visibleSpread = _getMaxSpread();
+    final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+    final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
 
     // --- FOCUS WINDOW LOGIC ---
     // If the menu is scrollable, restrict hovering to the center window.
-    final bool isScrollable = totalSweep > visibleSpread;
+    final isScrollable = totalSweep > visibleSpread;
 
     // Default to 100% of the visible spread if no scrolling is needed
-    double focusWindowHalfAngle = visibleSpread / 2;
+    var focusWindowHalfAngle = visibleSpread / 2;
 
     if (isScrollable) {
       // Create a window ~35% of the total spread (17.5% on each side of the midpoint)
@@ -288,21 +321,26 @@ void _updateHover(Offset globalPosition) {
     }
 
     int? closestIndex;
-    double minDiff = double.infinity;
+    var minDiff = double.infinity;
 
-    for (int i = 0; i < widget.itemCount; i++) {
-      double itemAngle = startAngle + (i * widget.preferredSpacing) + _scrollAngle;
+    for (var i = 0; i < widget.itemCount; i++) {
+      var itemAngle =
+          startAngle + (i * widget.preferredSpacing) + _scrollAngle;
       itemAngle = itemAngle % (2 * math.pi);
       if (itemAngle < 0) itemAngle += 2 * math.pi;
 
       // 1. Is the item physically inside the Focus Window?
-      double diffFromMidpoint = (itemAngle - midpoint).abs();
-      if (diffFromMidpoint > math.pi) diffFromMidpoint = 2 * math.pi - diffFromMidpoint;
+      var diffFromMidpoint = (itemAngle - midpoint).abs();
+      if (diffFromMidpoint > math.pi) {
+        diffFromMidpoint = 2 * math.pi - diffFromMidpoint;
+      }
 
       if (diffFromMidpoint <= focusWindowHalfAngle) {
         // 2. If it's in the window, how close is the user's finger to it?
-        double diffFromFinger = (itemAngle - fingerAngle).abs();
-        if (diffFromFinger > math.pi) diffFromFinger = 2 * math.pi - diffFromFinger;
+        var diffFromFinger = (itemAngle - fingerAngle).abs();
+        if (diffFromFinger > math.pi) {
+          diffFromFinger = 2 * math.pi - diffFromFinger;
+        }
 
         if (diffFromFinger < minDiff) {
           minDiff = diffFromFinger;
@@ -312,7 +350,8 @@ void _updateHover(Offset globalPosition) {
     }
 
     // 3. Must still be relatively close to the finger to count as a deliberate hover
-    int? newHovered = (minDiff <= widget.preferredSpacing / 1.5) ? closestIndex : null;
+    final newHovered =
+        (minDiff <= widget.preferredSpacing / 1.5) ? closestIndex : null;
 
     // Trigger the HUD stem animations if the hover state changes
     if (newHovered != _hoveredIndex) {
@@ -324,44 +363,45 @@ void _updateHover(Offset globalPosition) {
         _tooltipDwellTimer = Timer(const Duration(milliseconds: 250), () {
           if (mounted && _hoveredIndex != null) {
             _activeTooltipIndex = _hoveredIndex;
-            _tooltipController.forward();
+            unawaited(_tooltipController.forward());
           }
         });
       } else {
-        _tooltipController.reverse();
+        unawaited(_tooltipController.reverse());
       }
     }
   }
 
-
   // --- Overlay Renderer ---
 
   OverlayEntry _createOverlayEntry() {
-    final RenderBox? box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
     final fabSize = box?.size ?? const Size(56.0, 56.0);
     final itemSize = widget.itemSize;
 
     return OverlayEntry(
       builder: (context) {
-        final double midpoint = _getMidpoint();
-        final double visibleSpread = _getMaxSpread();
-        final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-        final double startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
-        final double fadeZone = math.pi / 8;
+        final midpoint = _getMidpoint();
+        final visibleSpread = _getMaxSpread();
+        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+        final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+        const fadeZone = math.pi / 8;
 
         // Determine safe zone for the Frosted Bloom based on FAB position
-        Offset bloomCenter;
-        switch (_currentPosition) {
-          case QuickMenuPosition.left:
-            bloomCenter = Offset(fabSize.width / 2 + widget.radius * 1.8, fabSize.height / 2 - widget.radius * 0.5);
-            break;
-          case QuickMenuPosition.right:
-            bloomCenter = Offset(fabSize.width / 2 - widget.radius * 1.8, fabSize.height / 2 - widget.radius * 0.5);
-            break;
-          case QuickMenuPosition.center:
-            bloomCenter = Offset(fabSize.width / 2, fabSize.height / 2 - widget.radius * 1.6);
-            break;
-        }
+        final bloomCenter = switch (_currentPosition) {
+          QuickMenuPosition.left => Offset(
+            fabSize.width / 2 + widget.radius * 1.8,
+            fabSize.height / 2 - widget.radius * 0.5,
+          ),
+          QuickMenuPosition.right => Offset(
+            fabSize.width / 2 - widget.radius * 1.8,
+            fabSize.height / 2 - widget.radius * 0.5,
+          ),
+          QuickMenuPosition.center => Offset(
+            fabSize.width / 2,
+            fabSize.height / 2 - widget.radius * 1.6,
+          ),
+        };
 
         return Stack(
           children: [
@@ -389,7 +429,8 @@ void _updateHover(Offset globalPosition) {
                     _startInteraction(details.globalPosition);
                   }
                 },
-                onPanUpdate: (details) => _updateInteraction(details.globalPosition),
+                onPanUpdate: (details) =>
+                    _updateInteraction(details.globalPosition),
                 onPanEnd: (details) => _endInteraction(null),
 
                 onLongPressStart: (details) {
@@ -399,7 +440,8 @@ void _updateHover(Offset globalPosition) {
                     _startInteraction(details.globalPosition);
                   }
                 },
-                onLongPressMoveUpdate: (details) => _updateInteraction(details.globalPosition),
+                onLongPressMoveUpdate: (details) =>
+                    _updateInteraction(details.globalPosition),
                 onLongPressEnd: (details) {
                   if (!_isOutsideActiveArea(details.globalPosition)) {
                     _endInteraction(details.globalPosition);
@@ -417,7 +459,10 @@ void _updateHover(Offset globalPosition) {
                 child: AnimatedBuilder(
                   animation: _tooltipController,
                   builder: (context, child) {
-                    final targetAngle = startAngle + (_activeTooltipIndex! * widget.preferredSpacing) + _scrollAngle;
+                    final targetAngle =
+                        startAngle +
+                        (_activeTooltipIndex! * widget.preferredSpacing) +
+                        _scrollAngle;
                     final targetRadius = _menuAnimation.value * widget.radius;
 
                     final itemCenter = Offset(
@@ -445,10 +490,20 @@ void _updateHover(Offset globalPosition) {
                             translation: const Offset(-0.5, -0.5),
                             child: Opacity(
                               // Delay panel fade in until stem is drawn (50% mark)
-                              opacity: (_tooltipController.value - 0.5).clamp(0.0, 0.5) * 2,
+                              opacity:
+                                  (_tooltipController.value - 0.5)
+                                      .clamp(0.0, 0.5) *
+                                  2,
                               child: Transform.scale(
-                                scale: 0.8 + ((_tooltipController.value - 0.5).clamp(0.0, 0.5) * 2) * 0.2,
-                                child: _buildFrostedHud(widget.tooltipBuilder!(_activeTooltipIndex!)),
+                                scale:
+                                    0.8 +
+                                    ((_tooltipController.value - 0.5)
+                                            .clamp(0.0, 0.5) *
+                                        2) *
+                                    0.2,
+                                child: _buildFrostedHud(
+                                  widget.tooltipBuilder!(_activeTooltipIndex!),
+                                ),
                               ),
                             ),
                           ),
@@ -461,20 +516,21 @@ void _updateHover(Offset globalPosition) {
 
             // THE MENU ROTARY ITEMS
             ...List.generate(widget.itemCount, (index) {
-              final double itemAngle = startAngle + (index * widget.preferredSpacing) + _scrollAngle;
+              final itemAngle =
+                  startAngle + (index * widget.preferredSpacing) + _scrollAngle;
 
-              double angularDiff = (itemAngle - midpoint).abs();
+              var angularDiff = (itemAngle - midpoint).abs();
               if (angularDiff > math.pi) angularDiff = 2 * math.pi - angularDiff;
 
-              double edgeDist = (visibleSpread / 2) - angularDiff;
-              double targetOpacity = 1.0;
-              double scaleShrink = 1.0;
+              final edgeDist = (visibleSpread / 2) - angularDiff;
+              var targetOpacity = 1.0;
+              var scaleShrink = 1.0;
 
               if (edgeDist <= 0) {
                 targetOpacity = 0.0;
                 scaleShrink = 0.4;
               } else if (edgeDist < fadeZone) {
-                double ratio = edgeDist / fadeZone;
+                final ratio = edgeDist / fadeZone;
                 targetOpacity = ratio;
                 scaleShrink = 0.4 + (0.6 * ratio);
               }
@@ -482,9 +538,10 @@ void _updateHover(Offset globalPosition) {
               return AnimatedBuilder(
                 animation: _menuAnimation,
                 builder: (context, child) {
-                  final double finalOpacity = (targetOpacity * _menuAnimation.value).clamp(0.0, 1.0);
-                  final bool isHovered = _hoveredIndex == index;
-                  final double currentRadius = _menuAnimation.value * widget.radius;
+                  final finalOpacity =
+                      (targetOpacity * _menuAnimation.value).clamp(0.0, 1.0);
+                  final isHovered = _hoveredIndex == index;
+                  final currentRadius = _menuAnimation.value * widget.radius;
 
                   final dx = math.cos(itemAngle) * currentRadius;
                   final dy = math.sin(itemAngle) * currentRadius;
@@ -494,8 +551,9 @@ void _updateHover(Offset globalPosition) {
                     (fabSize.height / 2) + dy - (itemSize / 2),
                   );
 
-                  final double baseScale = _menuAnimation.value.clamp(0.0, 1.0);
-                  final double finalScale = baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
+                  final baseScale = _menuAnimation.value.clamp(0.0, 1.0);
+                  final finalScale =
+                      baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
 
                   return CompositedTransformFollower(
                     link: _layerLink,
@@ -515,7 +573,11 @@ void _updateHover(Offset globalPosition) {
                 child: SizedBox(
                   width: itemSize,
                   height: itemSize,
-                  child: widget.itemBuilder(context, index, isHovered: _hoveredIndex == index),
+                  child: widget.itemBuilder(
+                    context,
+                    index,
+                    isHovered: _hoveredIndex == index,
+                  ),
                 ),
               );
             }),
@@ -527,6 +589,7 @@ void _updateHover(Offset globalPosition) {
 
   Widget _buildFrostedHud(String text) {
     return Material(
+      color: Colors.transparent,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8.0),
         child: BackdropFilter(
@@ -534,8 +597,10 @@ void _updateHover(Offset globalPosition) {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+              color: Colors.white.withValues(alpha: 0.05),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+              ),
               borderRadius: BorderRadius.circular(8.0),
             ),
             child: Text(
@@ -563,7 +628,8 @@ void _updateHover(Offset globalPosition) {
           _openMenu();
           _startInteraction(details.globalPosition);
         },
-        onLongPressMoveUpdate: (details) => _updateInteraction(details.globalPosition),
+        onLongPressMoveUpdate: (details) =>
+            _updateInteraction(details.globalPosition),
         onLongPressEnd: (details) => _endInteraction(details.globalPosition),
         child: widget.child,
       ),
@@ -574,28 +640,35 @@ void _updateHover(Offset globalPosition) {
 // --- Cyberpunk HUD Stem Painter ---
 
 class _StemPainter extends CustomPainter {
-  final Offset itemCenter;
-  final Offset bloomCenter;
-  final double progress;
-
+  /// Creates a [_StemPainter].
   _StemPainter({
     required this.itemCenter,
     required this.bloomCenter,
     required this.progress,
   });
 
+  /// The center of the menu item.
+  final Offset itemCenter;
+
+  /// The center of the bloom panel.
+  final Offset bloomCenter;
+
+  /// The drawing progress (0.0 to 1.0).
+  final double progress;
+
   @override
   void paint(Canvas canvas, Size size) {
     if (progress == 0) return;
 
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
+    final paint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.2)
+          ..style = PaintingStyle.stroke;
 
-    final dotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final dotPaint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
 
     // Stem drawing progress (0.0 to 0.5 of total animation maps to 0.0 to 1.0 of line length)
     final lineProgress = (progress * 2).clamp(0.0, 1.0);
