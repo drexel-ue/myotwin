@@ -148,22 +148,6 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     }
   }
 
-  double _getMidpoint() {
-    return switch (_currentPosition) {
-      QuickMenuPosition.left => 15 * math.pi / 8,
-      QuickMenuPosition.center => 3 * math.pi / 2,
-      QuickMenuPosition.right => 9 * math.pi / 8,
-    };
-  }
-
-  double _getMaxSpread() {
-    return switch (_currentPosition) {
-      QuickMenuPosition.left => 3 * math.pi / 4,
-      QuickMenuPosition.center => math.pi,
-      QuickMenuPosition.right => 3 * math.pi / 4,
-    };
-  }
-
   double _getFingerAngle(Offset globalPosition) {
     if (_fabCenterGlobal == null) return 0.0;
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
@@ -217,7 +201,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
 
   // --- Rotary & Hover Logic ---
 
-  void _startInteraction(Offset globalPosition) {
+  void _handleInteractionStart(Offset globalPosition) {
     _closeTimer?.cancel();
     _lastFingerAngle = _getFingerAngle(globalPosition);
     _isDragging = false;
@@ -235,7 +219,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     return distance > widget.radius * 1.8;
   }
 
-  void _updateInteraction(Offset globalPosition) {
+  void _handleInteractionUpdate(Offset globalPosition) {
     if (!_isOpen || _fabCenterGlobal == null) return;
 
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
@@ -251,7 +235,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     if (distance > widget.radius * 0.4) {
       if (delta.abs() > 0.01) {
         _isDragging = true;
-        final visibleSpread = _getMaxSpread();
+        final visibleSpread = _currentPosition.getMaxSpread();
         final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
 
         if (totalSweep > visibleSpread) {
@@ -267,7 +251,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     _overlayEntry?.markNeedsBuild();
   }
 
-  void _endInteraction(Offset? globalPosition) {
+  void _handleInteractionEnd(Offset? globalPosition) {
     if (!_isOpen) return;
     _tooltipDwellTimer?.cancel();
     if (!_isDragging && _hoveredIndex != null) {
@@ -297,8 +281,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     }
 
     final fingerAngle = _getFingerAngle(globalPosition);
-    final midpoint = _getMidpoint();
-    final visibleSpread = _getMaxSpread();
+    final midpoint = _currentPosition.getMidpoint();
+    final visibleSpread = _currentPosition.getMaxSpread();
     final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
     final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
 
@@ -375,219 +359,310 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
   // --- Overlay Renderer ---
 
   OverlayEntry _createOverlayEntry() {
-    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
-    final fabSize = box?.size ?? const Size(56.0, 56.0);
-    final itemSize = widget.itemSize;
-
     return OverlayEntry(
       builder: (context) {
-        final midpoint = _getMidpoint();
-        final visibleSpread = _getMaxSpread();
-        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-        final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
-        const fadeZone = math.pi / 8;
-
-        // Determine safe zone for the Frosted Bloom based on FAB position
-        final bloomCenter = switch (_currentPosition) {
-          QuickMenuPosition.left => Offset(
-            fabSize.width / 2 + widget.radius * 1.8,
-            fabSize.height / 2 - widget.radius * 0.5,
-          ),
-          QuickMenuPosition.right => Offset(
-            fabSize.width / 2 - widget.radius * 1.8,
-            fabSize.height / 2 - widget.radius * 0.5,
-          ),
-          QuickMenuPosition.center => Offset(
-            fabSize.width / 2,
-            fabSize.height / 2 - widget.radius * 1.6,
-          ),
-        };
-
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-
-                onTapDown: (details) {
-                  if (_isOutsideActiveArea(details.globalPosition)) {
-                    _closeMenu();
-                  } else {
-                    _startInteraction(details.globalPosition);
-                  }
-                },
-                onTapUp: (details) {
-                  if (!_isOutsideActiveArea(details.globalPosition)) {
-                    _endInteraction(details.globalPosition);
-                  }
-                },
-
-                onPanStart: (details) {
-                  if (_isOutsideActiveArea(details.globalPosition)) {
-                    _closeMenu();
-                  } else {
-                    _startInteraction(details.globalPosition);
-                  }
-                },
-                onPanUpdate: (details) =>
-                    _updateInteraction(details.globalPosition),
-                onPanEnd: (details) => _endInteraction(null),
-
-                onLongPressStart: (details) {
-                  if (_isOutsideActiveArea(details.globalPosition)) {
-                    _closeMenu();
-                  } else {
-                    _startInteraction(details.globalPosition);
-                  }
-                },
-                onLongPressMoveUpdate: (details) =>
-                    _updateInteraction(details.globalPosition),
-                onLongPressEnd: (details) {
-                  if (!_isOutsideActiveArea(details.globalPosition)) {
-                    _endInteraction(details.globalPosition);
-                  }
-                },
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-
-            // TETHER & BLOOM HUD LAYER (Rendered in Composited space to perfectly align with items)
-            if (widget.tooltipBuilder != null && _activeTooltipIndex != null)
-              CompositedTransformFollower(
-                link: _layerLink,
-                showWhenUnlinked: false,
-                child: AnimatedBuilder(
-                  animation: _tooltipController,
-                  builder: (context, child) {
-                    final targetAngle =
-                        startAngle +
-                        (_activeTooltipIndex! * widget.preferredSpacing) +
-                        _scrollAngle;
-                    final targetRadius = _menuAnimation.value * widget.radius;
-
-                    final itemCenter = Offset(
-                      (fabSize.width / 2) + math.cos(targetAngle) * targetRadius,
-                      (fabSize.height / 2) + math.sin(targetAngle) * targetRadius,
-                    );
-
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // The Stem
-                        CustomPaint(
-                          painter: _StemPainter(
-                            itemCenter: itemCenter,
-                            bloomCenter: bloomCenter,
-                            progress: _tooltipController.value,
-                          ),
-                          size: Size.infinite,
-                        ),
-                        // The Bloom Panel
-                        Positioned(
-                          left: bloomCenter.dx,
-                          top: bloomCenter.dy,
-                          child: FractionalTranslation(
-                            translation: const Offset(-0.5, -0.5),
-                            child: Opacity(
-                              // Delay panel fade in until stem is drawn (50% mark)
-                              opacity:
-                                  (_tooltipController.value - 0.5)
-                                      .clamp(0.0, 0.5) *
-                                  2,
-                              child: Transform.scale(
-                                scale:
-                                    0.8 +
-                                    ((_tooltipController.value - 0.5)
-                                            .clamp(0.0, 0.5) *
-                                        2) *
-                                    0.2,
-                                child: _buildFrostedHud(
-                                  widget.tooltipBuilder!(_activeTooltipIndex!),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-
-            // THE MENU ROTARY ITEMS
-            ...List.generate(widget.itemCount, (index) {
-              final itemAngle =
-                  startAngle + (index * widget.preferredSpacing) + _scrollAngle;
-
-              var angularDiff = (itemAngle - midpoint).abs();
-              if (angularDiff > math.pi) angularDiff = 2 * math.pi - angularDiff;
-
-              final edgeDist = (visibleSpread / 2) - angularDiff;
-              var targetOpacity = 1.0;
-              var scaleShrink = 1.0;
-
-              if (edgeDist <= 0) {
-                targetOpacity = 0.0;
-                scaleShrink = 0.4;
-              } else if (edgeDist < fadeZone) {
-                final ratio = edgeDist / fadeZone;
-                targetOpacity = ratio;
-                scaleShrink = 0.4 + (0.6 * ratio);
-              }
-
-              return AnimatedBuilder(
-                animation: _menuAnimation,
-                builder: (context, child) {
-                  final finalOpacity =
-                      (targetOpacity * _menuAnimation.value).clamp(0.0, 1.0);
-                  final isHovered = _hoveredIndex == index;
-                  final currentRadius = _menuAnimation.value * widget.radius;
-
-                  final dx = math.cos(itemAngle) * currentRadius;
-                  final dy = math.sin(itemAngle) * currentRadius;
-
-                  final offset = Offset(
-                    (fabSize.width / 2) + dx - (itemSize / 2),
-                    (fabSize.height / 2) + dy - (itemSize / 2),
-                  );
-
-                  final baseScale = _menuAnimation.value.clamp(0.0, 1.0);
-                  final finalScale =
-                      baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
-
-                  return CompositedTransformFollower(
-                    link: _layerLink,
-                    showWhenUnlinked: false,
-                    offset: offset,
-                    child: IgnorePointer(
-                      child: Transform.scale(
-                        scale: finalScale,
-                        child: Opacity(
-                          opacity: finalOpacity,
-                          child: child,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                child: SizedBox(
-                  width: itemSize,
-                  height: itemSize,
-                  child: widget.itemBuilder(
-                    context,
-                    index,
-                    isHovered: _hoveredIndex == index,
-                  ),
-                ),
-              );
-            }),
-          ],
+        return _QuickCommandOverlayContent(
+          menuAnimation: _menuAnimation,
+          tooltipController: _tooltipController,
+          layerLink: _layerLink,
+          itemCount: widget.itemCount,
+          itemBuilder: widget.itemBuilder,
+          tooltipBuilder: widget.tooltipBuilder,
+          onItemSelected: widget.onItemSelected,
+          radius: widget.radius,
+          itemSize: widget.itemSize,
+          preferredSpacing: widget.preferredSpacing,
+          position: _currentPosition,
+          fabKey: _fabKey,
+          scrollAngle: _scrollAngle,
+          hoveredIndex: _hoveredIndex,
+          activeTooltipIndex: _activeTooltipIndex,
+          onInteractionStart: _handleInteractionStart,
+          onInteractionUpdate: _handleInteractionUpdate,
+          onInteractionEnd: _handleInteractionEnd,
+          onClose: _closeMenu,
+          isOutsideActiveArea: _isOutsideActiveArea,
         );
       },
     );
   }
 
-  Widget _buildFrostedHud(String text) {
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: GestureDetector(
+        key: _fabKey,
+        onLongPressStart: (details) {
+          _openMenu();
+          _handleInteractionStart(details.globalPosition);
+        },
+        onLongPressMoveUpdate: (details) =>
+            _handleInteractionUpdate(details.globalPosition),
+        onLongPressEnd: (details) => _handleInteractionEnd(details.globalPosition),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _QuickCommandOverlayContent extends StatelessWidget {
+  const _QuickCommandOverlayContent({
+    required this.menuAnimation,
+    required this.tooltipController,
+    required this.layerLink,
+    required this.itemCount,
+    required this.itemBuilder,
+    this.tooltipBuilder,
+    required this.onItemSelected,
+    required this.radius,
+    required this.itemSize,
+    required this.preferredSpacing,
+    required this.position,
+    required this.fabKey,
+    required this.scrollAngle,
+    required this.hoveredIndex,
+    required this.activeTooltipIndex,
+    required this.onInteractionStart,
+    required this.onInteractionUpdate,
+    required this.onInteractionEnd,
+    required this.onClose,
+    required this.isOutsideActiveArea,
+  });
+
+  final Animation<double> menuAnimation;
+  final AnimationController tooltipController;
+  final LayerLink layerLink;
+  final int itemCount;
+  final QuickMenuItemBuilder itemBuilder;
+  final QuickMenuTooltipBuilder? tooltipBuilder;
+  final ValueChanged<int> onItemSelected;
+  final double radius;
+  final double itemSize;
+  final double preferredSpacing;
+  final QuickMenuPosition position;
+  final GlobalKey fabKey;
+  final double scrollAngle;
+  final int? hoveredIndex;
+  final int? activeTooltipIndex;
+  final ValueChanged<Offset> onInteractionStart;
+  final ValueChanged<Offset> onInteractionUpdate;
+  final ValueChanged<Offset?> onInteractionEnd;
+  final VoidCallback onClose;
+  final bool Function(Offset) isOutsideActiveArea;
+
+  @override
+  Widget build(BuildContext context) {
+    final box = fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final fabSize = box?.size ?? const Size(56.0, 56.0);
+
+    final midpoint = position.getMidpoint();
+    final visibleSpread = position.getMaxSpread();
+    final totalSweep = (itemCount - 1) * preferredSpacing;
+    final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+    const fadeZone = math.pi / 8;
+
+    // Determine safe zone for the Frosted Bloom based on FAB position
+    final bloomCenter = switch (position) {
+      QuickMenuPosition.left => Offset(
+          fabSize.width / 2 + radius * 1.8,
+          fabSize.height / 2 - radius * 0.5,
+        ),
+      QuickMenuPosition.right => Offset(
+          fabSize.width / 2 - radius * 1.8,
+          fabSize.height / 2 - radius * 0.5,
+        ),
+      QuickMenuPosition.center => Offset(
+          fabSize.width / 2,
+          fabSize.height / 2 - radius * 1.6,
+        ),
+    };
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapDown: (details) {
+              if (isOutsideActiveArea(details.globalPosition)) {
+                onClose();
+              } else {
+                onInteractionStart(details.globalPosition);
+              }
+            },
+            onTapUp: (details) {
+              if (!isOutsideActiveArea(details.globalPosition)) {
+                onInteractionEnd(details.globalPosition);
+              }
+            },
+            onPanStart: (details) {
+              if (isOutsideActiveArea(details.globalPosition)) {
+                onClose();
+              } else {
+                onInteractionStart(details.globalPosition);
+              }
+            },
+            onPanUpdate: (details) => onInteractionUpdate(details.globalPosition),
+            onPanEnd: (details) => onInteractionEnd(null),
+            onLongPressStart: (details) {
+              if (isOutsideActiveArea(details.globalPosition)) {
+                onClose();
+              } else {
+                onInteractionStart(details.globalPosition);
+              }
+            },
+            onLongPressMoveUpdate: (details) =>
+                onInteractionUpdate(details.globalPosition),
+            onLongPressEnd: (details) {
+              if (!isOutsideActiveArea(details.globalPosition)) {
+                onInteractionEnd(details.globalPosition);
+              }
+            },
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+
+        // TETHER & BLOOM HUD LAYER (Rendered in Composited space to perfectly align with items)
+        if (tooltipBuilder != null && activeTooltipIndex != null)
+          CompositedTransformFollower(
+            link: layerLink,
+            showWhenUnlinked: false,
+            child: AnimatedBuilder(
+              animation: tooltipController,
+              builder: (context, child) {
+                final targetAngle =
+                    startAngle +
+                    (activeTooltipIndex! * preferredSpacing) +
+                    scrollAngle;
+                final targetRadius = menuAnimation.value * radius;
+
+                final itemCenter = Offset(
+                  (fabSize.width / 2) + math.cos(targetAngle) * targetRadius,
+                  (fabSize.height / 2) + math.sin(targetAngle) * targetRadius,
+                );
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // The Stem
+                    CustomPaint(
+                      painter: _StemPainter(
+                        itemCenter: itemCenter,
+                        bloomCenter: bloomCenter,
+                        progress: tooltipController.value,
+                      ),
+                      size: Size.infinite,
+                    ),
+                    // The Bloom Panel
+                    Positioned(
+                      left: bloomCenter.dx,
+                      top: bloomCenter.dy,
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, -0.5),
+                        child: Opacity(
+                          // Delay panel fade in until stem is drawn (50% mark)
+                          opacity:
+                              (tooltipController.value - 0.5).clamp(0.0, 0.5) *
+                              2,
+                          child: Transform.scale(
+                            scale:
+                                0.8 +
+                                ((tooltipController.value - 0.5)
+                                        .clamp(0.0, 0.5) *
+                                    2) *
+                                0.2,
+                            child: _FrostedTooltipHud(
+                              text: tooltipBuilder!(activeTooltipIndex!),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+
+        // THE MENU ROTARY ITEMS
+        ...List.generate(itemCount, (index) {
+          final itemAngle =
+              startAngle + (index * preferredSpacing) + scrollAngle;
+
+          var angularDiff = (itemAngle - midpoint).abs();
+          if (angularDiff > math.pi) angularDiff = 2 * math.pi - angularDiff;
+
+          final edgeDist = (visibleSpread / 2) - angularDiff;
+          var targetOpacity = 1.0;
+          var scaleShrink = 1.0;
+
+          if (edgeDist <= 0) {
+            targetOpacity = 0.0;
+            scaleShrink = 0.4;
+          } else if (edgeDist < fadeZone) {
+            final ratio = edgeDist / fadeZone;
+            targetOpacity = ratio;
+            scaleShrink = 0.4 + (0.6 * ratio);
+          }
+
+          return AnimatedBuilder(
+            animation: menuAnimation,
+            builder: (context, child) {
+              final finalOpacity =
+                  (targetOpacity * menuAnimation.value).clamp(0.0, 1.0);
+              final isHovered = hoveredIndex == index;
+              final currentRadius = menuAnimation.value * radius;
+
+              final dx = math.cos(itemAngle) * currentRadius;
+              final dy = math.sin(itemAngle) * currentRadius;
+
+              final offset = Offset(
+                (fabSize.width / 2) + dx - (itemSize / 2),
+                (fabSize.height / 2) + dy - (itemSize / 2),
+              );
+
+              final baseScale = menuAnimation.value.clamp(0.0, 1.0);
+              final finalScale =
+                  baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
+
+              return CompositedTransformFollower(
+                link: layerLink,
+                showWhenUnlinked: false,
+                offset: offset,
+                child: IgnorePointer(
+                  child: Transform.scale(
+                    scale: finalScale,
+                    child: Opacity(
+                      opacity: finalOpacity,
+                      child: child,
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: SizedBox(
+              width: itemSize,
+              height: itemSize,
+              child: itemBuilder(
+                context,
+                index,
+                isHovered: hoveredIndex == index,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _FrostedTooltipHud extends StatelessWidget {
+  const _FrostedTooltipHud({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: ClipRRect(
@@ -617,23 +692,23 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
       ),
     );
   }
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: GestureDetector(
-        key: _fabKey,
-        onLongPressStart: (details) {
-          _openMenu();
-          _startInteraction(details.globalPosition);
-        },
-        onLongPressMoveUpdate: (details) =>
-            _updateInteraction(details.globalPosition),
-        onLongPressEnd: (details) => _endInteraction(details.globalPosition),
-        child: widget.child,
-      ),
-    );
+extension on QuickMenuPosition {
+  double getMidpoint() {
+    return switch (this) {
+      QuickMenuPosition.left => 15 * math.pi / 8,
+      QuickMenuPosition.center => 3 * math.pi / 2,
+      QuickMenuPosition.right => 9 * math.pi / 8,
+    };
+  }
+
+  double getMaxSpread() {
+    return switch (this) {
+      QuickMenuPosition.left => 3 * math.pi / 4,
+      QuickMenuPosition.center => math.pi,
+      QuickMenuPosition.right => 3 * math.pi / 4,
+    };
   }
 }
 
