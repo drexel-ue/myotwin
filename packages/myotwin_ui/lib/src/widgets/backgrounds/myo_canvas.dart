@@ -344,6 +344,9 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
                       fabState: state,
                       slideProgress: _slideProgress,
                       onFabPressed: _onFabPressed,
+                      onCommandSelected: (index) {
+                        widget.onCommandNodeSelected?.call(index.toString());
+                      },
                       onModeChanged: (value) {
                         _sliderMode.value = value;
                       },

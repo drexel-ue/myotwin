@@ -9,6 +9,7 @@ class GoalExplorerSurface extends StatefulWidget {
     super.key,
     required this.goals,
     required this.onGoalSelected,
+    required this.onClose,
   });
 
   /// The list of goals to explore.
@@ -16,6 +17,9 @@ class GoalExplorerSurface extends StatefulWidget {
 
   /// Called when a goal is selected from the list.
   final ValueChanged<Goal> onGoalSelected;
+
+  /// Called when the surface is dismissed.
+  final VoidCallback onClose;
 
   @override
   State<GoalExplorerSurface> createState() => _GoalExplorerSurfaceState();
@@ -39,6 +43,8 @@ class _GoalExplorerSurfaceState extends State<GoalExplorerSurface> {
     return FrostedHUD(
       impactPoint: .zero,
       title: 'GOAL_EXPLORER',
+      onClose: widget.onClose,
+      expand: true,
       child: Padding(
         padding: allPadding24,
         child: Column(

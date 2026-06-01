@@ -48,6 +48,7 @@ class ArcFABSlider extends StatefulWidget {
     required this.fabState,
     required this.onFabPressed,
     required this.onModeChanged,
+    this.onCommandSelected,
     this.slideProgress,
   });
 
@@ -71,6 +72,9 @@ class ArcFABSlider extends StatefulWidget {
   /// Callback invoked whenever the slider snaps to a new mode.
   /// Receives the new [ArcSliderMode] value.
   final ValueChanged<ArcSliderMode> onModeChanged;
+
+  /// Callback invoked when a command is selected from the radial menu.
+  final ValueChanged<int>? onCommandSelected;
 
   /// Optional notifier for the current slide progress (-1.0 to 1.0).
   /// If provided, the slider uses this for state synchronization.
@@ -196,12 +200,16 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                       radius: 120.0,
                       itemSize: spacing64,
                       onItemSelected: (index) {
-                        // Action selected via GenUI path
+                        widget.onCommandSelected?.call(index);
                       },
                       itemBuilder: (context, index, {required isHovered}) {
+                        final iconIntent = switch (index) {
+                          4 => 'target',
+                          _ => 'task',
+                        };
                         return MyoIconButton(
                           behavior: .translucent,
-                          intent: 'task',
+                          intent: iconIntent,
                           color: isHovered ? Colors.black : Colors.white,
                           size: spacing72,
                           onPressed: () {},
@@ -213,7 +221,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                           'REVERT LADDER',
                           'X-RAY OVERLAY',
                           'BODY HEATMAP',
-                          'CALIBRATE',
+                          'GOAL_EXPLORER',
                           'LOG SYMPTOM',
                           'REVERT LADDER',
                           'X-RAY OVERLAY',
