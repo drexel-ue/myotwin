@@ -11,8 +11,8 @@ class QuickCommandMenu extends StatefulWidget {
     super.key,
     required this.dragPosition,
     required this.onNodeHighlighted,
-    this.initialAngle = -math.pi / 2, // Upward
-    this.fanAngle = math.pi / 2, // 90 degree spread
+    this.initialAngle = -math.pi * 0.9, // Start from far left
+    this.fanAngle = math.pi * 0.8, // 144 degree spread for better spacing
   });
 
   /// The current drag position relative to the menu center.
@@ -36,8 +36,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
   late final AnimationController _controller;
   String? _lastHighlighted;
 
-  // Nodes to display (initially just Goals)
-  final List<String> _nodes = ['GOALS'];
+  // Nodes to display (for testing multiple options)
+  final List<String> _nodes = ['GOALS', 'TASKS', 'LOGS', 'STATS'];
 
   @override
   void initState() {
@@ -59,24 +59,29 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
   void _checkBounds() {
     if (widget.dragPosition == null) return;
 
+    final distance = widget.dragPosition!.distance;
     String? currentHighlight;
-    const radius = 70.0; // Compact radius
-    const hitThreshold = 40.0; // Circular hit area
 
-    for (var i = 0; i < _nodes.length; i++) {
-      final angle = widget.initialAngle +
-          (i *
-              (widget.fanAngle /
-                  (_nodes.length > 1 ? _nodes.length - 1 : 1)));
-
-      final nodeCenter = Offset(
-        math.cos(angle) * radius,
-        math.sin(angle) * radius,
-      );
-
-      if ((widget.dragPosition! - nodeCenter).distance < hitThreshold) {
-        currentHighlight = _nodes[i];
-        break;
+    // 1. Check if thumb is in the "active ring" around the button distance (40px)
+    // We allow a generous range (15px to 130px) to capture the drag intent
+    if (distance > 15.0 && distance < 130.0) {
+      // 2. Determine angle of the thumb relative to the center
+      var angle = math.atan2(widget.dragPosition!.dy, widget.dragPosition!.dx);
+      
+      // Normalize angle to the range of our fan
+      final stepAngle = widget.fanAngle / (_nodes.length > 1 ? _nodes.length - 1 : 1);
+      
+      for (var i = 0; i < _nodes.length; i++) {
+        final nodeAngle = widget.initialAngle + (i * stepAngle);
+        
+        // Check if the thumb angle is within ~half a step of this node's angle
+        var diff = (angle - nodeAngle).abs();
+        if (diff > math.pi) diff = (2 * math.pi) - diff; // Handle wrap-around
+        
+        if (diff < (stepAngle * 0.6)) {
+          currentHighlight = _nodes[i];
+          break;
+        }
       }
     }
 
@@ -156,7 +161,7 @@ class _RadialNode extends AnimatedWidget {
     // Bloom animation: scales in last 40%
     final bloomProgress = ((progress - 0.6) / 0.4).clamp(0.0, 1.0);
 
-    const radius = 70.0; // Compact radius
+    const radius = 40.0; // Button distance as requested
     final currentRadius = stemProgress * radius;
 
     final x = centerOffset + math.cos(angle) * currentRadius;
@@ -166,16 +171,17 @@ class _RadialNode extends AnimatedWidget {
       left: x,
       top: y,
       child: Transform.translate(
-        offset: const Offset(-40, -20), // Center the label
+        // Adjust translation to be more precise given the tight radius
+        offset: const Offset(-25, -15), 
         child: Opacity(
           opacity: stemProgress,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Transform.scale(
-                scale: 0.8 + (bloomProgress * 0.2) + (isHighlighted ? 0.2 : 0.0),
+                scale: 0.7 + (bloomProgress * 0.3) + (isHighlighted ? 0.2 : 0.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isHighlighted ? theme.accentHot : theme.surfaceElevated,
                     borderRadius: theme.radiusSm,
@@ -197,7 +203,8 @@ class _RadialNode extends AnimatedWidget {
                     style: theme.caption.copyWith(
                       color: isHighlighted ? theme.black : theme.onSurface,
                       fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                      letterSpacing: 1.5,
+                      letterSpacing: 1.0,
+                      fontSize: 9, // Smaller font for high density
                     ),
                   ),
                 ),
