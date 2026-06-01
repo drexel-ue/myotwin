@@ -1,69 +1,43 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-/// The relative position of the quick menu on the screen.
-enum QuickMenuPosition {
-  /// Left aligned.
-  left,
+enum QuickMenuPosition { left, center, right }
 
-  /// Center aligned.
-  center,
+typedef QuickMenuItemBuilder = Widget Function(BuildContext context, int index, {required bool isHovered});
+typedef QuickMenuTooltipBuilder = String Function(int index);
 
-  /// Right aligned.
-  right,
-}
-
-/// A builder for a single menu item in the [QuickCommandMenu].
-typedef QuickMenuItemBuilder =
-    Widget Function(
-      BuildContext context,
-      int index, {
-      required bool isHovered,
-    });
-
-/// A radial "Stem and Bloom" command menu anchored to a center point.
 class QuickCommandMenu extends StatefulWidget {
-  /// Creates a [QuickCommandMenu].
+  final int itemCount;
+  final QuickMenuItemBuilder itemBuilder;
+  final QuickMenuTooltipBuilder? tooltipBuilder; // NEW: Provides the text for the HUD
+  final ValueChanged<int> onItemSelected;
+  final Widget child;
+  final double radius;
+  final double itemSize;
+  final double preferredSpacing;
+
   const QuickCommandMenu({
     super.key,
     required this.itemCount,
     required this.itemBuilder,
+    this.tooltipBuilder,
     required this.onItemSelected,
     required this.child,
     this.radius = 110.0,
     this.itemSize = 56.0,
-    this.preferredSpacing = math.pi / 4, // 45 degrees
+    this.preferredSpacing = math.pi / 4,
   });
-
-  /// The number of items in the menu.
-  final int itemCount;
-
-  /// The builder for each menu item.
-  final QuickMenuItemBuilder itemBuilder;
-
-  /// Callback for when an item is selected.
-  final ValueChanged<int> onItemSelected;
-
-  /// The child widget to anchor the menu to.
-  final Widget child;
-
-  /// The radius of the radial arc.
-  final double radius;
-
-  /// The size of each menu item.
-  final double itemSize;
-
-  /// The preferred spacing between items in radians.
-  final double preferredSpacing;
 
   @override
   State<QuickCommandMenu> createState() => _QuickCommandMenuState();
 }
 
-class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
+class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProviderStateMixin {
+  late AnimationController _menuController;
+  late AnimationController _tooltipController; // NEW: Controls the stem and bloom
+  late Animation<double> _menuAnimation;
 
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
@@ -71,38 +45,47 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
 
   bool _isOpen = false;
   Timer? _closeTimer;
+  Timer? _tooltipDwellTimer;
+
   int? _hoveredIndex;
+  int? _activeTooltipIndex; // Keeps track of the last hovered item for smooth exit animations
 
   QuickMenuPosition _currentPosition = QuickMenuPosition.center;
   Offset? _fabCenterGlobal;
 
-  // --- Rotary Dial State ---
   double _scrollAngle = 0.0;
-  double _lastFingerAngle = 0.0; // Changed to relative frame tracking
+  double _lastFingerAngle = 0.0;
   bool _isDragging = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _menuController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutBack);
+
+    _tooltipController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
   }
 
   @override
   void dispose() {
     _closeTimer?.cancel();
-    _controller.dispose();
+    _tooltipDwellTimer?.cancel();
+    _menuController.dispose();
+    _tooltipController.dispose();
     _overlayEntry?.remove();
     super.dispose();
   }
 
-  // --- Spatial & Arc Mathematics ---
+  // --- Spatial Math & Anchors ---
 
   void _calculatePosition() {
-    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
 
     final offset = box.localToGlobal(Offset.zero);
@@ -124,26 +107,24 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
   }
 
   double _getMidpoint() {
-    // Recalculated to pin to the top of the screen (270 degrees) and fan downward
     switch (_currentPosition) {
       case QuickMenuPosition.left:
-        return 15 * math.pi / 8; // 337.5°
+        return 15 * math.pi / 8;
       case QuickMenuPosition.center:
-        return 3 * math.pi / 2; // 270.0°
+        return 3 * math.pi / 2;
       case QuickMenuPosition.right:
-        return 9 * math.pi / 8; // 202.5°
+        return 9 * math.pi / 8;
     }
   }
 
   double _getMaxSpread() {
-    // Increased left and right windows to 135 degrees
     switch (_currentPosition) {
       case QuickMenuPosition.left:
-        return 3 * math.pi / 4; // 135° limit
+        return 3 * math.pi / 4;
       case QuickMenuPosition.center:
-        return math.pi; // 180° limit
+        return math.pi;
       case QuickMenuPosition.right:
-        return 3 * math.pi / 4; // 135° limit
+        return 3 * math.pi / 4;
     }
   }
 
@@ -151,12 +132,12 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
     if (_fabCenterGlobal == null) return 0.0;
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
-    var angle = math.atan2(dy, dx);
+    double angle = math.atan2(dy, dx);
     if (angle < 0) angle += 2 * math.pi;
     return angle;
   }
 
-  // --- Core Interaction Lifecycle ---
+  // --- Interaction Lifecycle ---
 
   void _openMenu() {
     _calculatePosition();
@@ -165,21 +146,22 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
       Overlay.of(context).insert(_overlayEntry!);
     }
     _isOpen = true;
-    unawaited(_controller.forward());
+    _menuController.forward();
   }
 
   void _closeMenu() {
     _closeTimer?.cancel();
+    _tooltipDwellTimer?.cancel();
     _isOpen = false;
-    unawaited(
-      _controller.reverse().then((_) {
-        if (!_isOpen && _overlayEntry != null) {
-          _overlayEntry!.remove();
-          _overlayEntry = null;
-          _hoveredIndex = null;
-        }
-      }),
-    );
+    _tooltipController.reverse(); // Ensure HUD closes
+    _menuController.reverse().then((_) {
+      if (!_isOpen && _overlayEntry != null) {
+        _overlayEntry!.remove();
+        _overlayEntry = null;
+        _hoveredIndex = null;
+        _activeTooltipIndex = null;
+      }
+    });
   }
 
   void _startTimer() {
@@ -195,155 +177,314 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
     _closeMenu();
   }
 
-  // --- Rotary Drag Handlers ---
+  // --- Rotary & Hover Logic ---
 
   void _startInteraction(Offset globalPosition) {
     _closeTimer?.cancel();
     _lastFingerAngle = _getFingerAngle(globalPosition);
     _isDragging = false;
     _updateHover(globalPosition);
+
+
+
+
+  }
+
+  bool _isOutsideActiveArea(Offset globalPosition) {
+    if (_fabCenterGlobal == null) return false;
+    final dx = globalPosition.dx - _fabCenterGlobal!.dx;
+    final dy = globalPosition.dy - _fabCenterGlobal!.dy;
+    final distance = math.sqrt(dx * dx + dy * dy);
+
+    // 1.8x the radius gives a comfortable padding around the items
+    // before a touch is considered a "dismiss" intent.
+    return distance > widget.radius * 1.8;
   }
 
   void _updateInteraction(Offset globalPosition) {
+    if (!_isOpen || _fabCenterGlobal == null) return;
     if (_fabCenterGlobal == null) return;
 
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
 
-    final currentAngle = _getFingerAngle(globalPosition);
-    var delta = currentAngle - _lastFingerAngle;
+    double currentAngle = _getFingerAngle(globalPosition);
+    double delta = currentAngle - _lastFingerAngle;
 
-    // Normalize delta for shortest-path wrap around
     if (delta > math.pi) delta -= 2 * math.pi;
     if (delta < -math.pi) delta += 2 * math.pi;
 
-    // ONLY process scroll if they have pushed out of the unstable dead zone
     if (distance > widget.radius * 0.4) {
       if (delta.abs() > 0.01) {
-        // 0.01 rad is roughly 0.5 degrees
         _isDragging = true;
-
-        final visibleSpread = _getMaxSpread();
-        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+        final double visibleSpread = _getMaxSpread();
+        final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
 
         if (totalSweep > visibleSpread) {
-          final maxScroll = totalSweep - visibleSpread;
-          _scrollAngle += delta; // Add relative movement
+          double maxScroll = totalSweep - visibleSpread;
+          _scrollAngle += delta;
           _scrollAngle = _scrollAngle.clamp(-maxScroll, 0.0);
         }
       }
     }
 
-    // Always update the last angle so exiting the dead zone doesn't cause a jump
     _lastFingerAngle = currentAngle;
-
     _updateHover(globalPosition);
     _overlayEntry?.markNeedsBuild();
   }
 
   void _endInteraction(Offset? globalPosition) {
+    if (!_isOpen) return;
+    _tooltipDwellTimer?.cancel();
     if (!_isDragging && _hoveredIndex != null) {
       _onItemTapped(_hoveredIndex!);
     } else {
       _hoveredIndex = null;
+      _tooltipController.reverse(); // Retract stem
       _overlayEntry?.markNeedsBuild();
       _startTimer();
     }
   }
 
-  void _updateHover(Offset globalPosition) {
+void _updateHover(Offset globalPosition) {
     if (_fabCenterGlobal == null) return;
 
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
 
+    // If the finger moves physically too far away from the rotary ring, cancel hover
     if ((distance - widget.radius).abs() > widget.itemSize * 1.5) {
-      _hoveredIndex = null;
+      if (_hoveredIndex != null) {
+        _hoveredIndex = null;
+        _tooltipController.reverse();
+      }
       return;
     }
 
-    final fingerAngle = _getFingerAngle(globalPosition);
-    final midpoint = _getMidpoint();
-    final visibleSpread = _getMaxSpread();
-    final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-    final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+    double fingerAngle = _getFingerAngle(globalPosition);
+    final double midpoint = _getMidpoint();
+    final double visibleSpread = _getMaxSpread();
+    final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+    final double startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
 
-    int? closestIndex;
-    var minDiff = double.infinity;
+    // --- FOCUS WINDOW LOGIC ---
+    // If the menu is scrollable, restrict hovering to the center window.
+    final bool isScrollable = totalSweep > visibleSpread;
 
-    for (var i = 0; i < widget.itemCount; i++) {
-      var itemAngle = startAngle + (i * widget.preferredSpacing) + _scrollAngle;
+    // Default to 100% of the visible spread if no scrolling is needed
+    double focusWindowHalfAngle = visibleSpread / 2;
 
-      itemAngle = itemAngle % (2 * math.pi);
-      if (itemAngle < 0) itemAngle += 2 * math.pi;
+    if (isScrollable) {
+      // Create a window ~35% of the total spread (17.5% on each side of the midpoint)
+      focusWindowHalfAngle = (visibleSpread * 0.35) / 2;
 
-      var diff = (itemAngle - fingerAngle).abs();
-      if (diff > math.pi) diff = 2 * math.pi - diff;
-
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIndex = i;
+      // Mathematical safeguard: Ensure the window is at least wide enough
+      // (60% of the item spacing) so you never land in a dead gap between two items.
+      if (focusWindowHalfAngle < widget.preferredSpacing * 0.6) {
+        focusWindowHalfAngle = widget.preferredSpacing * 0.6;
       }
     }
 
-    _hoveredIndex = (minDiff <= widget.preferredSpacing / 1.5) ? closestIndex : null;
+    int? closestIndex;
+    double minDiff = double.infinity;
+
+    for (int i = 0; i < widget.itemCount; i++) {
+      double itemAngle = startAngle + (i * widget.preferredSpacing) + _scrollAngle;
+      itemAngle = itemAngle % (2 * math.pi);
+      if (itemAngle < 0) itemAngle += 2 * math.pi;
+
+      // 1. Is the item physically inside the Focus Window?
+      double diffFromMidpoint = (itemAngle - midpoint).abs();
+      if (diffFromMidpoint > math.pi) diffFromMidpoint = 2 * math.pi - diffFromMidpoint;
+
+      if (diffFromMidpoint <= focusWindowHalfAngle) {
+        // 2. If it's in the window, how close is the user's finger to it?
+        double diffFromFinger = (itemAngle - fingerAngle).abs();
+        if (diffFromFinger > math.pi) diffFromFinger = 2 * math.pi - diffFromFinger;
+
+        if (diffFromFinger < minDiff) {
+          minDiff = diffFromFinger;
+          closestIndex = i;
+        }
+      }
+    }
+
+    // 3. Must still be relatively close to the finger to count as a deliberate hover
+    int? newHovered = (minDiff <= widget.preferredSpacing / 1.5) ? closestIndex : null;
+
+    // Trigger the HUD stem animations if the hover state changes
+    if (newHovered != _hoveredIndex) {
+      _hoveredIndex = newHovered;
+      _tooltipDwellTimer?.cancel();
+      if (_hoveredIndex != null) {
+        // Start the dwell timer. 250ms is standard for UI tooltips.
+        // It's fast enough to feel responsive, but slow enough to ignore quick scrubs.
+        _tooltipDwellTimer = Timer(const Duration(milliseconds: 250), () {
+          if (mounted && _hoveredIndex != null) {
+            _activeTooltipIndex = _hoveredIndex;
+            _tooltipController.forward();
+          }
+        });
+      } else {
+        _tooltipController.reverse();
+      }
+    }
   }
+
 
   // --- Overlay Renderer ---
 
   OverlayEntry _createOverlayEntry() {
-    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
     final fabSize = box?.size ?? const Size(56.0, 56.0);
     final itemSize = widget.itemSize;
 
     return OverlayEntry(
       builder: (context) {
-        final midpoint = _getMidpoint();
-        final visibleSpread = _getMaxSpread();
-        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-        final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
-        const fadeZone = math.pi / 8;
+        final double midpoint = _getMidpoint();
+        final double visibleSpread = _getMaxSpread();
+        final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+        final double startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+        final double fadeZone = math.pi / 8;
+
+        // Determine safe zone for the Frosted Bloom based on FAB position
+        Offset bloomCenter;
+        switch (_currentPosition) {
+          case QuickMenuPosition.left:
+            bloomCenter = Offset(fabSize.width / 2 + widget.radius * 1.8, fabSize.height / 2 - widget.radius * 0.5);
+            break;
+          case QuickMenuPosition.right:
+            bloomCenter = Offset(fabSize.width / 2 - widget.radius * 1.8, fabSize.height / 2 - widget.radius * 0.5);
+            break;
+          case QuickMenuPosition.center:
+            bloomCenter = Offset(fabSize.width / 2, fabSize.height / 2 - widget.radius * 1.6);
+            break;
+        }
 
         return Stack(
           children: [
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
-                onTapDown: (details) => _startInteraction(details.globalPosition),
-                onTapUp: (details) => _endInteraction(details.globalPosition),
-                onPanStart: (details) => _startInteraction(details.globalPosition),
+
+                onTapDown: (details) {
+                  if (_isOutsideActiveArea(details.globalPosition)) {
+                    _closeMenu();
+                  } else {
+                    _startInteraction(details.globalPosition);
+                  }
+                },
+                onTapUp: (details) {
+                  if (!_isOutsideActiveArea(details.globalPosition)) {
+                    _endInteraction(details.globalPosition);
+                  }
+                },
+
+                onPanStart: (details) {
+                  if (_isOutsideActiveArea(details.globalPosition)) {
+                    _closeMenu();
+                  } else {
+                    _startInteraction(details.globalPosition);
+                  }
+                },
                 onPanUpdate: (details) => _updateInteraction(details.globalPosition),
                 onPanEnd: (details) => _endInteraction(null),
+
+                onLongPressStart: (details) {
+                  if (_isOutsideActiveArea(details.globalPosition)) {
+                    _closeMenu();
+                  } else {
+                    _startInteraction(details.globalPosition);
+                  }
+                },
+                onLongPressMoveUpdate: (details) => _updateInteraction(details.globalPosition),
+                onLongPressEnd: (details) {
+                  if (!_isOutsideActiveArea(details.globalPosition)) {
+                    _endInteraction(details.globalPosition);
+                  }
+                },
                 child: Container(color: Colors.transparent),
               ),
             ),
-            ...List.generate(widget.itemCount, (index) {
-              final itemAngle = startAngle + (index * widget.preferredSpacing) + _scrollAngle;
 
-              var angularDiff = (itemAngle - midpoint).abs();
+            // TETHER & BLOOM HUD LAYER (Rendered in Composited space to perfectly align with items)
+            if (widget.tooltipBuilder != null && _activeTooltipIndex != null)
+              CompositedTransformFollower(
+                link: _layerLink,
+                showWhenUnlinked: false,
+                child: AnimatedBuilder(
+                  animation: _tooltipController,
+                  builder: (context, child) {
+                    final targetAngle = startAngle + (_activeTooltipIndex! * widget.preferredSpacing) + _scrollAngle;
+                    final targetRadius = _menuAnimation.value * widget.radius;
+
+                    final itemCenter = Offset(
+                      (fabSize.width / 2) + math.cos(targetAngle) * targetRadius,
+                      (fabSize.height / 2) + math.sin(targetAngle) * targetRadius,
+                    );
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // The Stem
+                        CustomPaint(
+                          painter: _StemPainter(
+                            itemCenter: itemCenter,
+                            bloomCenter: bloomCenter,
+                            progress: _tooltipController.value,
+                          ),
+                          size: Size.infinite,
+                        ),
+                        // The Bloom Panel
+                        Positioned(
+                          left: bloomCenter.dx,
+                          top: bloomCenter.dy,
+                          child: FractionalTranslation(
+                            translation: const Offset(-0.5, -0.5),
+                            child: Opacity(
+                              // Delay panel fade in until stem is drawn (50% mark)
+                              opacity: (_tooltipController.value - 0.5).clamp(0.0, 0.5) * 2,
+                              child: Transform.scale(
+                                scale: 0.8 + ((_tooltipController.value - 0.5).clamp(0.0, 0.5) * 2) * 0.2,
+                                child: _buildFrostedHud(widget.tooltipBuilder!(_activeTooltipIndex!)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
+            // THE MENU ROTARY ITEMS
+            ...List.generate(widget.itemCount, (index) {
+              final double itemAngle = startAngle + (index * widget.preferredSpacing) + _scrollAngle;
+
+              double angularDiff = (itemAngle - midpoint).abs();
               if (angularDiff > math.pi) angularDiff = 2 * math.pi - angularDiff;
 
-              final edgeDist = (visibleSpread / 2) - angularDiff;
-              var targetOpacity = 1.0;
-              var scaleShrink = 1.0;
+              double edgeDist = (visibleSpread / 2) - angularDiff;
+              double targetOpacity = 1.0;
+              double scaleShrink = 1.0;
 
               if (edgeDist <= 0) {
                 targetOpacity = 0.0;
                 scaleShrink = 0.4;
               } else if (edgeDist < fadeZone) {
-                final ratio = edgeDist / fadeZone;
+                double ratio = edgeDist / fadeZone;
                 targetOpacity = ratio;
                 scaleShrink = 0.4 + (0.6 * ratio);
               }
 
               return AnimatedBuilder(
-                animation: _animation,
+                animation: _menuAnimation,
                 builder: (context, child) {
-                  final finalOpacity = (targetOpacity * _animation.value).clamp(0.0, 1.0);
-                  final isHovered = _hoveredIndex == index;
-                  final currentRadius = _animation.value * widget.radius;
+                  final double finalOpacity = (targetOpacity * _menuAnimation.value).clamp(0.0, 1.0);
+                  final bool isHovered = _hoveredIndex == index;
+                  final double currentRadius = _menuAnimation.value * widget.radius;
 
                   final dx = math.cos(itemAngle) * currentRadius;
                   final dy = math.sin(itemAngle) * currentRadius;
@@ -353,8 +494,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
                     (fabSize.height / 2) + dy - (itemSize / 2),
                   );
 
-                  final baseScale = _animation.value.clamp(0.0, 1.0);
-                  final finalScale = baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
+                  final double baseScale = _menuAnimation.value.clamp(0.0, 1.0);
+                  final double finalScale = baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
 
                   return CompositedTransformFollower(
                     link: _layerLink,
@@ -374,17 +515,41 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
                 child: SizedBox(
                   width: itemSize,
                   height: itemSize,
-                  child: widget.itemBuilder(
-                    context,
-                    index,
-                    isHovered: _hoveredIndex == index,
-                  ),
+                  child: widget.itemBuilder(context, index, isHovered: _hoveredIndex == index),
                 ),
               );
             }),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildFrostedHud(String text) {
+    return Material(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8.0),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: Text(
+              text.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.0,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -403,5 +568,55 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
         child: widget.child,
       ),
     );
+  }
+}
+
+// --- Cyberpunk HUD Stem Painter ---
+
+class _StemPainter extends CustomPainter {
+  final Offset itemCenter;
+  final Offset bloomCenter;
+  final double progress;
+
+  _StemPainter({
+    required this.itemCenter,
+    required this.bloomCenter,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress == 0) return;
+
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.6)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final dotPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // Stem drawing progress (0.0 to 0.5 of total animation maps to 0.0 to 1.0 of line length)
+    final lineProgress = (progress * 2).clamp(0.0, 1.0);
+
+    final currentEnd = Offset(
+      ui.lerpDouble(itemCenter.dx, bloomCenter.dx, lineProgress)!,
+      ui.lerpDouble(itemCenter.dy, bloomCenter.dy, lineProgress)!,
+    );
+
+    canvas.drawLine(itemCenter, currentEnd, paint);
+
+    // Glowing connection dot at the node
+    if (lineProgress > 0) {
+      canvas.drawCircle(itemCenter, 3.0 * lineProgress, dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StemPainter oldDelegate) {
+    return oldDelegate.itemCenter != itemCenter ||
+        oldDelegate.bloomCenter != bloomCenter ||
+        oldDelegate.progress != progress;
   }
 }

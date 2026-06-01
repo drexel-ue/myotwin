@@ -7,6 +7,7 @@ class MyoIconButton extends StatefulWidget {
   /// Creates a [MyoIconButton].
   const MyoIconButton({
     super.key,
+    this.behavior = .deferToChild,
     required this.onPressed,
     required this.intent,
     this.fallbackIntent,
@@ -14,6 +15,9 @@ class MyoIconButton extends StatefulWidget {
     this.size = spacing24,
     this.color,
   });
+
+  /// Optional hit test behavior.
+  final HitTestBehavior behavior;
 
   /// Callback invoked when the button is pressed.
   final VoidCallback onPressed;
@@ -57,6 +61,7 @@ class _MyoIconButtonState extends State<MyoIconButton> with SingleTickerProvider
     final iconColor = widget.color ?? (widget.enabled ? theme.onSurface : theme.onSurfaceDim);
 
     return GestureDetector(
+      behavior: widget.behavior,
       onTap: widget.enabled
           ? () {
               triggerGlitch();

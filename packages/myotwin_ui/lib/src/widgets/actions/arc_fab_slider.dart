@@ -200,11 +200,27 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                       },
                       itemBuilder: (context, index, {required isHovered}) {
                         return MyoIconButton(
+                          behavior: .translucent,
                           intent: 'task',
                           color: isHovered ? Colors.black : Colors.white,
                           size: spacing72,
                           onPressed: () {},
                         );
+                      },
+                      tooltipBuilder: (index) {
+                        const tooltips = [
+                          'LOG SYMPTOM',
+                          'REVERT LADDER',
+                          'X-RAY OVERLAY',
+                          'BODY HEATMAP',
+                          'CALIBRATE',
+                          'LOG SYMPTOM',
+                          'REVERT LADDER',
+                          'X-RAY OVERLAY',
+                          'BODY HEATMAP',
+                          'CALIBRATE',
+                        ];
+                        return tooltips[index];
                       },
                       child: AnimatedHoloFAB(
                         state: widget.fabState,
