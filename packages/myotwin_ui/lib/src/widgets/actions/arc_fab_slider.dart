@@ -48,6 +48,7 @@ class ArcFABSlider extends StatefulWidget {
     required this.fabState,
     required this.onFabPressed,
     required this.onModeChanged,
+    this.slideProgress,
   });
 
   /// Vertical drop in pixels from the track baseline to the arc's
@@ -71,6 +72,10 @@ class ArcFABSlider extends StatefulWidget {
   /// Receives the new [ArcSliderMode] value.
   final ValueChanged<ArcSliderMode> onModeChanged;
 
+  /// Optional notifier for the current slide progress (-1.0 to 1.0).
+  /// If provided, the slider uses this for state synchronization.
+  final ValueNotifier<double>? slideProgress;
+
   @override
   State<ArcFABSlider> createState() => _ArcFABSliderState();
 }
@@ -80,7 +85,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
   double maxSlideDistance = 120.0; // How far left/right it moves in pixelss
 
   // State: -1.0 (Left), 0.0 (Center), 1.0 (Right)
-  final _slideProgress = ValueNotifier<double>(0.0);
+  late final ValueNotifier<double> _slideProgress;
 
   // Physics engine for snapping when the user lets go
   late final AnimationController _snapController;
@@ -92,6 +97,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    _slideProgress = widget.slideProgress ?? ValueNotifier<double>(0.0);
     _snapController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -151,7 +157,9 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
   @override
   void dispose() {
     _snapController.dispose();
-    _slideProgress.dispose();
+    if (widget.slideProgress == null) {
+      _slideProgress.dispose();
+    }
     super.dispose();
   }
 

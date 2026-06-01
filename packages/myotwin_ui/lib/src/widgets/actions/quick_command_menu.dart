@@ -11,8 +11,8 @@ class QuickCommandMenu extends StatefulWidget {
     super.key,
     required this.dragPosition,
     required this.onNodeHighlighted,
-    this.initialAngle = -math.pi * 0.9, // Start from far left
-    this.fanAngle = math.pi * 0.8, // 144 degree spread for better spacing
+    required this.startAngle,
+    required this.endAngle,
   });
 
   /// The current drag position relative to the menu center.
@@ -21,11 +21,11 @@ class QuickCommandMenu extends StatefulWidget {
   /// Called when a node becomes highlighted or unhighlighted.
   final ValueChanged<String?> onNodeHighlighted;
 
-  /// The starting angle of the radial arc.
-  final double initialAngle;
+  /// The start boundary of the radial fan in radians.
+  final double startAngle;
 
-  /// The total spread of the radial fan.
-  final double fanAngle;
+  /// The end boundary of the radial fan in radians.
+  final double endAngle;
 
   @override
   State<QuickCommandMenu> createState() => _QuickCommandMenuState();
@@ -63,22 +63,24 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     String? currentHighlight;
 
     // 1. Check if thumb is in the "active ring" around the button distance (40px)
-    // We allow a generous range (15px to 130px) to capture the drag intent
-    if (distance > 15.0 && distance < 130.0) {
+    if (distance > 15.0 && distance < 120.0) {
       // 2. Determine angle of the thumb relative to the center
-      var angle = math.atan2(widget.dragPosition!.dy, widget.dragPosition!.dx);
+      final angle = math.atan2(widget.dragPosition!.dy, widget.dragPosition!.dx);
       
-      // Normalize angle to the range of our fan
-      final stepAngle = widget.fanAngle / (_nodes.length > 1 ? _nodes.length - 1 : 1);
+      final stepAngle = (_nodes.length > 1) 
+          ? (widget.endAngle - widget.startAngle) / (_nodes.length - 1)
+          : 0.0;
       
       for (var i = 0; i < _nodes.length; i++) {
-        final nodeAngle = widget.initialAngle + (i * stepAngle);
+        final nodeAngle = (_nodes.length > 1)
+            ? widget.startAngle + (i * stepAngle)
+            : (widget.startAngle + widget.endAngle) / 2.0;
         
-        // Check if the thumb angle is within ~half a step of this node's angle
+        // Circular difference check
         var diff = (angle - nodeAngle).abs();
-        if (diff > math.pi) diff = (2 * math.pi) - diff; // Handle wrap-around
+        if (diff > math.pi) diff = (2 * math.pi) - diff;
         
-        if (diff < (stepAngle * 0.6)) {
+        if (diff < 0.3) { // High precision angular sector
           currentHighlight = _nodes[i];
           break;
         }
@@ -105,6 +107,10 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
     const menuSize = 300.0;
     const centerOffset = menuSize / 2.0;
 
+    final stepAngle = (_nodes.length > 1) 
+        ? (widget.endAngle - widget.startAngle) / (_nodes.length - 1)
+        : 0.0;
+
     return SizedBox(
       width: menuSize,
       height: menuSize,
@@ -116,10 +122,9 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
             final label = entry.value;
             final isHighlighted = _lastHighlighted == label;
 
-            final angle = widget.initialAngle +
-                (index *
-                    (widget.fanAngle /
-                        (_nodes.length > 1 ? _nodes.length - 1 : 1)));
+            final angle = (_nodes.length > 1)
+                ? widget.startAngle + (index * stepAngle)
+                : (widget.startAngle + widget.endAngle) / 2.0;
 
             return _RadialNode(
               label: label,
@@ -156,12 +161,10 @@ class _RadialNode extends AnimatedWidget {
     final theme = context.myoTheme;
     final progress = _animation.value;
 
-    // Stem animation: grows first 60%
     final stemProgress = (progress / 0.6).clamp(0.0, 1.0);
-    // Bloom animation: scales in last 40%
     final bloomProgress = ((progress - 0.6) / 0.4).clamp(0.0, 1.0);
 
-    const radius = 40.0; // Button distance as requested
+    const radius = 40.0;
     final currentRadius = stemProgress * radius;
 
     final x = centerOffset + math.cos(angle) * currentRadius;
@@ -171,8 +174,7 @@ class _RadialNode extends AnimatedWidget {
       left: x,
       top: y,
       child: Transform.translate(
-        // Adjust translation to be more precise given the tight radius
-        offset: const Offset(-25, -15), 
+        offset: const Offset(-25, -15),
         child: Opacity(
           opacity: stemProgress,
           child: Column(
@@ -204,7 +206,7 @@ class _RadialNode extends AnimatedWidget {
                       color: isHighlighted ? theme.black : theme.onSurface,
                       fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
                       letterSpacing: 1.0,
-                      fontSize: 9, // Smaller font for high density
+                      fontSize: 9,
                     ),
                   ),
                 ),
