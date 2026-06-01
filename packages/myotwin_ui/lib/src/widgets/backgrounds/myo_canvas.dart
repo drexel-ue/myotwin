@@ -361,23 +361,22 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
             left: 0,
             right: 0,
             bottom: ArcFABSlider.trackHeight / 2,
-            child: Center(
-              child: ValueListenableBuilder(
-                valueListenable: _sliderMode,
-                builder: (context, mode, child) {
-                  // Adjust fan angle based on mode to stay on screen
-                  final double initialAngle;
-                  const fanAngle = math.pi / 2;
+            child: ValueListenableBuilder(
+              valueListenable: _sliderMode,
+              builder: (context, mode, child) {
+                // Adjust fan angle based on mode to stay on screen
+                final double initialAngle;
 
-                  if (mode == ArcSliderMode.voice) {
-                    initialAngle = -math.pi / 4;
-                  } else if (mode == ArcSliderMode.text) {
-                    initialAngle = -3 * math.pi / 4;
-                  } else {
-                    initialAngle = -math.pi / 2;
-                  }
+                if (mode == ArcSliderMode.voice) {
+                  initialAngle = -math.pi / 4;
+                } else if (mode == ArcSliderMode.text) {
+                  initialAngle = -3 * math.pi / 4;
+                } else {
+                  initialAngle = -math.pi / 2;
+                }
 
-                  return QuickCommandMenu(
+                return Center(
+                  child: QuickCommandMenu(
                     initialAngle: initialAngle,
                     onNodeSelected: (node) {
                       setState(() => _isShowingCommandMenu = false);
@@ -386,9 +385,9 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
                     onCancel: () {
                       setState(() => _isShowingCommandMenu = false);
                     },
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
       ],

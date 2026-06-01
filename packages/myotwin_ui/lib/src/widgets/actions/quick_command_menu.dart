@@ -80,30 +80,41 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanUpdate: (d) => _handleDragUpdate(d.localPosition),
-      onPanEnd: (d) => _handleDragEnd(),
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          ..._nodes.asMap().entries.map((entry) {
-            final index = entry.key;
-            final label = entry.value;
-            final isHighlighted = _highlightedNode == label;
+    const menuSize = 400.0;
+    const centerOffset = menuSize / 2.0;
 
-            // Calculate angle for this node
-            final angle = widget.initialAngle +
-                (index * (widget.fanAngle / (_nodes.length > 1 ? _nodes.length - 1 : 1)));
+    return SizedBox(
+      width: menuSize,
+      height: menuSize,
+      child: GestureDetector(
+        onPanUpdate: (d) =>
+            _handleDragUpdate(d.localPosition - const Offset(centerOffset, centerOffset)),
+        onPanEnd: (d) => _handleDragEnd(),
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ..._nodes.asMap().entries.map((entry) {
+              final index = entry.key;
+              final label = entry.value;
+              final isHighlighted = _highlightedNode == label;
 
-            return _RadialNode(
-              label: label,
-              angle: angle,
-              animation: _controller,
-              isHighlighted: isHighlighted,
-            );
-          }),
-        ],
+              // Calculate angle for this node
+              final angle = widget.initialAngle +
+                  (index *
+                      (widget.fanAngle /
+                          (_nodes.length > 1 ? _nodes.length - 1 : 1)));
+
+              return _RadialNode(
+                label: label,
+                angle: angle,
+                animation: _controller,
+                isHighlighted: isHighlighted,
+                centerOffset: centerOffset,
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -115,11 +126,13 @@ class _RadialNode extends AnimatedWidget {
     required this.angle,
     required Animation<double> animation,
     required this.isHighlighted,
+    required this.centerOffset,
   }) : super(listenable: animation);
 
   final String label;
   final double angle;
   final bool isHighlighted;
+  final double centerOffset;
 
   Animation<double> get _animation => listenable as Animation<double>;
 
@@ -136,14 +149,14 @@ class _RadialNode extends AnimatedWidget {
     const radius = 100.0;
     final currentRadius = stemProgress * radius;
 
-    final x = math.cos(angle) * currentRadius;
-    final y = math.sin(angle) * currentRadius;
+    final x = centerOffset + math.cos(angle) * currentRadius;
+    final y = centerOffset + math.sin(angle) * currentRadius;
 
     return Positioned(
       left: x,
       top: y,
       child: Transform.translate(
-        offset: const Offset(-20, -20), // Center the node
+        offset: const Offset(-40, -20), // Adjusted for wider labels
         child: Opacity(
           opacity: stemProgress,
           child: Column(
@@ -152,11 +165,14 @@ class _RadialNode extends AnimatedWidget {
               // The "Stem" line could be drawn with a CustomPainter in the parent stack
               // but for this simple version we'll focus on the Bloom.
               Transform.scale(
-                scale: 0.8 + (bloomProgress * 0.2) + (isHighlighted ? 0.2 : 0.0),
+                scale:
+                    0.8 + (bloomProgress * 0.2) + (isHighlighted ? 0.2 : 0.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isHighlighted ? theme.accentHot : theme.surfaceElevated,
+                    color:
+                        isHighlighted ? theme.accentHot : theme.surfaceElevated,
                     borderRadius: theme.radiusSm,
                     border: Border.all(
                       color: isHighlighted ? theme.white : theme.outline,
@@ -175,7 +191,8 @@ class _RadialNode extends AnimatedWidget {
                     label,
                     style: theme.caption.copyWith(
                       color: isHighlighted ? theme.black : theme.onSurface,
-                      fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isHighlighted ? FontWeight.bold : FontWeight.normal,
                       letterSpacing: 1.5,
                     ),
                   ),
