@@ -24,9 +24,36 @@ class ChatRepository {
         .map((rows) => rows.map(_mapToDomain).toList());
   }
 
-  /// Initiates an AI response stream.
-  Stream<String> getResponseStream(String message, {List<domain.IntentRecord>? context}) {
-    return _agent.streamChatResponse(message, context: context);
+  /// Initiates an AI response stream with global biomechanical context.
+  Stream<String> getResponseStream(String message, {List<domain.IntentRecord>? context}) async* {
+    final report = await _generateSituationReport();
+    final augmentedMessage =
+        '''
+[SITUATION_REPORT]
+$report
+[/SITUATION_REPORT]
+
+USER_INPUT: $message
+''';
+    yield* _agent.streamChatResponse(augmentedMessage, context: context);
+  }
+
+  Future<String> _generateSituationReport() async {
+    final activeGoals = await (_db.select(
+      _db.goals,
+    )..where((t) => t.status.equals(domain.GoalStatus.active.name))).get();
+
+    if (activeGoals.isEmpty) return 'No active biological objectives detected.';
+
+    final buffer = StringBuffer('Active Biological Objectives:\n');
+    for (final goal in activeGoals) {
+      final meta = goal.metadata;
+      buffer.write('- ${goal.label}: ${meta.summary ?? 'No summary available.'}\n');
+      if (meta.targetAnatomyNodes.isNotEmpty) {
+        buffer.write('  Nodes: ${meta.targetAnatomyNodes.join(', ')}\n');
+      }
+    }
+    return buffer.toString();
   }
 
   /// Persists a new [domain.IntentRecord] to the database.
@@ -71,6 +98,23 @@ class ChatRepository {
           ),
         );
     return id;
+  }
+
+  /// Fetches all user goals from the database.
+  Future<List<domain.Goal>> fetchGoals() async {
+    final rows = await _db.select(_db.goals).get();
+    return rows.map(_mapGoalToDomain).toList();
+  }
+
+  domain.Goal _mapGoalToDomain(Goal row) {
+    return domain.Goal(
+      id: row.id,
+      label: row.label,
+      status: row.status,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      metadata: row.metadata,
+    );
   }
 
   domain.IntentRecord _mapToDomain(IntentRecord row) {

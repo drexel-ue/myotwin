@@ -13,6 +13,7 @@ class ChatState {
     this.isProcessing = false,
     this.isThinking = false,
     this.isResponding = false,
+    this.isTransitioning = false,
     this.activeGoalId,
   });
 
@@ -28,6 +29,9 @@ class ChatState {
   /// Whether the agent is currently streaming a response or GenUI.
   final bool isResponding;
 
+  /// Whether the UI is currently transitioning between goal contexts.
+  final bool isTransitioning;
+
   /// The current active goal context.
   final String? activeGoalId;
 
@@ -37,6 +41,7 @@ class ChatState {
     bool? isProcessing,
     bool? isThinking,
     bool? isResponding,
+    bool? isTransitioning,
     String? activeGoalId,
   }) {
     return ChatState(
@@ -44,6 +49,7 @@ class ChatState {
       isProcessing: isProcessing ?? this.isProcessing,
       isThinking: isThinking ?? this.isThinking,
       isResponding: isResponding ?? this.isResponding,
+      isTransitioning: isTransitioning ?? this.isTransitioning,
       activeGoalId: activeGoalId ?? this.activeGoalId,
     );
   }
@@ -156,6 +162,37 @@ class ChatCubit extends Cubit<ChatState> {
       );
     }
   }
+
+  /// Switches the active goal context with a cinematic visual transition.
+  Future<void> switchGoal(String newGoalId) async {
+    if (state.activeGoalId == newGoalId) return;
+
+    // 1. Trigger visual glitch mask
+    emit(state.copyWith(isTransitioning: true));
+
+    // 2. Short delay to allow the glitch to fully cover the screen
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+
+    // 3. Swap the database subscription
+    await _historySubscription?.cancel();
+    _historySubscription = _repository.watchMessages(newGoalId).listen((messages) {
+      emit(
+        state.copyWith(
+          activeGoalId: newGoalId,
+          messages: messages,
+        ),
+      );
+    });
+
+    // 4. Hold the glitch for a moment to allow the new context to "scan in"
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    // 5. Clear transition state
+    emit(state.copyWith(isTransitioning: false));
+  }
+
+  /// Fetches all user goals.
+  Future<List<Goal>> fetchGoals() => _repository.fetchGoals();
 
   @override
   Future<void> close() async {
