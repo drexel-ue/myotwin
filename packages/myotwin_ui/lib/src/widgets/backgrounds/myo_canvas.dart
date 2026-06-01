@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:myotwin_ui/src/widgets/actions/arc_fab_slider.dart';
 
@@ -22,6 +23,7 @@ class MyoCanvas extends StatefulWidget {
     this.voiceAmplitudes,
     this.onMessageSubmitted,
     this.fabState,
+    this.onCommandNodeSelected,
   });
 
   /// {@macro myo_canvas.background_child}
@@ -46,17 +48,23 @@ class MyoCanvas extends StatefulWidget {
   /// If null, the canvas manages the state internally (idle/listening).
   final ValueNotifier<HoloState>? fabState;
 
+  /// Called when a node is selected from the quick command menu.
+  final ValueChanged<String>? onCommandNodeSelected;
+
   @override
   State<MyoCanvas> createState() => _MyoCanvasState();
 }
 
-class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMixin {
+class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
   late final AnimationController _chatOffsetController;
   bool _showChat = false;
   late final ValueNotifier<HoloState> _fabState;
   final _sliderMode = ValueNotifier<ArcSliderMode>(.centered);
   final _textGlitchTrigger = ValueNotifier<int>(0);
   final _voiceGlitchTrigger = ValueNotifier<int>(0);
+
+  // Command Menu State
+  bool _isShowingCommandMenu = false;
 
   // Fallback for voice visualizer if none provided
   late final ValueNotifier<List<double>> _internalVoiceAmplitudes;
@@ -331,17 +339,58 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
             child: ValueListenableBuilder(
               valueListenable: _fabState,
               builder: (context, state, child) {
-                return ArcFABSlider(
-                  fabState: state,
-                  onFabPressed: _onFabPressed,
-                  onModeChanged: (value) {
-                    _sliderMode.value = value;
+                return GestureDetector(
+                  onLongPressStart: (_) {
+                    setState(() => _isShowingCommandMenu = true);
+                    unawaited(HapticFeedback.heavyImpact());
                   },
+                  child: ArcFABSlider(
+                    fabState: _isShowingCommandMenu ? HoloState.active : state,
+                    onFabPressed: _onFabPressed,
+                    onModeChanged: (value) {
+                      _sliderMode.value = value;
+                    },
+                  ),
                 );
               },
             ),
           ),
         ),
+        if (_isShowingCommandMenu)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: ArcFABSlider.trackHeight / 2,
+            child: Center(
+              child: ValueListenableBuilder(
+                valueListenable: _sliderMode,
+                builder: (context, mode, child) {
+                  // Adjust fan angle based on mode to stay on screen
+                  final double initialAngle;
+                  const fanAngle = math.pi / 2;
+
+                  if (mode == ArcSliderMode.voice) {
+                    initialAngle = -math.pi / 4;
+                  } else if (mode == ArcSliderMode.text) {
+                    initialAngle = -3 * math.pi / 4;
+                  } else {
+                    initialAngle = -math.pi / 2;
+                  }
+
+                  return QuickCommandMenu(
+                    initialAngle: initialAngle,
+                    onNodeSelected: (node) {
+                      setState(() => _isShowingCommandMenu = false);
+                      widget.onCommandNodeSelected?.call(node);
+                    },
+                    onCancel: () {
+                      setState(() => _isShowingCommandMenu = false);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
       ],
     );
   }
