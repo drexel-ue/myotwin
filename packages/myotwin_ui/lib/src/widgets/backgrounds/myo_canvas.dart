@@ -63,8 +63,10 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
   final _textGlitchTrigger = ValueNotifier<int>(0);
   final _voiceGlitchTrigger = ValueNotifier<int>(0);
 
-  // Command Menu State
+  // Command Menu Gesture State
   bool _isShowingCommandMenu = false;
+  Offset? _commandMenuDragPosition;
+  String? _highlightedNode;
 
   // Fallback for voice visualizer if none provided
   late final ValueNotifier<List<double>> _internalVoiceAmplitudes;
@@ -340,12 +342,34 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
               valueListenable: _fabState,
               builder: (context, state, child) {
                 return GestureDetector(
-                  onLongPressStart: (_) {
-                    setState(() => _isShowingCommandMenu = true);
+                  onLongPressStart: (details) {
+                    setState(() {
+                      _isShowingCommandMenu = true;
+                      _commandMenuDragPosition = Offset.zero;
+                      _highlightedNode = null;
+                    });
                     unawaited(HapticFeedback.heavyImpact());
                   },
+                  onLongPressMoveUpdate: (details) {
+                    setState(() {
+                      // Use the offset relative to the long-press start point
+                      _commandMenuDragPosition = details.offsetFromOrigin;
+                    });
+                  },
+                  onLongPressEnd: (details) {
+                    final selectedNode = _highlightedNode;
+                    setState(() {
+                      _isShowingCommandMenu = false;
+                      _commandMenuDragPosition = null;
+                      _highlightedNode = null;
+                    });
+                    
+                    if (selectedNode != null) {
+                      widget.onCommandNodeSelected?.call(selectedNode);
+                    }
+                  },
                   child: ArcFABSlider(
-                    fabState: _isShowingCommandMenu ? HoloState.active : state,
+                    fabState: state,
                     onFabPressed: _onFabPressed,
                     onModeChanged: (value) {
                       _sliderMode.value = value;
@@ -378,12 +402,9 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
                 return Center(
                   child: QuickCommandMenu(
                     initialAngle: initialAngle,
-                    onNodeSelected: (node) {
-                      setState(() => _isShowingCommandMenu = false);
-                      widget.onCommandNodeSelected?.call(node);
-                    },
-                    onCancel: () {
-                      setState(() => _isShowingCommandMenu = false);
+                    dragPosition: _commandMenuDragPosition,
+                    onNodeHighlighted: (node) {
+                      _highlightedNode = node;
                     },
                   ),
                 );

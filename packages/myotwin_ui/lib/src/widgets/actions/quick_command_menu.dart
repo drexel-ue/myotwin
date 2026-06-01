@@ -4,22 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
-/// A radial "Stem and Bloom" command menu anchored to a center point.
+/// A radial "Stem and Bloom" command menu that reacts to an external drag position.
 class QuickCommandMenu extends StatefulWidget {
   /// Creates a [QuickCommandMenu].
   const QuickCommandMenu({
     super.key,
-    required this.onNodeSelected,
-    required this.onCancel,
+    required this.dragPosition,
+    required this.onNodeHighlighted,
     this.initialAngle = -math.pi / 2, // Upward
     this.fanAngle = math.pi / 2, // 90 degree spread
   });
 
-  /// Called when a node is selected.
-  final ValueChanged<String> onNodeSelected;
+  /// The current drag position relative to the menu center.
+  final Offset? dragPosition;
 
-  /// Called when the menu is closed without selection.
-  final VoidCallback onCancel;
+  /// Called when a node becomes highlighted or unhighlighted.
+  final ValueChanged<String?> onNodeHighlighted;
 
   /// The starting angle of the radial arc.
   final double initialAngle;
@@ -34,7 +34,7 @@ class QuickCommandMenu extends StatefulWidget {
 class _QuickCommandMenuState extends State<QuickCommandMenu>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  String? _highlightedNode;
+  String? _lastHighlighted;
 
   // Nodes to display (initially just Goals)
   final List<String> _nodes = ['GOALS'];
@@ -49,72 +49,82 @@ class _QuickCommandMenuState extends State<QuickCommandMenu>
   }
 
   @override
+  void didUpdateWidget(covariant QuickCommandMenu oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.dragPosition != oldWidget.dragPosition) {
+      _checkBounds();
+    }
+  }
+
+  void _checkBounds() {
+    if (widget.dragPosition == null) return;
+
+    String? currentHighlight;
+    const radius = 70.0; // Compact radius
+    const hitThreshold = 40.0; // Circular hit area
+
+    for (var i = 0; i < _nodes.length; i++) {
+      final angle = widget.initialAngle +
+          (i *
+              (widget.fanAngle /
+                  (_nodes.length > 1 ? _nodes.length - 1 : 1)));
+
+      final nodeCenter = Offset(
+        math.cos(angle) * radius,
+        math.sin(angle) * radius,
+      );
+
+      if ((widget.dragPosition! - nodeCenter).distance < hitThreshold) {
+        currentHighlight = _nodes[i];
+        break;
+      }
+    }
+
+    if (currentHighlight != _lastHighlighted) {
+      _lastHighlighted = currentHighlight;
+      widget.onNodeHighlighted(currentHighlight);
+      if (currentHighlight != null) {
+        unawaited(HapticFeedback.selectionClick());
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  void _handleDragUpdate(Offset localPosition) {
-    // Logic to determine which node is closest to the thumb
-    // (Simplified for single node for now)
-    final distance = localPosition.distance;
-    if (distance > 40 && distance < 150) {
-      if (_highlightedNode != 'GOALS') {
-        setState(() => _highlightedNode = 'GOALS');
-        unawaited(HapticFeedback.selectionClick());
-      }
-    } else {
-      if (_highlightedNode != null) {
-        setState(() => _highlightedNode = null);
-      }
-    }
-  }
-
-  void _handleDragEnd() {
-    if (_highlightedNode != null) {
-      widget.onNodeSelected(_highlightedNode!);
-    } else {
-      widget.onCancel();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    const menuSize = 400.0;
+    const menuSize = 300.0;
     const centerOffset = menuSize / 2.0;
 
     return SizedBox(
       width: menuSize,
       height: menuSize,
-      child: GestureDetector(
-        onPanUpdate: (d) =>
-            _handleDragUpdate(d.localPosition - const Offset(centerOffset, centerOffset)),
-        onPanEnd: (d) => _handleDragEnd(),
-        behavior: HitTestBehavior.opaque,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            ..._nodes.asMap().entries.map((entry) {
-              final index = entry.key;
-              final label = entry.value;
-              final isHighlighted = _highlightedNode == label;
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ..._nodes.asMap().entries.map((entry) {
+            final index = entry.key;
+            final label = entry.value;
+            final isHighlighted = _lastHighlighted == label;
 
-              // Calculate angle for this node
-              final angle = widget.initialAngle +
-                  (index *
-                      (widget.fanAngle /
-                          (_nodes.length > 1 ? _nodes.length - 1 : 1)));
+            final angle = widget.initialAngle +
+                (index *
+                    (widget.fanAngle /
+                        (_nodes.length > 1 ? _nodes.length - 1 : 1)));
 
-              return _RadialNode(
-                label: label,
-                angle: angle,
-                animation: _controller,
-                isHighlighted: isHighlighted,
-                centerOffset: centerOffset,
-              );
-            }),
-          ],
-        ),
+            return _RadialNode(
+              label: label,
+              angle: angle,
+              animation: _controller,
+              isHighlighted: isHighlighted,
+              centerOffset: centerOffset,
+            );
+          }),
+        ],
       ),
     );
   }
@@ -146,7 +156,7 @@ class _RadialNode extends AnimatedWidget {
     // Bloom animation: scales in last 40%
     final bloomProgress = ((progress - 0.6) / 0.4).clamp(0.0, 1.0);
 
-    const radius = 100.0;
+    const radius = 70.0; // Compact radius
     final currentRadius = stemProgress * radius;
 
     final x = centerOffset + math.cos(angle) * currentRadius;
@@ -156,23 +166,18 @@ class _RadialNode extends AnimatedWidget {
       left: x,
       top: y,
       child: Transform.translate(
-        offset: const Offset(-40, -20), // Adjusted for wider labels
+        offset: const Offset(-40, -20), // Center the label
         child: Opacity(
           opacity: stemProgress,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // The "Stem" line could be drawn with a CustomPainter in the parent stack
-              // but for this simple version we'll focus on the Bloom.
               Transform.scale(
-                scale:
-                    0.8 + (bloomProgress * 0.2) + (isHighlighted ? 0.2 : 0.0),
+                scale: 0.8 + (bloomProgress * 0.2) + (isHighlighted ? 0.2 : 0.0),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color:
-                        isHighlighted ? theme.accentHot : theme.surfaceElevated,
+                    color: isHighlighted ? theme.accentHot : theme.surfaceElevated,
                     borderRadius: theme.radiusSm,
                     border: Border.all(
                       color: isHighlighted ? theme.white : theme.outline,
@@ -191,8 +196,7 @@ class _RadialNode extends AnimatedWidget {
                     label,
                     style: theme.caption.copyWith(
                       color: isHighlighted ? theme.black : theme.onSurface,
-                      fontWeight:
-                          isHighlighted ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
                       letterSpacing: 1.5,
                     ),
                   ),
