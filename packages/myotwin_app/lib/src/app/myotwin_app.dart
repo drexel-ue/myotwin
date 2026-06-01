@@ -21,6 +21,14 @@ class MyotwinApp extends StatefulWidget {
 }
 
 class _MyotwinAppState extends State<MyotwinApp> {
+  final _fabStateNotifier = ValueNotifier<HoloState>(HoloState.idle);
+
+  @override
+  void dispose() {
+    _fabStateNotifier.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final agent = context.watch<LocalMotusAgent>();
@@ -41,7 +49,22 @@ class _MyotwinAppState extends State<MyotwinApp> {
             unawaited(cubit.initialize());
             return cubit;
           },
-          child: _MyoStartupOrchestrator(agent: agent),
+          child: BlocListener<ChatCubit, ChatState>(
+            listener: (context, state) {
+              if (state.isThinking) {
+                _fabStateNotifier.value = HoloState.thinking;
+              } else if (state.isResponding) {
+                _fabStateNotifier.value = HoloState.active;
+              } else {
+                // Return to listening if chat is presumed open
+                _fabStateNotifier.value = HoloState.listening;
+              }
+            },
+            child: _MyoStartupOrchestrator(
+              agent: agent,
+              fabState: _fabStateNotifier,
+            ),
+          ),
         ),
       ),
     );
@@ -50,9 +73,13 @@ class _MyotwinAppState extends State<MyotwinApp> {
 
 /// Orchestrates the visual transition between the boot sequence and the HUD.
 class _MyoStartupOrchestrator extends StatefulWidget {
-  const _MyoStartupOrchestrator({required this.agent});
+  const _MyoStartupOrchestrator({
+    required this.agent,
+    required this.fabState,
+  });
 
   final LocalMotusAgent agent;
+  final ValueNotifier<HoloState> fabState;
 
   @override
   State<_MyoStartupOrchestrator> createState() =>
@@ -144,6 +171,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
               )
             : MyoCanvas(
                 key: const ValueKey('myo_canvas'),
+                fabState: widget.fabState,
                 backgroundChild: const InteractiveGrid(
                   child: emptyWidget,
                 ),
@@ -152,16 +180,15 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                     return MyoChatList(messages: state.messages);
                   },
                 ),
-                onMessageSubmitted: (value) {
-                  unawaited(context.read<ChatCubit>().submit(value));
+                onMessageSubmitted: (value) async {
+                  return context.read<ChatCubit>().submit(value);
                 },
-                onShowChatChanged: _handleShowChatChanged,
+                onShowChatChanged: (visible) {
+                  widget.fabState.value =
+                      visible ? HoloState.listening : HoloState.idle;
+                },
               ),
       ),
     );
-  }
-
-  static void _handleShowChatChanged(bool visible) {
-    // Top-level global visibility tracking if needed.
   }
 }
