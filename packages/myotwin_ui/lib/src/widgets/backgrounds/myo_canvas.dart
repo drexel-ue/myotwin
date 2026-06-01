@@ -21,6 +21,7 @@ class MyoCanvas extends StatefulWidget {
     required this.onShowChatChanged,
     this.voiceAmplitudes,
     this.onMessageSubmitted,
+    this.fabState,
   });
 
   /// {@macro myo_canvas.background_child}
@@ -38,7 +39,12 @@ class MyoCanvas extends StatefulWidget {
   final ValueNotifier<List<double>>? voiceAmplitudes;
 
   /// Called when a message is submitted from the text input.
-  final ValueChanged<String>? onMessageSubmitted;
+  /// Returns true if the message was successfully processed.
+  final Future<bool> Function(String)? onMessageSubmitted;
+
+  /// An optional notifier to drive the FAB's state externally.
+  /// If null, the canvas manages the state internally (idle/listening).
+  final ValueNotifier<HoloState>? fabState;
 
   @override
   State<MyoCanvas> createState() => _MyoCanvasState();
@@ -47,7 +53,7 @@ class MyoCanvas extends StatefulWidget {
 class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMixin {
   late final AnimationController _chatOffsetController;
   bool _showChat = false;
-  final _fabState = ValueNotifier<HoloState>(.idle);
+  late final ValueNotifier<HoloState> _fabState;
   final _sliderMode = ValueNotifier<ArcSliderMode>(.centered);
   final _textGlitchTrigger = ValueNotifier<int>(0);
   final _voiceGlitchTrigger = ValueNotifier<int>(0);
@@ -59,11 +65,15 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
   Timer? _stubTimer;
   double _stubPhase = 0.0;
 
+  // Text input management
+  final TextEditingController _textController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _chatOffsetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
     _internalVoiceAmplitudes = widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(128, 0.0));
+    _fabState = widget.fabState ?? ValueNotifier<HoloState>(HoloState.idle);
     
     // Listen for mode changes to manage the stub timer
     _sliderMode.addListener(_handleModeChange);
@@ -154,15 +164,38 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
     widget.onShowChatChanged(_showChat);
   }
 
+  Future<void> _handleSubmit(String text) async {
+    if (text.trim().isEmpty) return;
+
+    // 1. Capture and clear immediately for visual responsiveness
+    final capturedText = text;
+    _textController.clear();
+
+    // 2. Dispatch to agent
+    if (widget.onMessageSubmitted != null) {
+      final success = await widget.onMessageSubmitted!(capturedText);
+      
+      // 3. Auto-recovery logic: if processing failed, restore the text
+      if (!success && mounted) {
+        _textController.text = capturedText;
+        // Trigger a "Transmission Error" glitch spike on the input field
+        _textGlitchTrigger.value++;
+      }
+    }
+  }
+
   @override
   void dispose() {
     _sliderMode.removeListener(_handleModeChange);
     _chatOffsetController.dispose();
-    _fabState.dispose();
+    if (widget.fabState == null) {
+      _fabState.dispose();
+    }
     _sliderMode.dispose();
     _textGlitchTrigger.dispose();
     _voiceGlitchTrigger.dispose();
     _stubTimer?.cancel();
+    _textController.dispose();
     if (widget.voiceAmplitudes == null) {
       _internalVoiceAmplitudes.dispose();
     }
@@ -275,12 +308,12 @@ class _MyoCanvasState extends State<MyoCanvas> with SingleTickerProviderStateMix
                       valueListenable: _textGlitchTrigger,
                       builder: (context, glitchKey, child) {
                         return MyoTextField(
+                          controller: _textController,
+                          autofocus: true,
                           glitchKey: glitchKey,
                           hint: 'ENTER_COMMAND...',
                           prefixIcon: const MyoIcon(intent: 'terminal', size: 18),
-                          onSubmitted: (value) {
-                            widget.onMessageSubmitted?.call(value);
-                          },
+                          onSubmitted: _handleSubmit,
                         );
                       },
                     ),

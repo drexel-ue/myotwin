@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_core/shared_core.dart';
 
-/// A scrollable list of chat messages with velocity tracking.
+/// A scrollable list of chat messages with velocity tracking and auto-scroll.
 class MyoChatList extends StatefulWidget {
   /// Creates a [MyoChatList].
   const MyoChatList({
@@ -24,6 +26,24 @@ class _MyoChatListState extends State<MyoChatList> {
 
   // 2. The Actuator (Controls the scrolling imperative actions)
   final ItemScrollController chatScrollController = ItemScrollController();
+
+  @override
+  void didUpdateWidget(covariant MyoChatList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Auto-scroll to bottom (index 0 in reversed list) when new messages arrive
+    if (widget.messages.length > oldWidget.messages.length) {
+      // Small delay to ensure the list has processed the new item
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (chatScrollController.isAttached) {
+          unawaited(chatScrollController.scrollTo(
+            index: 0,
+            duration: context.myoTheme.motionNormal,
+            curve: context.myoTheme.curveEaseOut,
+          ));
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +100,7 @@ class _MyoChatListState extends State<MyoChatList> {
                   child: _ChatEntry(
                     index: index,
                     intent: message,
+                    isLatest: index == 0,
                     // Pass the velocity tracker down so the bubble can stretch itself
                     velocityTracker: scrollVelocity,
                   ),
@@ -99,46 +120,61 @@ class _ChatEntry extends StatelessWidget {
     required this.index,
     required this.intent,
     required this.velocityTracker,
+    required this.isLatest,
   });
 
   final int index;
   final IntentRecord intent;
   final ValueNotifier<double> velocityTracker;
+  final bool isLatest;
 
   @override
   Widget build(BuildContext context) {
-    // Basic GenUI Dispatcher: Initially just renders terminal text
+    final isUser = intent.reason == 'USER_INPUT';
     final items = intent.payload.catalogItems ?? [];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: items.map((item) {
-        final type = item['type'] as String?;
-        final data = item['data'] as Map<String, dynamic>? ?? {};
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.7,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: items.map((item) {
+            final type = item['type'] as String?;
+            final data = item['data'] as Map<String, dynamic>? ?? {};
 
-        if (type == 'terminal_text') {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: FrostedHUD(
-              impactPoint: .zero,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  data['text'] as String? ?? 'EMPTY_NODE',
-                  style: context.myoTheme.terminal.copyWith(
-                    color: intent.reason == 'USER_INPUT'
-                        ? context.myoTheme.onSurfaceMedium
-                        : context.myoTheme.accentHot,
+            if (type == 'terminal_text') {
+              final text = data['text'] as String? ?? 'EMPTY_NODE';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: FrostedHUD(
+                  impactPoint: .zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: isUser || !isLatest
+                        ? Text(
+                            text,
+                            textAlign: isUser ? TextAlign.right : TextAlign.left,
+                            style: context.myoTheme.terminal,
+                          )
+                        : HolographicDecryptText(
+                            text,
+                            style: context.myoTheme.terminal,
+                            playheadColor: context.myoTheme.accentHot,
+                          ),
                   ),
                 ),
-              ),
-            ),
-          );
-        }
+              );
+            }
 
-        return emptyWidget;
-      }).toList(),
+            return emptyWidget;
+          }).toList(),
+        ),
+      ),
     );
   }
 }
