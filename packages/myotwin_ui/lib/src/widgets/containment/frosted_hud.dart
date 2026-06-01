@@ -46,7 +46,8 @@ class FrostedHUD extends StatefulWidget {
   State<FrostedHUD> createState() => _FrostedHUDState();
 }
 
-class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateMixin, HoloGlitchLogicMixin {
+class _FrostedHUDState extends State<FrostedHUD>
+    with SingleTickerProviderStateMixin, HoloGlitchLogicMixin {
   late final Ticker _ticker;
   Duration _lastTime = Duration.zero;
 
@@ -90,7 +91,8 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
     const bleedInsets = EdgeInsets.all(bleedValue);
 
     return Stack(
-      clipBehavior: Clip.none, // Critical: Allows the BleedMargin to overflow the Stack
+      clipBehavior:
+          Clip.none, // Critical: Allows the BleedMargin to overflow the Stack
       children: [
         // --- LAYER 1: The Stable Glass ---
         // Because BleedMargin hides the 32px padding from the Stack's layout,
@@ -116,15 +118,42 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
             severity: 0.05,
             child: Padding(
               padding: bleedInsets,
-              child: _buildContent(theme),
+              child: _FrostedHUDContent(
+                title: widget.title,
+                impactPoint: widget.impactPoint,
+                animationProgress: widget.animationProgress,
+                onClose: widget.onClose,
+                expand: widget.expand,
+                child: widget.child,
+              ),
             ),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildContent(MyoTwinTheme theme) {
+class _FrostedHUDContent extends StatelessWidget {
+  const _FrostedHUDContent({
+    required this.title,
+    required this.child,
+    required this.impactPoint,
+    required this.animationProgress,
+    this.onClose,
+    required this.expand,
+  });
+
+  final String? title;
+  final Widget child;
+  final Offset impactPoint;
+  final double animationProgress;
+  final VoidCallback? onClose;
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.myoTheme;
     final content = ClipRRect(
       borderRadius: theme.radiusSm,
       child: DecoratedBox(
@@ -135,34 +164,35 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
         ),
         child: CustomPaint(
           painter: _RadiatingHUDPainter(
-            progress: widget.animationProgress,
-            impactPoint: widget.impactPoint,
+            progress: animationProgress,
+            impactPoint: impactPoint,
             strokeColor: theme.white,
             outlineColor: theme.outline,
           ),
           child: Padding(
             padding: allPadding16,
             child: Opacity(
-              opacity: (widget.animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
+              opacity: (animationProgress - 0.5).clamp(0.0, 0.5) / 0.5,
               child: Column(
-                mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
                 children: [
-                  if (widget.title case final String title when title.isNotEmpty) ...[
+                  if (title case final String titleText when titleText.isNotEmpty) ...[
                     Row(
                       children: [
                         Expanded(
-                          child: Text(title.toUpperCase(), style: theme.headlineMedium),
+                          child: Text(titleText.toUpperCase(),
+                              style: theme.headlineMedium),
                         ),
-                        if (widget.onClose != null)
+                        if (onClose != null)
                           MyoIconButton(
                             intent: 'x',
-                            onPressed: widget.onClose!,
+                            onPressed: onClose!,
                           ),
                       ],
                     ),
                     const MyoDivider(height: spacing16),
                   ],
-                  if (widget.expand) Expanded(child: widget.child) else widget.child,
+                  if (expand) Expanded(child: child) else child,
                 ],
               ),
             ),
@@ -171,7 +201,7 @@ class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateM
       ),
     );
 
-    if (widget.expand) return content;
+    if (expand) return content;
 
     return IntrinsicWidth(
       child: IntrinsicHeight(
@@ -222,7 +252,8 @@ class _RadiatingHUDPainter extends CustomPainter {
     final metric = metricsList.first;
     final totalPerimeter = metric.length;
 
-    final impactDistance = _getDistanceOfPointOnPath(metric, impactPoint, totalPerimeter);
+    final impactDistance =
+        _getDistanceOfPointOnPath(metric, impactPoint, totalPerimeter);
 
     final halfSpread = (totalPerimeter / 2) * progress;
 
@@ -242,7 +273,8 @@ class _RadiatingHUDPainter extends CustomPainter {
     canvas.drawPath(activeLaserPath, laserPaint);
   }
 
-  double _getDistanceOfPointOnPath(PathMetric metric, Offset target, double perimeter) {
+  double _getDistanceOfPointOnPath(
+      PathMetric metric, Offset target, double perimeter) {
     var minDistance = double.infinity;
     var targetedOffset = 0.0;
 
