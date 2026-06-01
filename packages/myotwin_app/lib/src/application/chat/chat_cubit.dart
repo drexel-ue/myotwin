@@ -54,8 +54,8 @@ class ChatCubit extends Cubit<ChatState> {
   /// Creates a [ChatCubit].
   ChatCubit({
     required ChatRepository repository,
-  })  : _repository = repository,
-        super(const ChatState());
+  }) : _repository = repository,
+       super(const ChatState());
 
   final ChatRepository _repository;
   StreamSubscription<List<IntentRecord>>? _historySubscription;
@@ -89,24 +89,25 @@ class ChatCubit extends Cubit<ChatState> {
             {
               'type': 'terminal_text',
               'data': {'text': text},
-            }
-          ]
+            },
+          ],
         }),
       );
       await _repository.saveIntent(userIntent);
 
       // 2. Start AI streaming
-      emit(state.copyWith(
-        isProcessing: true,
-        isThinking: true,
-        isResponding: false,
-      ));
+      emit(
+        state.copyWith(
+          isProcessing: true,
+          isThinking: true,
+          isResponding: false,
+        ),
+      );
 
       final responseId = const Uuid().v4();
       final buffer = StringBuffer();
 
-      final stream =
-          _repository.getResponseStream(text, context: state.messages);
+      final stream = _repository.getResponseStream(text, context: state.messages);
 
       var hasReceivedTokens = false;
 
@@ -114,10 +115,12 @@ class ChatCubit extends Cubit<ChatState> {
         if (!hasReceivedTokens) {
           hasReceivedTokens = true;
           // First token received: Move from Thinking to Responding
-          emit(state.copyWith(
-            isThinking: false,
-            isResponding: true,
-          ));
+          emit(
+            state.copyWith(
+              isThinking: false,
+              isResponding: true,
+            ),
+          );
         }
         buffer.write(token);
       });
@@ -134,8 +137,8 @@ class ChatCubit extends Cubit<ChatState> {
             {
               'type': 'terminal_text',
               'data': {'text': buffer.toString()},
-            }
-          ]
+            },
+          ],
         }),
       );
       await _repository.saveIntent(agentIntent);
@@ -144,11 +147,13 @@ class ChatCubit extends Cubit<ChatState> {
       developer.log('ChatCubit Error', error: e);
       return false;
     } finally {
-      emit(state.copyWith(
-        isProcessing: false,
-        isThinking: false,
-        isResponding: false,
-      ));
+      emit(
+        state.copyWith(
+          isProcessing: false,
+          isThinking: false,
+          isResponding: false,
+        ),
+      );
     }
   }
 

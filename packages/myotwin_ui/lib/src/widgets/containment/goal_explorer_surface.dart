@@ -32,12 +32,9 @@ class _GoalExplorerSurfaceState extends State<GoalExplorerSurface> {
     // Filter and sort the goals
     final filteredGoals = widget.goals.where((goal) {
       final matchesStatus = goal.status == _selectedStatus;
-      final matchesSearch =
-          goal.label.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesSearch = goal.label.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesStatus && matchesSearch;
-    }).toList()
-      ..sort((a, b) => (b.updatedAt ?? b.createdAt)
-          .compareTo(a.updatedAt ?? a.createdAt));
+    }).toList()..sort((a, b) => (b.updatedAt ?? b.createdAt).compareTo(a.updatedAt ?? a.createdAt));
 
     return FrostedHUD(
       impactPoint: .zero,
@@ -49,8 +46,7 @@ class _GoalExplorerSurfaceState extends State<GoalExplorerSurface> {
             // 1. Filter Toggles
             MyoSegmentedButton<GoalStatus>(
               value: _selectedStatus,
-              onSelectionChanged: (value) =>
-                  setState(() => _selectedStatus = value),
+              onSelectionChanged: (value) => setState(() => _selectedStatus = value),
               segments: const [
                 MyoSegment(value: GoalStatus.active, label: 'ACTIVE'),
                 MyoSegment(value: GoalStatus.paused, label: 'PAUSED'),
@@ -84,10 +80,8 @@ class _GoalExplorerSurfaceState extends State<GoalExplorerSurface> {
                         final goal = filteredGoals[index];
                         return MyoListTile(
                           title: goal.label,
-                          subtitle:
-                              'LAST_MODIFIED: ${goal.updatedAt ?? goal.createdAt}',
-                          trailing:
-                              const MyoIcon(intent: 'chevron-right', size: 16),
+                          subtitle: 'LAST_MODIFIED: ${goal.updatedAt ?? goal.createdAt}',
+                          trailing: const MyoIcon(intent: 'chevron-right', size: 16),
                           onTap: () => widget.onGoalSelected(goal),
                         );
                       },

@@ -27,8 +27,7 @@ class OscilloscopeWrapper extends StatefulWidget {
 }
 
 class _OscilloscopeWrapperState extends State<OscilloscopeWrapper> {
-  final ValueNotifier<List<double>> _amplitudes =
-      ValueNotifier<List<double>>(List.filled(64, 0.0));
+  final ValueNotifier<List<double>> _amplitudes = ValueNotifier<List<double>>(List.filled(64, 0.0));
   Timer? _timer;
   double _phase = 0.0;
 
@@ -40,8 +39,7 @@ class _OscilloscopeWrapperState extends State<OscilloscopeWrapper> {
         _phase += 0.2;
         final newData = List.generate(64, (index) {
           // Complex wave: sum of two sines
-          return (math.sin(_phase + index * 0.2) * 0.5) +
-              (math.sin(_phase * 0.5 + index * 0.4) * 0.3);
+          return (math.sin(_phase + index * 0.2) * 0.5) + (math.sin(_phase * 0.5 + index * 0.4) * 0.3);
         });
         _amplitudes.value = newData;
       }

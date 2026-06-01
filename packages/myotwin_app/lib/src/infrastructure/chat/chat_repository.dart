@@ -9,8 +9,8 @@ class ChatRepository {
   ChatRepository({
     required MyoTwinDatabase database,
     required domain.MotusAgent agent,
-  })  : _db = database,
-        _agent = agent;
+  }) : _db = database,
+       _agent = agent;
 
   final MyoTwinDatabase _db;
   final domain.MotusAgent _agent;
@@ -31,7 +31,9 @@ class ChatRepository {
 
   /// Persists a new [domain.IntentRecord] to the database.
   Future<void> saveIntent(domain.IntentRecord intent) async {
-    await _db.into(_db.intentRecords).insert(
+    await _db
+        .into(_db.intentRecords)
+        .insert(
           IntentRecordsCompanion.insert(
             id: intent.id,
             goalId: intent.goalId,
@@ -48,15 +50,18 @@ class ChatRepository {
 
   /// Ensures a default "Active Session" goal exists and returns its ID.
   Future<String> getOrCreateActiveGoalId() async {
-    final existing = await (_db.select(_db.goals)
-          ..where((t) => t.status.equals(domain.GoalStatus.active.name))
-          ..limit(1))
-        .getSingleOrNull();
+    final existing =
+        await (_db.select(_db.goals)
+              ..where((t) => t.status.equals(domain.GoalStatus.active.name))
+              ..limit(1))
+            .getSingleOrNull();
 
     if (existing != null) return existing.id;
 
     final id = const Uuid().v4();
-    await _db.into(_db.goals).insert(
+    await _db
+        .into(_db.goals)
+        .insert(
           GoalsCompanion.insert(
             id: id,
             label: 'ACTIVE_HUD_SESSION',

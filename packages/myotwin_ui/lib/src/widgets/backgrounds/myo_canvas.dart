@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:myotwin_ui/src/widgets/actions/arc_fab_slider.dart';
 
@@ -64,11 +63,6 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
   final _textGlitchTrigger = ValueNotifier<int>(0);
   final _voiceGlitchTrigger = ValueNotifier<int>(0);
 
-  // Command Menu Gesture State
-  bool _isShowingCommandMenu = false;
-  Offset? _commandMenuDragPosition;
-  String? _highlightedNode;
-
   // Fallback for voice visualizer if none provided
   late final ValueNotifier<List<double>> _internalVoiceAmplitudes;
 
@@ -82,10 +76,8 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _chatOffsetController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _internalVoiceAmplitudes =
-        widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(128, 0.0));
+    _chatOffsetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _internalVoiceAmplitudes = widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(128, 0.0));
     _fabState = widget.fabState ?? ValueNotifier<HoloState>(HoloState.idle);
 
     // Listen for mode changes to manage the stub timer
@@ -142,14 +134,12 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
       // Gaussian curve: creates a highly localized sharp peak
       final envelope1 = math.exp(-(distance1 * distance1) * 80.0);
       // Traveling carrier wave inside the pulse
-      final wave1 =
-          math.sin((progress - _stubPhase) * math.pi * 12) * envelope1;
+      final wave1 = math.sin((progress - _stubPhase) * math.pi * 12) * envelope1;
 
       // 2. Secondary Pulse ("Lub") - trailing slightly behind
       final distance2 = (progress - (beatTime - 0.15)).abs();
       final envelope2 = math.exp(-(distance2 * distance2) * 120.0);
-      final wave2 =
-          math.sin((progress - _stubPhase) * math.pi * 18) * envelope2 * 0.4;
+      final wave2 = math.sin((progress - _stubPhase) * math.pi * 18) * envelope2 * 0.4;
 
       // 3. Ambient baseline (very subtle constant vibration)
       final ambient = math.sin(_stubPhase * 2 + progress * math.pi * 8) * 0.01;
@@ -220,178 +210,148 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      // Replicate maxSlideDistance logic for manual positioning
-      const fabSize = spacing64;
-      final maxSlideDistance = (constraints.maxWidth - fabSize) / 2.0;
-
-      return Stack(
-        fit: .passthrough,
-        children: [
-          Positioned.fill(
-            child: InteractiveGrid(
-              child: widget.backgroundChild,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          fit: .passthrough,
+          children: [
+            Positioned.fill(
+              child: InteractiveGrid(
+                child: widget.backgroundChild,
+              ),
             ),
-          ),
-          Positioned.fill(
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1.0),
-                end: .zero,
-              ).animate(
-                CurvedAnimation(
-                  parent: _chatOffsetController,
-                  curve: context.myoTheme.curveEaseOut,
+            Positioned.fill(
+              child: SlideTransition(
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0, 1.0),
+                      end: .zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _chatOffsetController,
+                        curve: context.myoTheme.curveEaseOut,
+                      ),
+                    ),
+                child: MyoChat(
+                  child: ValueListenableBuilder(
+                    valueListenable: _sliderMode,
+                    builder: (context, mode, child) {
+                      return AnimatedPadding(
+                        padding: EdgeInsets.only(
+                          bottom: mode == ArcSliderMode.centered
+                              ? ArcFABSlider.trackHeight
+                              : (ArcFABSlider.trackHeight / 2.0),
+                        ),
+                        duration: context.myoTheme.motionNormal,
+                        curve: Curves.easeOut,
+                        child: widget.chatChild,
+                      );
+                    },
+                  ),
                 ),
               ),
-              child: MyoChat(
-                child: ValueListenableBuilder(
-                  valueListenable: _sliderMode,
-                  builder: (context, mode, child) {
-                    return AnimatedPadding(
-                      padding: EdgeInsets.only(
-                        bottom: mode == ArcSliderMode.centered
-                            ? ArcFABSlider.trackHeight
-                            : (ArcFABSlider.trackHeight / 2.0),
-                      ),
+            ),
+            Positioned(
+              left: spacing64 + spacing24, // Space for scaled FAB on left
+              right: spacing16,
+              bottom: spacing16, // Align perfectly with the dropped FAB's center
+              child: ValueListenableBuilder(
+                valueListenable: _sliderMode,
+                builder: (context, mode, child) {
+                  final isVoiceMode = mode == ArcSliderMode.voice;
+                  return AnimatedSlide(
+                    offset: isVoiceMode ? Offset.zero : const Offset(-1.2, 0),
+                    duration: context.myoTheme.motionHolographic,
+                    curve: Curves.easeOutExpo,
+                    onEnd: () {
+                      if (isVoiceMode) {
+                        _voiceGlitchTrigger.value++;
+                      }
+                    },
+                    child: AnimatedOpacity(
+                      opacity: isVoiceMode ? 1.0 : 0.0,
                       duration: context.myoTheme.motionNormal,
                       curve: Curves.easeOut,
-                      child: widget.chatChild,
+                      child: IgnorePointer(
+                        ignoring: !isVoiceMode,
+                        child: ValueListenableBuilder(
+                          valueListenable: _voiceGlitchTrigger,
+                          builder: (context, glitchKey, child) {
+                            return MyoAudioOscilloscope(
+                              glitchKey: glitchKey,
+                              amplitudes: _internalVoiceAmplitudes,
+                              isListening: isVoiceMode,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              left: spacing16,
+              right: spacing64 + spacing24, // Space for scaled FAB on right
+              bottom: spacing16, // Align perfectly with the dropped FAB's center
+              child: ValueListenableBuilder(
+                valueListenable: _sliderMode,
+                builder: (context, mode, child) {
+                  final isTextMode = mode == ArcSliderMode.text;
+                  return AnimatedSlide(
+                    offset: isTextMode ? Offset.zero : const Offset(1.2, 0),
+                    duration: context.myoTheme.motionHolographic,
+                    curve: Curves.easeOutExpo,
+                    onEnd: () {
+                      if (isTextMode) {
+                        _textGlitchTrigger.value++;
+                      }
+                    },
+                    child: AnimatedOpacity(
+                      opacity: isTextMode ? 1.0 : 0.0,
+                      duration: context.myoTheme.motionNormal,
+                      curve: Curves.easeOut,
+                      child: IgnorePointer(
+                        ignoring: !isTextMode,
+                        child: ValueListenableBuilder(
+                          valueListenable: _textGlitchTrigger,
+                          builder: (context, glitchKey, child) {
+                            return MyoTextField(
+                              controller: _textController,
+                              autofocus: true,
+                              glitchKey: glitchKey,
+                              hint: 'ENTER_COMMAND...',
+                              prefixIcon: const MyoIcon(intent: 'terminal', size: 18),
+                              onSubmitted: _handleSubmit,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              left: spacing16,
+              right: spacing16,
+              bottom: 0,
+              child: Center(
+                child: ValueListenableBuilder(
+                  valueListenable: _fabState,
+                  builder: (context, state, child) {
+                    return ArcFABSlider(
+                      fabState: state,
+                      slideProgress: _slideProgress,
+                      onFabPressed: _onFabPressed,
+                      onModeChanged: (value) {
+                        _sliderMode.value = value;
+                      },
                     );
                   },
                 ),
               ),
             ),
-          ),
-          Positioned(
-            left: spacing64 + spacing24, // Space for scaled FAB on left
-            right: spacing16,
-            bottom: spacing16, // Align perfectly with the dropped FAB's center
-            child: ValueListenableBuilder(
-              valueListenable: _sliderMode,
-              builder: (context, mode, child) {
-                final isVoiceMode = mode == ArcSliderMode.voice;
-                return AnimatedSlide(
-                  offset: isVoiceMode ? Offset.zero : const Offset(-1.2, 0),
-                  duration: context.myoTheme.motionHolographic,
-                  curve: Curves.easeOutExpo,
-                  onEnd: () {
-                    if (isVoiceMode) {
-                      _voiceGlitchTrigger.value++;
-                    }
-                  },
-                  child: AnimatedOpacity(
-                    opacity: isVoiceMode ? 1.0 : 0.0,
-                    duration: context.myoTheme.motionNormal,
-                    curve: Curves.easeOut,
-                    child: IgnorePointer(
-                      ignoring: !isVoiceMode,
-                      child: ValueListenableBuilder(
-                        valueListenable: _voiceGlitchTrigger,
-                        builder: (context, glitchKey, child) {
-                          return MyoAudioOscilloscope(
-                            glitchKey: glitchKey,
-                            amplitudes: _internalVoiceAmplitudes,
-                            isListening: isVoiceMode,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Positioned(
-            left: spacing16,
-            right: spacing64 + spacing24, // Space for scaled FAB on right
-            bottom: spacing16, // Align perfectly with the dropped FAB's center
-            child: ValueListenableBuilder(
-              valueListenable: _sliderMode,
-              builder: (context, mode, child) {
-                final isTextMode = mode == ArcSliderMode.text;
-                return AnimatedSlide(
-                  offset: isTextMode ? Offset.zero : const Offset(1.2, 0),
-                  duration: context.myoTheme.motionHolographic,
-                  curve: Curves.easeOutExpo,
-                  onEnd: () {
-                    if (isTextMode) {
-                      _textGlitchTrigger.value++;
-                    }
-                  },
-                  child: AnimatedOpacity(
-                    opacity: isTextMode ? 1.0 : 0.0,
-                    duration: context.myoTheme.motionNormal,
-                    curve: Curves.easeOut,
-                    child: IgnorePointer(
-                      ignoring: !isTextMode,
-                      child: ValueListenableBuilder(
-                        valueListenable: _textGlitchTrigger,
-                        builder: (context, glitchKey, child) {
-                          return MyoTextField(
-                            controller: _textController,
-                            autofocus: true,
-                            glitchKey: glitchKey,
-                            hint: 'ENTER_COMMAND...',
-                            prefixIcon:
-                                const MyoIcon(intent: 'terminal', size: 18),
-                            onSubmitted: _handleSubmit,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Positioned(
-            left: spacing16,
-            right: spacing16,
-            bottom: 0,
-            child: Center(
-              child: ValueListenableBuilder(
-                valueListenable: _fabState,
-                builder: (context, state, child) {
-                  return GestureDetector(
-                    onLongPressStart: (details) {
-                      setState(() {
-                        _isShowingCommandMenu = true;
-                        _commandMenuDragPosition = Offset.zero;
-                        _highlightedNode = null;
-                      });
-                      unawaited(HapticFeedback.heavyImpact());
-                    },
-                    onLongPressMoveUpdate: (details) {
-                      setState(() {
-                        _commandMenuDragPosition = details.offsetFromOrigin;
-                      });
-                    },
-                    onLongPressEnd: (details) {
-                      final selectedNode = _highlightedNode;
-                      setState(() {
-                        _isShowingCommandMenu = false;
-                        _commandMenuDragPosition = null;
-                        _highlightedNode = null;
-                      });
-
-                      if (selectedNode != null) {
-                        widget.onCommandNodeSelected?.call(selectedNode);
-                      }
-                    },
-                      child: ArcFABSlider(
-                        fabState: state,
-                        slideProgress: _slideProgress,
-                        onFabPressed: _onFabPressed,
-                        onModeChanged: (value) {
-                          _sliderMode.value = value;
-                        },
-                      ),
-                  );
-                },
-              ),
-            ),
-          ),
           ],
         );
       },

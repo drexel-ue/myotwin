@@ -31,8 +31,8 @@ class RenderBleedMargin extends RenderShiftedBox {
   RenderBleedMargin({
     required EdgeInsets margin,
     RenderBox? child,
-  })  : _margin = margin,
-        super(child);
+  }) : _margin = margin,
+       super(child);
 
   EdgeInsets _margin;
 

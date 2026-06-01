@@ -1,13 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:llamadart/llamadart.dart'
-    show
-        ChatSession,
-        LlamaBackend,
-        LlamaEngine,
-        LlamaTextContent,
-        ModelLoadOptions,
-        ModelSource;
+    show ChatSession, LlamaBackend, LlamaEngine, LlamaTextContent, ModelLoadOptions, ModelSource;
 import 'package:shared_core/shared_core.dart';
 
 /// A concrete implementation of [MotusAgent] that uses the `llamadart`

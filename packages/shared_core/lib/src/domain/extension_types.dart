@@ -16,8 +16,7 @@ extension type const GoalMetadata(Map<String, dynamic> data) {
 /// Wraps an unstructured GenUI payload for an IntentRecord.
 extension type const IntentPayload(Map<String, dynamic> data) {
   /// The list of CatalogItem configurations to render.
-  List<Map<String, dynamic>>? get catalogItems =>
-      (data['items'] as List?)?.cast<Map<String, dynamic>>();
+  List<Map<String, dynamic>>? get catalogItems => (data['items'] as List?)?.cast<Map<String, dynamic>>();
 
   /// The visual urgency of the surface (0.0 to 1.0).
   double? get urgency => data['urgency'] as double?;

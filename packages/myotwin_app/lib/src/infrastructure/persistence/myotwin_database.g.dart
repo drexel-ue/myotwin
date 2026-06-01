@@ -27,14 +27,13 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     requiredDuringInsert: true,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<GoalStatus, String> status =
-      GeneratedColumn<String>(
-        'status',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<GoalStatus>($GoalsTable.$converterstatus);
+  late final GeneratedColumnWithTypeConverter<GoalStatus, String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<GoalStatus>($GoalsTable.$converterstatus);
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -58,14 +57,13 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     requiredDuringInsert: false,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<GoalMetadata, String> metadata =
-      GeneratedColumn<String>(
-        'metadata',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<GoalMetadata>($GoalsTable.$convertermetadata);
+  late final GeneratedColumnWithTypeConverter<GoalMetadata, String> metadata = GeneratedColumn<String>(
+    'metadata',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<GoalMetadata>($GoalsTable.$convertermetadata);
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -159,10 +157,8 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     return $GoalsTable(attachedDatabase, alias);
   }
 
-  static JsonTypeConverter2<GoalStatus, String, String> $converterstatus =
-      const EnumNameConverter(GoalStatus.values);
-  static TypeConverter<GoalMetadata, String> $convertermetadata =
-      const GoalMetadataConverter();
+  static JsonTypeConverter2<GoalStatus, String, String> $converterstatus = const EnumNameConverter(GoalStatus.values);
+  static TypeConverter<GoalMetadata, String> $convertermetadata = const GoalMetadataConverter();
 }
 
 class Goal extends DataClass implements Insertable<Goal> {
@@ -210,9 +206,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       label: Value(label),
       status: Value(status),
       createdAt: Value(createdAt),
-      updatedAt: updatedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(updatedAt),
+      updatedAt: updatedAt == null && nullToAbsent ? const Value.absent() : Value(updatedAt),
       metadata: Value(metadata),
     );
   }
@@ -288,8 +282,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, label, status, createdAt, updatedAt, metadata);
+  int get hashCode => Object.hash(id, label, status, createdAt, updatedAt, metadata);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -418,8 +411,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   }
 }
 
-class $IntentRecordsTable extends IntentRecords
-    with TableInfo<$IntentRecordsTable, IntentRecord> {
+class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTable, IntentRecord> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -446,14 +438,13 @@ class $IntentRecordsTable extends IntentRecords
     ),
   );
   @override
-  late final GeneratedColumnWithTypeConverter<IntentType, String> type =
-      GeneratedColumn<String>(
-        'type',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<IntentType>($IntentRecordsTable.$convertertype);
+  late final GeneratedColumnWithTypeConverter<IntentType, String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<IntentType>($IntentRecordsTable.$convertertype);
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -469,14 +460,13 @@ class $IntentRecordsTable extends IntentRecords
     'scheduledTime',
   );
   @override
-  late final GeneratedColumn<DateTime> scheduledTime =
-      GeneratedColumn<DateTime>(
-        'scheduled_time',
-        aliasedName,
-        false,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: true,
-      );
+  late final GeneratedColumn<DateTime> scheduledTime = GeneratedColumn<DateTime>(
+    'scheduled_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _deliveredAtMeta = const VerificationMeta(
     'deliveredAt',
   );
@@ -488,17 +478,15 @@ class $IntentRecordsTable extends IntentRecords
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _userEngagementScoreMeta =
-      const VerificationMeta('userEngagementScore');
+  static const VerificationMeta _userEngagementScoreMeta = const VerificationMeta('userEngagementScore');
   @override
-  late final GeneratedColumn<double> userEngagementScore =
-      GeneratedColumn<double>(
-        'user_engagement_score',
-        aliasedName,
-        true,
-        type: DriftSqlType.double,
-        requiredDuringInsert: false,
-      );
+  late final GeneratedColumn<double> userEngagementScore = GeneratedColumn<double>(
+    'user_engagement_score',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
   @override
   late final GeneratedColumn<String> reason = GeneratedColumn<String>(
@@ -509,14 +497,13 @@ class $IntentRecordsTable extends IntentRecords
     requiredDuringInsert: true,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<IntentPayload, String> payload =
-      GeneratedColumn<String>(
-        'payload',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<IntentPayload>($IntentRecordsTable.$converterpayload);
+  late final GeneratedColumnWithTypeConverter<IntentPayload, String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<IntentPayload>($IntentRecordsTable.$converterpayload);
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -656,10 +643,8 @@ class $IntentRecordsTable extends IntentRecords
     return $IntentRecordsTable(attachedDatabase, alias);
   }
 
-  static JsonTypeConverter2<IntentType, String, String> $convertertype =
-      const EnumNameConverter(IntentType.values);
-  static TypeConverter<IntentPayload, String> $converterpayload =
-      const IntentPayloadConverter();
+  static JsonTypeConverter2<IntentType, String, String> $convertertype = const EnumNameConverter(IntentType.values);
+  static TypeConverter<IntentPayload, String> $converterpayload = const IntentPayloadConverter();
 }
 
 class IntentRecord extends DataClass implements Insertable<IntentRecord> {
@@ -719,9 +704,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
       type: Value(type),
       createdAt: Value(createdAt),
       scheduledTime: Value(scheduledTime),
-      deliveredAt: deliveredAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(deliveredAt),
+      deliveredAt: deliveredAt == null && nullToAbsent ? const Value.absent() : Value(deliveredAt),
       userEngagementScore: userEngagementScore == null && nullToAbsent
           ? const Value.absent()
           : Value(userEngagementScore),
@@ -786,9 +769,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
     createdAt: createdAt ?? this.createdAt,
     scheduledTime: scheduledTime ?? this.scheduledTime,
     deliveredAt: deliveredAt.present ? deliveredAt.value : this.deliveredAt,
-    userEngagementScore: userEngagementScore.present
-        ? userEngagementScore.value
-        : this.userEngagementScore,
+    userEngagementScore: userEngagementScore.present ? userEngagementScore.value : this.userEngagementScore,
     reason: reason ?? this.reason,
     payload: payload ?? this.payload,
   );
@@ -798,15 +779,9 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
       goalId: data.goalId.present ? data.goalId.value : this.goalId,
       type: data.type.present ? data.type.value : this.type,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      scheduledTime: data.scheduledTime.present
-          ? data.scheduledTime.value
-          : this.scheduledTime,
-      deliveredAt: data.deliveredAt.present
-          ? data.deliveredAt.value
-          : this.deliveredAt,
-      userEngagementScore: data.userEngagementScore.present
-          ? data.userEngagementScore.value
-          : this.userEngagementScore,
+      scheduledTime: data.scheduledTime.present ? data.scheduledTime.value : this.scheduledTime,
+      deliveredAt: data.deliveredAt.present ? data.deliveredAt.value : this.deliveredAt,
+      userEngagementScore: data.userEngagementScore.present ? data.userEngagementScore.value : this.userEngagementScore,
       reason: data.reason.present ? data.reason.value : this.reason,
       payload: data.payload.present ? data.payload.value : this.payload,
     );
@@ -915,8 +890,7 @@ class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
       if (createdAt != null) 'created_at': createdAt,
       if (scheduledTime != null) 'scheduled_time': scheduledTime,
       if (deliveredAt != null) 'delivered_at': deliveredAt,
-      if (userEngagementScore != null)
-        'user_engagement_score': userEngagementScore,
+      if (userEngagementScore != null) 'user_engagement_score': userEngagementScore,
       if (reason != null) 'reason': reason,
       if (payload != null) 'payload': payload,
       if (rowid != null) 'rowid': rowid,
@@ -1015,8 +989,7 @@ abstract class _$MyoTwinDatabase extends GeneratedDatabase {
   late final $GoalsTable goals = $GoalsTable(this);
   late final $IntentRecordsTable intentRecords = $IntentRecordsTable(this);
   @override
-  Iterable<TableInfo<Table, Object?>> get allTables =>
-      allSchemaEntities.whereType<TableInfo<Table, Object?>>();
+  Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [goals, intentRecords];
 }
@@ -1042,12 +1015,10 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$GoalsTableReferences
-    extends BaseReferences<_$MyoTwinDatabase, $GoalsTable, Goal> {
+final class $$GoalsTableReferences extends BaseReferences<_$MyoTwinDatabase, $GoalsTable, Goal> {
   $$GoalsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$IntentRecordsTable, List<IntentRecord>>
-  _intentRecordsRefsTable(_$MyoTwinDatabase db) =>
+  static MultiTypedResultKey<$IntentRecordsTable, List<IntentRecord>> _intentRecordsRefsTable(_$MyoTwinDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.intentRecords,
         aliasName: $_aliasNameGenerator(db.goals.id, db.intentRecords.goalId),
@@ -1066,8 +1037,7 @@ final class $$GoalsTableReferences
   }
 }
 
-class $$GoalsTableFilterComposer
-    extends Composer<_$MyoTwinDatabase, $GoalsTable> {
+class $$GoalsTableFilterComposer extends Composer<_$MyoTwinDatabase, $GoalsTable> {
   $$GoalsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -1085,11 +1055,10 @@ class $$GoalsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<GoalStatus, GoalStatus, String> get status =>
-      $composableBuilder(
-        column: $table.status,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
+  ColumnWithTypeConverterFilters<GoalStatus, GoalStatus, String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
@@ -1101,8 +1070,7 @@ class $$GoalsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<GoalMetadata, GoalMetadata, String>
-  get metadata => $composableBuilder(
+  ColumnWithTypeConverterFilters<GoalMetadata, GoalMetadata, String> get metadata => $composableBuilder(
     column: $table.metadata,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
@@ -1125,16 +1093,14 @@ class $$GoalsTableFilterComposer
             $table: $db.intentRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
           ),
     );
     return f(composer);
   }
 }
 
-class $$GoalsTableOrderingComposer
-    extends Composer<_$MyoTwinDatabase, $GoalsTable> {
+class $$GoalsTableOrderingComposer extends Composer<_$MyoTwinDatabase, $GoalsTable> {
   $$GoalsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -1173,8 +1139,7 @@ class $$GoalsTableOrderingComposer
   );
 }
 
-class $$GoalsTableAnnotationComposer
-    extends Composer<_$MyoTwinDatabase, $GoalsTable> {
+class $$GoalsTableAnnotationComposer extends Composer<_$MyoTwinDatabase, $GoalsTable> {
   $$GoalsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -1182,20 +1147,16 @@ class $$GoalsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get label =>
-      $composableBuilder(column: $table.label, builder: (column) => column);
+  GeneratedColumn<String> get label => $composableBuilder(column: $table.label, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<GoalStatus, String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<GoalMetadata, String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
@@ -1218,8 +1179,7 @@ class $$GoalsTableAnnotationComposer
             $table: $db.intentRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
           ),
     );
     return f(composer);
@@ -1246,12 +1206,9 @@ class $$GoalsTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$GoalsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$GoalsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$GoalsTableAnnotationComposer($db: db, $table: table),
+          createFilteringComposer: () => $$GoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$GoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$GoalsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
@@ -1290,8 +1247,7 @@ class $$GoalsTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$GoalsTableReferences(db, table, e)),
+                (e) => (e.readTable(table), $$GoalsTableReferences(db, table, e)),
               )
               .toList(),
           prefetchHooksCallback: ({intentRecordsRefs = false}) {
@@ -1306,8 +1262,7 @@ class $$GoalsTableTableManager
                   if (intentRecordsRefs)
                     await $_getPrefetchedData<Goal, $GoalsTable, IntentRecord>(
                       currentTable: table,
-                      referencedTable: $$GoalsTableReferences
-                          ._intentRecordsRefsTable(db),
+                      referencedTable: $$GoalsTableReferences._intentRecordsRefsTable(db),
                       managerFromTypedResult: (p0) => $$GoalsTableReferences(
                         db,
                         table,
@@ -1367,8 +1322,7 @@ typedef $$IntentRecordsTableUpdateCompanionBuilder =
     });
 
 final class $$IntentRecordsTableReferences
-    extends
-        BaseReferences<_$MyoTwinDatabase, $IntentRecordsTable, IntentRecord> {
+    extends BaseReferences<_$MyoTwinDatabase, $IntentRecordsTable, IntentRecord> {
   $$IntentRecordsTableReferences(
     super.$_db,
     super.$_table,
@@ -1394,8 +1348,7 @@ final class $$IntentRecordsTableReferences
   }
 }
 
-class $$IntentRecordsTableFilterComposer
-    extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
+class $$IntentRecordsTableFilterComposer extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
   $$IntentRecordsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -1408,11 +1361,10 @@ class $$IntentRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<IntentType, IntentType, String> get type =>
-      $composableBuilder(
-        column: $table.type,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
+  ColumnWithTypeConverterFilters<IntentType, IntentType, String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
@@ -1439,8 +1391,7 @@ class $$IntentRecordsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<IntentPayload, IntentPayload, String>
-  get payload => $composableBuilder(
+  ColumnWithTypeConverterFilters<IntentPayload, IntentPayload, String> get payload => $composableBuilder(
     column: $table.payload,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
@@ -1461,16 +1412,14 @@ class $$IntentRecordsTableFilterComposer
             $table: $db.goals,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
           ),
     );
     return composer;
   }
 }
 
-class $$IntentRecordsTableOrderingComposer
-    extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
+class $$IntentRecordsTableOrderingComposer extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
   $$IntentRecordsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -1534,16 +1483,14 @@ class $$IntentRecordsTableOrderingComposer
             $table: $db.goals,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
           ),
     );
     return composer;
   }
 }
 
-class $$IntentRecordsTableAnnotationComposer
-    extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
+class $$IntentRecordsTableAnnotationComposer extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
   $$IntentRecordsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -1551,14 +1498,12 @@ class $$IntentRecordsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<IntentType, String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get scheduledTime => $composableBuilder(
     column: $table.scheduledTime,
@@ -1575,8 +1520,7 @@ class $$IntentRecordsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get reason =>
-      $composableBuilder(column: $table.reason, builder: (column) => column);
+  GeneratedColumn<String> get reason => $composableBuilder(column: $table.reason, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<IntentPayload, String> get payload =>
       $composableBuilder(column: $table.payload, builder: (column) => column);
@@ -1597,8 +1541,7 @@ class $$IntentRecordsTableAnnotationComposer
             $table: $db.goals,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
           ),
     );
     return composer;
@@ -1627,12 +1570,9 @@ class $$IntentRecordsTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$IntentRecordsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$IntentRecordsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$IntentRecordsTableAnnotationComposer($db: db, $table: table),
+          createFilteringComposer: () => $$IntentRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$IntentRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$IntentRecordsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
@@ -1714,11 +1654,8 @@ class $$IntentRecordsTableTableManager
                           state.withJoin(
                                 currentTable: table,
                                 currentColumn: table.goalId,
-                                referencedTable: $$IntentRecordsTableReferences
-                                    ._goalIdTable(db),
-                                referencedColumn: $$IntentRecordsTableReferences
-                                    ._goalIdTable(db)
-                                    .id,
+                                referencedTable: $$IntentRecordsTableReferences._goalIdTable(db),
+                                referencedColumn: $$IntentRecordsTableReferences._goalIdTable(db).id,
                               )
                               as T;
                     }
@@ -1752,8 +1689,6 @@ typedef $$IntentRecordsTableProcessedTableManager =
 class $MyoTwinDatabaseManager {
   final _$MyoTwinDatabase _db;
   $MyoTwinDatabaseManager(this._db);
-  $$GoalsTableTableManager get goals =>
-      $$GoalsTableTableManager(_db, _db.goals);
-  $$IntentRecordsTableTableManager get intentRecords =>
-      $$IntentRecordsTableTableManager(_db, _db.intentRecords);
+  $$GoalsTableTableManager get goals => $$GoalsTableTableManager(_db, _db.goals);
+  $$IntentRecordsTableTableManager get intentRecords => $$IntentRecordsTableTableManager(_db, _db.intentRecords);
 }

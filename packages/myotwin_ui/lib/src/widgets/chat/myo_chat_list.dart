@@ -35,11 +35,13 @@ class _MyoChatListState extends State<MyoChatList> {
       // Small delay to ensure the list has processed the new item
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (chatScrollController.isAttached) {
-          unawaited(chatScrollController.scrollTo(
-            index: 0,
-            duration: context.myoTheme.motionNormal,
-            curve: context.myoTheme.curveEaseOut,
-          ));
+          unawaited(
+            chatScrollController.scrollTo(
+              index: 0,
+              duration: context.myoTheme.motionNormal,
+              curve: context.myoTheme.curveEaseOut,
+            ),
+          );
         }
       });
     }
@@ -140,8 +142,7 @@ class _ChatEntry extends StatelessWidget {
           maxWidth: MediaQuery.sizeOf(context).width * 0.7,
         ),
         child: Column(
-          crossAxisAlignment:
-              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: items.map((item) {
             final type = item['type'] as String?;

@@ -17,8 +17,7 @@ class Goals extends Table {
   TextColumn get label => text()();
 
   /// Current lifecycle state.
-  TextColumn get status =>
-      text().map(const EnumNameConverter(GoalStatus.values))();
+  TextColumn get status => text().map(const EnumNameConverter(GoalStatus.values))();
 
   /// When the goal was first established.
   DateTimeColumn get createdAt => dateTime()();
@@ -42,8 +41,7 @@ class IntentRecords extends Table {
   TextColumn get goalId => text().references(Goals, #id)();
 
   /// The type of interaction (e.g., chat, notification).
-  TextColumn get type =>
-      text().map(const EnumNameConverter(IntentType.values))();
+  TextColumn get type => text().map(const EnumNameConverter(IntentType.values))();
 
   /// When the intent was recorded.
   DateTimeColumn get createdAt => dateTime()();
@@ -78,10 +76,10 @@ class MyoTwinDatabase extends _$MyoTwinDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

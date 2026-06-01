@@ -56,8 +56,7 @@ class _MyotwinAppState extends State<MyotwinApp> {
               } else if (state.isResponding) {
                 _fabStateNotifier.value = HoloState.active;
               } else {
-                // Return to listening if chat is presumed open
-                _fabStateNotifier.value = HoloState.listening;
+                _fabStateNotifier.value = HoloState.idle;
               }
             },
             child: _MyoStartupOrchestrator(
@@ -82,8 +81,7 @@ class _MyoStartupOrchestrator extends StatefulWidget {
   final ValueNotifier<HoloState> fabState;
 
   @override
-  State<_MyoStartupOrchestrator> createState() =>
-      _MyoStartupOrchestratorState();
+  State<_MyoStartupOrchestrator> createState() => _MyoStartupOrchestratorState();
 }
 
 class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
@@ -184,8 +182,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                   return context.read<ChatCubit>().submit(value);
                 },
                 onShowChatChanged: (visible) {
-                  widget.fabState.value =
-                      visible ? HoloState.listening : HoloState.idle;
+                  widget.fabState.value = visible ? HoloState.listening : HoloState.idle;
                 },
               ),
       ),

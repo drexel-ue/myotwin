@@ -137,9 +137,7 @@ class _MyoTextFieldState extends State<MyoTextField>
           Text(
             widget.label!,
             style: theme.caption.copyWith(
-              color: widget.enabled
-                  ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium)
-                  : theme.onSurfaceDim,
+              color: widget.enabled ? (_isFocused ? theme.accentHot : theme.onSurfaceMedium) : theme.onSurfaceDim,
               letterSpacing: 0.03,
             ),
           ),
@@ -160,9 +158,7 @@ class _MyoTextFieldState extends State<MyoTextField>
                   color: widget.enabled ? theme.surfaceElevated : theme.surface,
                   borderRadius: theme.radiusSm,
                   border: .all(
-                    color: widget.enabled
-                        ? (_isFocused ? theme.accentHot : theme.outline)
-                        : theme.outlineDim,
+                    color: widget.enabled ? (_isFocused ? theme.accentHot : theme.outline) : theme.outlineDim,
                     width: _isFocused ? 1.5 : 1.0,
                   ),
                   boxShadow: _isFocused

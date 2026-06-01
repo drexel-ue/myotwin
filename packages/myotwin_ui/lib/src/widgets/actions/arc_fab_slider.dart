@@ -194,27 +194,16 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                     child: QuickCommandMenu(
                       itemCount: 10,
                       radius: 120.0,
-                      itemSize: 56.0,
+                      itemSize: spacing64,
                       onItemSelected: (index) {
-                        print("Action $index selected via GenUI path");
+                        // Action selected via GenUI path
                       },
-                      itemBuilder: (context, index, isHovered) {
-                        // Return whatever node or widget styling fits your digital twin surface design
-                        return Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isHovered ? Colors.white : Colors.black87,
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Icon(
-                            switch (index) {
-                              0 => Icons.mic,
-                              1 => Icons.keyboard,
-                              2 => Icons.settings,
-                              _ => Icons.help,
-                            },
-                            color: isHovered ? Colors.black : Colors.white,
-                          ),
+                      itemBuilder: (context, index, {required isHovered}) {
+                        return MyoIconButton(
+                          intent: 'task',
+                          color: isHovered ? Colors.black : Colors.white,
+                          size: spacing72,
+                          onPressed: () {},
                         );
                       },
                       child: AnimatedHoloFAB(

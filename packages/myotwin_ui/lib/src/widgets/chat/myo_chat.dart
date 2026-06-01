@@ -21,7 +21,6 @@ class MyoChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Stack(
       fit: .passthrough,
       children: [

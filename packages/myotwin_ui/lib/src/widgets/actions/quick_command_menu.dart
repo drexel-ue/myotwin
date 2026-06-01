@@ -2,19 +2,29 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-enum QuickMenuPosition { left, center, right }
+/// The relative position of the quick menu on the screen.
+enum QuickMenuPosition {
+  /// Left aligned.
+  left,
 
-typedef QuickMenuItemBuilder = Widget Function(BuildContext context, int index, bool isHovered);
+  /// Center aligned.
+  center,
 
+  /// Right aligned.
+  right,
+}
+
+/// A builder for a single menu item in the [QuickCommandMenu].
+typedef QuickMenuItemBuilder =
+    Widget Function(
+      BuildContext context,
+      int index, {
+      required bool isHovered,
+    });
+
+/// A radial "Stem and Bloom" command menu anchored to a center point.
 class QuickCommandMenu extends StatefulWidget {
-  final int itemCount;
-  final QuickMenuItemBuilder itemBuilder;
-  final ValueChanged<int> onItemSelected;
-  final Widget child;
-  final double radius;
-  final double itemSize;
-  final double preferredSpacing;
-
+  /// Creates a [QuickCommandMenu].
   const QuickCommandMenu({
     super.key,
     required this.itemCount,
@@ -26,13 +36,34 @@ class QuickCommandMenu extends StatefulWidget {
     this.preferredSpacing = math.pi / 4, // 45 degrees
   });
 
+  /// The number of items in the menu.
+  final int itemCount;
+
+  /// The builder for each menu item.
+  final QuickMenuItemBuilder itemBuilder;
+
+  /// Callback for when an item is selected.
+  final ValueChanged<int> onItemSelected;
+
+  /// The child widget to anchor the menu to.
+  final Widget child;
+
+  /// The radius of the radial arc.
+  final double radius;
+
+  /// The size of each menu item.
+  final double itemSize;
+
+  /// The preferred spacing between items in radians.
+  final double preferredSpacing;
+
   @override
   State<QuickCommandMenu> createState() => _QuickCommandMenuState();
 }
 
 class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
 
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
@@ -71,7 +102,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
   // --- Spatial & Arc Mathematics ---
 
   void _calculatePosition() {
-    final RenderBox? box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
 
     final offset = box.localToGlobal(Offset.zero);
@@ -120,7 +151,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
     if (_fabCenterGlobal == null) return 0.0;
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
-    double angle = math.atan2(dy, dx);
+    var angle = math.atan2(dy, dx);
     if (angle < 0) angle += 2 * math.pi;
     return angle;
   }
@@ -134,19 +165,21 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
       Overlay.of(context).insert(_overlayEntry!);
     }
     _isOpen = true;
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   void _closeMenu() {
     _closeTimer?.cancel();
     _isOpen = false;
-    _controller.reverse().then((_) {
-      if (!_isOpen && _overlayEntry != null) {
-        _overlayEntry!.remove();
-        _overlayEntry = null;
-        _hoveredIndex = null;
-      }
-    });
+    unawaited(
+      _controller.reverse().then((_) {
+        if (!_isOpen && _overlayEntry != null) {
+          _overlayEntry!.remove();
+          _overlayEntry = null;
+          _hoveredIndex = null;
+        }
+      }),
+    );
   }
 
   void _startTimer() {
@@ -178,8 +211,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
     final distance = math.sqrt(dx * dx + dy * dy);
 
-    double currentAngle = _getFingerAngle(globalPosition);
-    double delta = currentAngle - _lastFingerAngle;
+    final currentAngle = _getFingerAngle(globalPosition);
+    var delta = currentAngle - _lastFingerAngle;
 
     // Normalize delta for shortest-path wrap around
     if (delta > math.pi) delta -= 2 * math.pi;
@@ -191,11 +224,11 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
         // 0.01 rad is roughly 0.5 degrees
         _isDragging = true;
 
-        final double visibleSpread = _getMaxSpread();
-        final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+        final visibleSpread = _getMaxSpread();
+        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
 
         if (totalSweep > visibleSpread) {
-          double maxScroll = totalSweep - visibleSpread;
+          final maxScroll = totalSweep - visibleSpread;
           _scrollAngle += delta; // Add relative movement
           _scrollAngle = _scrollAngle.clamp(-maxScroll, 0.0);
         }
@@ -231,22 +264,22 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
       return;
     }
 
-    double fingerAngle = _getFingerAngle(globalPosition);
-    final double midpoint = _getMidpoint();
-    final double visibleSpread = _getMaxSpread();
-    final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-    final double startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+    final fingerAngle = _getFingerAngle(globalPosition);
+    final midpoint = _getMidpoint();
+    final visibleSpread = _getMaxSpread();
+    final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+    final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
 
     int? closestIndex;
-    double minDiff = double.infinity;
+    var minDiff = double.infinity;
 
-    for (int i = 0; i < widget.itemCount; i++) {
-      double itemAngle = startAngle + (i * widget.preferredSpacing) + _scrollAngle;
+    for (var i = 0; i < widget.itemCount; i++) {
+      var itemAngle = startAngle + (i * widget.preferredSpacing) + _scrollAngle;
 
       itemAngle = itemAngle % (2 * math.pi);
       if (itemAngle < 0) itemAngle += 2 * math.pi;
 
-      double diff = (itemAngle - fingerAngle).abs();
+      var diff = (itemAngle - fingerAngle).abs();
       if (diff > math.pi) diff = 2 * math.pi - diff;
 
       if (diff < minDiff) {
@@ -261,17 +294,17 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
   // --- Overlay Renderer ---
 
   OverlayEntry _createOverlayEntry() {
-    final RenderBox? box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
     final fabSize = box?.size ?? const Size(56.0, 56.0);
     final itemSize = widget.itemSize;
 
     return OverlayEntry(
       builder: (context) {
-        final double midpoint = _getMidpoint();
-        final double visibleSpread = _getMaxSpread();
-        final double totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-        final double startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
-        final double fadeZone = math.pi / 8;
+        final midpoint = _getMidpoint();
+        final visibleSpread = _getMaxSpread();
+        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+        final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
+        const fadeZone = math.pi / 8;
 
         return Stack(
           children: [
@@ -286,22 +319,21 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
                 child: Container(color: Colors.transparent),
               ),
             ),
-
             ...List.generate(widget.itemCount, (index) {
-              final double itemAngle = startAngle + (index * widget.preferredSpacing) + _scrollAngle;
+              final itemAngle = startAngle + (index * widget.preferredSpacing) + _scrollAngle;
 
-              double angularDiff = (itemAngle - midpoint).abs();
+              var angularDiff = (itemAngle - midpoint).abs();
               if (angularDiff > math.pi) angularDiff = 2 * math.pi - angularDiff;
 
-              double edgeDist = (visibleSpread / 2) - angularDiff;
-              double targetOpacity = 1.0;
-              double scaleShrink = 1.0;
+              final edgeDist = (visibleSpread / 2) - angularDiff;
+              var targetOpacity = 1.0;
+              var scaleShrink = 1.0;
 
               if (edgeDist <= 0) {
                 targetOpacity = 0.0;
                 scaleShrink = 0.4;
               } else if (edgeDist < fadeZone) {
-                double ratio = edgeDist / fadeZone;
+                final ratio = edgeDist / fadeZone;
                 targetOpacity = ratio;
                 scaleShrink = 0.4 + (0.6 * ratio);
               }
@@ -309,9 +341,9 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
               return AnimatedBuilder(
                 animation: _animation,
                 builder: (context, child) {
-                  final double finalOpacity = (targetOpacity * _animation.value).clamp(0.0, 1.0);
-                  final bool isHovered = _hoveredIndex == index;
-                  final double currentRadius = _animation.value * widget.radius;
+                  final finalOpacity = (targetOpacity * _animation.value).clamp(0.0, 1.0);
+                  final isHovered = _hoveredIndex == index;
+                  final currentRadius = _animation.value * widget.radius;
 
                   final dx = math.cos(itemAngle) * currentRadius;
                   final dy = math.sin(itemAngle) * currentRadius;
@@ -321,8 +353,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
                     (fabSize.height / 2) + dy - (itemSize / 2),
                   );
 
-                  final double baseScale = _animation.value.clamp(0.0, 1.0);
-                  final double finalScale = baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
+                  final baseScale = _animation.value.clamp(0.0, 1.0);
+                  final finalScale = baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
 
                   return CompositedTransformFollower(
                     link: _layerLink,
@@ -342,7 +374,11 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with SingleTickerPr
                 child: SizedBox(
                   width: itemSize,
                   height: itemSize,
-                  child: widget.itemBuilder(context, index, _hoveredIndex == index),
+                  child: widget.itemBuilder(
+                    context,
+                    index,
+                    isHovered: _hoveredIndex == index,
+                  ),
                 ),
               );
             }),
