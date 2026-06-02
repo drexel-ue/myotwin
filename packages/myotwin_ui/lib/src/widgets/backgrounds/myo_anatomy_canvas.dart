@@ -29,8 +29,8 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   
   // Camera State
   double _phi = math.pi / 2; // Latitude
-  double _theta = 0.0;       // Longitude
-  double _radius = 5.0;      // Zoom distance
+  double _theta = -math.pi / 2; // Longitude (Facing the user)
+  double _radius = 5.0;       // Zoom distance
 
   @override
   void initState() {
