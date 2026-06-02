@@ -82,51 +82,56 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
       child: ClipRRect(
         borderRadius: theme.radiusSm,
         child: Row(
+          mainAxisSize: .min,
           children: widget.segments.map((segment) {
             final isSelected = segment.value == widget.value;
             final isPreviouslySelected = segment.value == _previousValue;
             final shouldGlitch = isSelected || isPreviouslySelected;
 
-            return Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  if (!isSelected) {
-                    _previousValue = widget.value;
-                    triggerGlitch();
-                    widget.onSelectionChanged(segment.value);
-                  }
-                },
-                child: HoloGlitch(
-                  phase: glitchPhase,
-                  intensity: shouldGlitch ? glitchIntensity : 0,
-                  severity: 0.15,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? theme.surfaceElevated : Colors.transparent,
-                      border: Border(
-                        right: BorderSide(
-                          color: theme.outline,
-                        ),
+            return GestureDetector(
+              onTap: () {
+                if (!isSelected) {
+                  _previousValue = widget.value;
+                  triggerGlitch();
+                  widget.onSelectionChanged(segment.value);
+                }
+              },
+              child: HoloGlitch(
+                phase: glitchPhase,
+                intensity: shouldGlitch ? glitchIntensity : 0,
+                severity: 0.15,
+                child: Container(
+                  padding: horizontalPadding16,
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected ? theme.surfaceElevated : Colors.transparent,
+                    border: Border(
+                      right: BorderSide(
+                        color: theme.outline,
                       ),
                     ),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: .center,
-                        children: [
-                          if (segment.icon != null) ...[
-                            segment.icon!,
-                            horizontalMargin8,
-                          ],
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: .min,
+                      mainAxisAlignment: .center,
+                      children: [
+                        if (segment.icon != null) ...[
+                          segment.icon!,
+                          if (segment.label.isNotEmpty) horizontalMargin8,
+                        ],
+                        if (segment.label.isNotEmpty)
                           Text(
                             segment.label,
                             style: theme.glitch.copyWith(
-                              color: isSelected ? theme.onSurface : theme.onSurfaceDim,
+                              color: isSelected
+                                  ? theme.onSurface
+                                  : theme.onSurfaceDim,
                               fontSize: 12,
                               fontWeight: isSelected ? .bold : .normal,
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
