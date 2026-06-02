@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A pannable/flashable container that hosts a precision grid background
@@ -12,22 +15,27 @@ class InteractiveGrid extends StatefulWidget {
   const InteractiveGrid({
     super.key,
     required this.child,
+    this.onLongPress,
   });
 
   /// The widget contained inside the [InteractiveGrid].
   final Widget child;
+
+  /// Optional callback for when the grid background is long-pressed.
+  final VoidCallback? onLongPress;
 
   /// Creates the mutable state for this widget.
   @override
   State<InteractiveGrid> createState() => _InteractiveGridState();
 }
 
-class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProviderStateMixin {
-  final _cameraPan = ValueNotifier<Offset>(.zero);
-  Offset _velocity = .zero;
+class _InteractiveGridState extends State<InteractiveGrid>
+    with SingleTickerProviderStateMixin {
+  final _cameraPan = ValueNotifier<Offset>(Offset.zero);
+  Offset _velocity = Offset.zero;
 
   late final Ticker _ticker;
-  Duration _lastTimeStamp = .zero;
+  Duration _lastTimeStamp = Duration.zero;
 
   // The friction coefficient. Higher = stops faster. Lower = glides like ice.
   // 4.5 gives a heavy, deliberate "blueprint table" feel.
@@ -42,7 +50,7 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
 
   void _onTick(Duration elapsed) {
     // Handle the first frame after a flick to prevent time-delta jumps
-    if (_lastTimeStamp == .zero) {
+    if (_lastTimeStamp == Duration.zero) {
       _lastTimeStamp = elapsed;
       return;
     }
@@ -60,7 +68,7 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
 
     // 3. Cull the loop when the velocity drops below a perceptible threshold
     if (_velocity.distance < 5.0) {
-      _velocity = .zero;
+      _velocity = Offset.zero;
       _ticker.stop();
     }
   }
@@ -70,11 +78,18 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
     if (_ticker.isTicking) {
       _ticker.stop();
     }
-    _velocity = .zero;
+    _velocity = Offset.zero;
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
     _cameraPan.value += details.delta;
+  }
+
+  void _onLongPress() {
+    debugPrint('>> INTERACTIVE_GRID: TRIGGERING_BACKGROUND_RESET');
+    _cameraPan.value = Offset.zero;
+    widget.onLongPress?.call();
+    unawaited(HapticFeedback.mediumImpact());
   }
 
   Future<void> _onPanEnd(DragEndDetails details) async {
@@ -88,7 +103,7 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
 
     // Only initiate the physics engine if the user actually threw it
     if (_velocity.distance > 50) {
-      _lastTimeStamp = .zero;
+      _lastTimeStamp = Duration.zero;
       await _ticker.start();
     }
   }
@@ -103,13 +118,17 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Stack(
-      fit: .passthrough,
+      fit: StackFit.passthrough,
       children: [
+        // --- LAYER 1: Background Grid & Gestures ---
         Positioned.fill(
           child: GestureDetector(
+            // Use Opaque so hits are captured by this layer if they reach it
+            behavior: HitTestBehavior.opaque,
             onPanStart: _onPanStart,
             onPanUpdate: _onPanUpdate,
             onPanEnd: _onPanEnd,
+            onLongPress: _onLongPress,
             child: ValueListenableBuilder(
               valueListenable: _cameraPan,
               builder: (context, offset, _) {
@@ -118,6 +137,9 @@ class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProv
             ),
           ),
         ),
+
+        // --- LAYER 2: Foreground Content (Model, etc.) ---
+        // Hits only reach Layer 1 if Layer 2 is transparent to the hit.
         Positioned.fill(child: widget.child),
       ],
     );

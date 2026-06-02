@@ -15,10 +15,14 @@ class MyoAnatomyCanvas extends StatefulWidget {
   const MyoAnatomyCanvas({
     super.key,
     this.activeNodes = const [],
+    this.resetTrigger,
   });
 
   /// The list of anatomical nodes to highlight in the heatmap.
   final List<String> activeNodes;
+
+  /// An optional notifier to trigger a camera view reset.
+  final ValueNotifier<int>? resetTrigger;
 
   @override
   State<MyoAnatomyCanvas> createState() => _MyoAnatomyCanvasState();
@@ -56,6 +60,8 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
         });
       }
     }));
+
+    widget.resetTrigger?.addListener(_resetView);
   }
 
   @override
@@ -64,6 +70,25 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
     if (_isInitialized && widget.activeNodes != oldWidget.activeNodes) {
       _applyHighlights();
     }
+    if (widget.resetTrigger != oldWidget.resetTrigger) {
+      oldWidget.resetTrigger?.removeListener(_resetView);
+      widget.resetTrigger?.addListener(_resetView);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.resetTrigger?.removeListener(_resetView);
+    super.dispose();
+  }
+
+  void _resetView() {
+    setState(() {
+      _phi = math.pi / 2;
+      _theta = -math.pi / 2;
+      _radius = 2.4;
+      _targetPos = vm.Vector3(0.0, 0.85, 0.0);
+    });
   }
 
   void _applyHighlights() {
@@ -94,9 +119,6 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
         final right = vm.Vector3(0.0, 1.0, 0.0).cross(forward).normalized();
         final up = forward.cross(right).normalized();
 
-        // Translate the target position relative to camera view
-        // Drag right (dx > 0) -> Move target LEFT (-right) -> Model appears to move RIGHT
-        // Drag down (dy > 0) -> Move target UP (+up) -> Model appears to move DOWN
         _targetPos -= right * (details.focalPointDelta.dx * 0.005);
         _targetPos += up * (details.focalPointDelta.dy * 0.005);
       } else {
@@ -135,31 +157,56 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
       up: vm.Vector3(0.0, 1.0, 0.0),
     );
 
-    return Listener(
-      onPointerSignal: _handlePointerSignal,
-      child: GestureDetector(
-        onScaleUpdate: _handleScaleUpdate,
-        child: CustomPaint(
-          painter: _ScenePainter(
-            scene: _scene,
-            camera: camera,
+    return LayoutBuilder(builder: (context, constraints) {
+      return Listener(
+        onPointerSignal: _handlePointerSignal,
+        child: GestureDetector(
+          // Use deferToChild so we only block background hits if our silhouette hitTest passes
+          behavior: HitTestBehavior.deferToChild,
+          onScaleUpdate: _handleScaleUpdate,
+          child: CustomPaint(
+            painter: _ScenePainter(
+              scene: _scene,
+              camera: camera,
+              viewportSize: constraints.biggest,
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
 class _ScenePainter extends CustomPainter {
-  _ScenePainter({required this.scene, required this.camera});
+  _ScenePainter({
+    required this.scene,
+    required this.camera,
+    required this.viewportSize,
+  });
 
   final Scene scene;
   final Camera camera;
+  final Size viewportSize;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
     scene.render(camera, canvas, viewport: Offset.zero & size);
+  }
+
+  @override
+  bool hitTest(Offset position) {
+    // SILHOUETTE HIT-TESTING HEURISTIC
+    // Since we don't have per-mesh raycasting yet, we define a "Hit Zone"
+    // that covers the human model in the center of the screen.
+    // Touches outside this zone will "pass through" to the InteractiveGrid below.
+
+    // We assume the model is centered horizontally and occupies roughly 50% width.
+    final centerX = viewportSize.width / 2;
+    final hitWidth = viewportSize.width * 0.25; // 50% total width
+
+    // If the touch is within the horizontal central silhouette, claim the hit.
+    return (position.dx - centerX).abs() < hitWidth;
   }
 
   @override
