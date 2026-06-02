@@ -142,4 +142,44 @@ class AnatomyLayerManager {
       }
     }
   }
+
+  /// Projects a 3D node's world position to 2D screen coordinates.
+  flutter.Offset? projectNodeToScreen(
+    String nodeName,
+    Camera camera,
+    flutter.Size viewportSize,
+  ) {
+    for (final root in _layerRoots.values) {
+      final target = root.getChildByName(nodeName);
+      if (target != null) {
+        // 1. Get world position (origin of the node)
+        final worldPos = target.globalTransform.getTranslation();
+
+        // 2. Get combined View-Projection matrix
+        final viewProj = camera.getViewTransform(viewportSize);
+
+        // 3. Project to Clip Space (NDC)
+        final clipPos = viewProj.transform(
+          Vector4(worldPos.x, worldPos.y, worldPos.z, 1.0),
+        );
+
+        // Perspective divide
+        if (clipPos.w <= 0) return null; // Node is behind the camera
+        final ndc = Vector3(
+          clipPos.x / clipPos.w,
+          clipPos.y / clipPos.w,
+          clipPos.z / clipPos.w,
+        );
+
+        // 4. Map NDC (-1 to 1) to Screen Pixels
+        // Flutter: (0,0) top-left.
+        // NDC: (-1,-1) bottom-left, (1,1) top-right.
+        final x = (ndc.x + 1.0) / 2.0 * viewportSize.width;
+        final y = (1.0 - ndc.y) / 2.0 * viewportSize.height;
+
+        return flutter.Offset(x, y);
+      }
+    }
+    return null;
+  }
 }

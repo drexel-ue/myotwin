@@ -14,6 +14,7 @@ export 'src/widgets/chat/myo_chat.dart';
 export 'src/widgets/chat/myo_chat_list.dart';
 export 'src/widgets/communication/myo_badge.dart';
 export 'src/widgets/communication/myo_linear_progress_indicator.dart';
+export 'src/widgets/containment/anatomy_targeting_surface.dart';
 export 'src/widgets/containment/frosted_hud.dart';
 export 'src/widgets/containment/goal_explorer_surface.dart';
 export 'src/widgets/containment/myo_divider.dart';

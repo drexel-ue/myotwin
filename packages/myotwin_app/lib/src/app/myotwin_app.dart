@@ -90,13 +90,17 @@ class _MyoStartupOrchestrator extends StatefulWidget {
 }
 
 class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
-    with TickerProviderStateMixin, HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
+    with
+        TickerProviderStateMixin,
+        HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
   late final AnimationController _perceivedController;
   bool _readyToTransition = false;
   bool _showGoalExplorer = false;
+  bool _showAnatomyTargeter = false;
   String _status = 'INITIALIZING_MOTUS_CORE...';
 
   final _anatomyResetTrigger = ValueNotifier<int>(0);
+  final List<String> _manualActiveNodes = [];
 
   @override
   void initState() {
@@ -115,17 +119,6 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
   }
 
   @override
-  void didUpdateWidget(covariant _MyoStartupOrchestrator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.agent != oldWidget.agent) {
-      oldWidget.agent.removeListener(_checkHandoff);
-      oldWidget.agent.loadingProgress.removeListener(_checkHandoff);
-      widget.agent.addListener(_checkHandoff);
-      widget.agent.loadingProgress.addListener(_checkHandoff);
-    }
-  }
-
-  @override
   void dispose() {
     _perceivedController.dispose();
     _anatomyResetTrigger.dispose();
@@ -137,13 +130,10 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
   void _checkHandoff() {
     if (_readyToTransition) return;
 
-    final isModelReady = widget.agent.isInitialized;
-    final isScanFinished = _perceivedController.value >= 1.0;
-
     // We only transition when:
     // 1. The actual model is loaded.
     // 2. The perceived cinematic "scan" animation is finished.
-    if (isModelReady && isScanFinished) {
+    if (widget.agent.isInitialized && _perceivedController.value >= 1.0) {
       setState(() {
         _status = 'SYSTEM_READY_FOR_INPUT';
       });
@@ -191,7 +181,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                     final scanProgress = _perceivedController.value;
                     final initError = widget.agent.initializationError;
 
-                    final double progress;
+                    var progress = 0.0;
                     var status = _status;
 
                     if (initError != null) {
@@ -237,14 +227,20 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                               // 2. Wait for the peak of the glitch to mask the jump
                               Timer(const Duration(milliseconds: 150), () {
                                 if (mounted) {
-                                  _anatomyResetTrigger.value++;
+                                  setState(() {
+                                    _manualActiveNodes.clear();
+                                    _anatomyResetTrigger.value++;
+                                  });
                                 }
                               });
                             },
                             child: MyoAnatomyCanvas(
-                              activeNodes:
-                                  state.activeGoal?.metadata.targetAnatomyNodes ??
-                                      [],
+                              activeNodes: [
+                                ...state.activeGoal?.metadata
+                                        .targetAnatomyNodes ??
+                                    [],
+                                ..._manualActiveNodes,
+                              ],
                               resetTrigger: _anatomyResetTrigger,
                             ),
                           ),
@@ -257,9 +253,10 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                 visible ? HoloState.listening : HoloState.idle;
                           },
                           onCommandNodeSelected: (node) {
-                            // Node 4 is the mock Goal Explorer
                             if (node == '4') {
                               setState(() => _showGoalExplorer = true);
+                            } else if (node == '3') {
+                              setState(() => _showAnatomyTargeter = true);
                             }
                           },
                         );
@@ -292,6 +289,40 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                 },
                               ),
                             ),
+                          ),
+                        ),
+                      ),
+                    if (_showAnatomyTargeter)
+                      Positioned(
+                        right: 32,
+                        top: 32,
+                        bottom: 32,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 300),
+                          child: AnatomyTargetingSurface(
+                            availableNodes: const [
+                              'Biceps_L',
+                              'Biceps_R',
+                              'Femur_L',
+                              'Femur_R',
+                              'Humerus_L',
+                              'Humerus_R',
+                              'Trapezius_L',
+                              'Trapezius_R',
+                              'Rectus_abdominis_muscle_L',
+                              'Rectus_abdominis_muscle_R',
+                            ],
+                            onNodeSelected: (node) {
+                              setState(() {
+                                if (_manualActiveNodes.contains(node)) {
+                                  _manualActiveNodes.remove(node);
+                                } else {
+                                  _manualActiveNodes.add(node);
+                                }
+                              });
+                            },
+                            onClose: () =>
+                                setState(() => _showAnatomyTargeter = false),
                           ),
                         ),
                       ),

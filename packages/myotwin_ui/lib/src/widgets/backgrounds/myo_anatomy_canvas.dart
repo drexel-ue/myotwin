@@ -136,8 +136,6 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
         final up = forward.cross(right).normalized();
 
         // Translate the target position relative to camera view
-        // Drag right (dx > 0) -> Move target LEFT (-right) -> Model appears to move RIGHT
-        // Drag down (dy > 0) -> Move target UP (+up) -> Model appears to move DOWN
         _targetPos -= right * (details.focalPointDelta.dx * 0.005);
         _targetPos += up * (details.focalPointDelta.dy * 0.005);
       } else {
@@ -176,24 +174,84 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
       up: vm.Vector3(0.0, 1.0, 0.0),
     );
 
-    return LayoutBuilder(builder: (context, constraints) {
-      return Listener(
-        onPointerSignal: _handlePointerSignal,
-        child: GestureDetector(
-          // Use deferToChild so we only block background hits if our silhouette hitTest passes
-          behavior: HitTestBehavior.deferToChild,
-          onScaleStart: _handleScaleStart,
-          onScaleUpdate: _handleScaleUpdate,
-          child: CustomPaint(
-            painter: _ScenePainter(
-              scene: _scene,
-              camera: camera,
-              viewportSize: constraints.biggest,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate screen-space offsets for all active highlights
+        final projectedTooltips = <String, Offset>{};
+        if (_isInitialized) {
+          for (final node in widget.activeNodes) {
+            final screenPos = _manager.projectNodeToScreen(
+              node,
+              camera,
+              constraints.biggest,
+            );
+            if (screenPos != null) {
+              projectedTooltips[node] = screenPos;
+            }
+          }
+        }
+
+        return Listener(
+          onPointerSignal: _handlePointerSignal,
+          child: GestureDetector(
+            // Use deferToChild so we only block background hits if our silhouette hitTest passes
+            behavior: HitTestBehavior.deferToChild,
+            onScaleStart: _handleScaleStart,
+            onScaleUpdate: _handleScaleUpdate,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _ScenePainter(
+                      scene: _scene,
+                      camera: camera,
+                      viewportSize: constraints.biggest,
+                    ),
+                  ),
+                ),
+                // Render 3D-Anchored Tooltips
+                ...projectedTooltips.entries.map((entry) {
+                  return Positioned(
+                    left: entry.value.dx,
+                    top: entry.value.dy,
+                    child: FractionalTranslation(
+                      translation: const Offset(-0.5, -1.2),
+                      child: _AnatomyTooltip(label: entry.key),
+                    ),
+                  );
+                }),
+              ],
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _AnatomyTooltip extends StatelessWidget {
+  const _AnatomyTooltip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.myoTheme;
+    return FrostedHUD(
+      impactPoint: Offset.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label.toUpperCase(),
+          style: theme.caption.copyWith(
+            color: theme.accentHot,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.0,
+          ),
         ),
-      );
-    });
+      ),
+    );
   }
 }
 
@@ -217,11 +275,6 @@ class _ScenePainter extends CustomPainter {
   @override
   bool hitTest(Offset position) {
     // SILHOUETTE HIT-TESTING HEURISTIC
-    // Since we don't have per-mesh raycasting yet, we define a "Hit Zone"
-    // that covers the human model in the center of the screen.
-    // Touches outside this zone will "pass through" to the InteractiveGrid below.
-
-    // We assume the model is centered horizontally and occupies roughly 50% width.
     final centerX = viewportSize.width / 2;
     final hitWidth = viewportSize.width * 0.25; // 50% total width
 

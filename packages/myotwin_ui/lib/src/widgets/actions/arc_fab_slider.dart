@@ -205,6 +205,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                       itemBuilder: (context, index, {required isHovered}) {
                         final iconIntent = switch (index) {
                           4 => 'target',
+                          3 => 'crosshair',
                           _ => 'task',
                         };
                         return MyoIconButton(
@@ -220,7 +221,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                           'LOG SYMPTOM',
                           'REVERT LADDER',
                           'X-RAY OVERLAY',
-                          'BODY HEATMAP',
+                          'ANATOMY TARGETER',
                           'GOAL_EXPLORER',
                           'LOG SYMPTOM',
                           'REVERT LADDER',
