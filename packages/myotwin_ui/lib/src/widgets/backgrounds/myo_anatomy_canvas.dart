@@ -16,6 +16,8 @@ class MyoAnatomyCanvas extends StatefulWidget {
     super.key,
     this.activeNodes = const [],
     this.resetTrigger,
+    this.activeLayer,
+    this.onNodesLoaded,
   });
 
   /// The list of anatomical nodes to highlight in the heatmap.
@@ -23,6 +25,12 @@ class MyoAnatomyCanvas extends StatefulWidget {
 
   /// An optional notifier to trigger a camera view reset.
   final ValueNotifier<int>? resetTrigger;
+
+  /// The anatomical layer to isolate (make solid while ghosting others).
+  final AnatomyLayer? activeLayer;
+
+  /// Called when the 3D models are fully loaded and node names are available.
+  final ValueChanged<Map<AnatomyLayer, List<String>>>? onNodesLoaded;
 
   @override
   State<MyoAnatomyCanvas> createState() => _MyoAnatomyCanvasState();
@@ -61,7 +69,9 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
         setState(() {
           _isInitialized = true;
           _applyHighlights();
+          _manager.isolateLayer(widget.activeLayer);
         });
+        widget.onNodesLoaded?.call(_manager.getAvailableNodesByLayer());
       }
     }));
 
@@ -71,8 +81,13 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   @override
   void didUpdateWidget(covariant MyoAnatomyCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_isInitialized && widget.activeNodes != oldWidget.activeNodes) {
-      _applyHighlights();
+    if (_isInitialized) {
+      if (widget.activeNodes != oldWidget.activeNodes) {
+        _applyHighlights();
+      }
+      if (widget.activeLayer != oldWidget.activeLayer) {
+        _manager.isolateLayer(widget.activeLayer);
+      }
     }
     if (widget.resetTrigger != oldWidget.resetTrigger) {
       oldWidget.resetTrigger?.removeListener(_resetView);

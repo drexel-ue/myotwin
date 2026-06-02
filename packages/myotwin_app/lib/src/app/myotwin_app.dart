@@ -101,6 +101,8 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
 
   final _anatomyResetTrigger = ValueNotifier<int>(0);
   final List<String> _manualActiveNodes = [];
+  AnatomyLayer? _activeLayer;
+  Map<AnatomyLayer, List<String>> _availableNodes = {};
 
   @override
   void initState() {
@@ -229,6 +231,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                 if (mounted) {
                                   setState(() {
                                     _manualActiveNodes.clear();
+                                    _activeLayer = null;
                                     _anatomyResetTrigger.value++;
                                   });
                                 }
@@ -241,7 +244,11 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                     [],
                                 ..._manualActiveNodes,
                               ],
+                              activeLayer: _activeLayer,
                               resetTrigger: _anatomyResetTrigger,
+                              onNodesLoaded: (nodes) {
+                                setState(() => _availableNodes = nodes);
+                              },
                             ),
                           ),
                           chatChild: MyoChatList(messages: state.messages),
@@ -300,18 +307,11 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 300),
                           child: AnatomyTargetingSurface(
-                            availableNodes: const [
-                              'Biceps_L',
-                              'Biceps_R',
-                              'Femur_L',
-                              'Femur_R',
-                              'Humerus_L',
-                              'Humerus_R',
-                              'Trapezius_L',
-                              'Trapezius_R',
-                              'Rectus_abdominis_muscle_L',
-                              'Rectus_abdominis_muscle_R',
-                            ],
+                            nodesByLayer: _availableNodes,
+                            activeLayer: _activeLayer,
+                            onLayerChanged: (layer) {
+                              setState(() => _activeLayer = layer);
+                            },
                             onNodeSelected: (node) {
                               setState(() {
                                 if (_manualActiveNodes.contains(node)) {

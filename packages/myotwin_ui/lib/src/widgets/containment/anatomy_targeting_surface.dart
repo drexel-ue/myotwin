@@ -6,13 +6,21 @@ class AnatomyTargetingSurface extends StatefulWidget {
   /// Creates an [AnatomyTargetingSurface].
   const AnatomyTargetingSurface({
     super.key,
-    required this.availableNodes,
+    required this.nodesByLayer,
+    required this.activeLayer,
+    required this.onLayerChanged,
     required this.onNodeSelected,
     required this.onClose,
   });
 
-  /// The list of anatomical node IDs available for targeting.
-  final List<String> availableNodes;
+  /// The map of anatomical node IDs grouped by layer.
+  final Map<AnatomyLayer, List<String>> nodesByLayer;
+
+  /// The currently isolated layer.
+  final AnatomyLayer? activeLayer;
+
+  /// Called when the isolated layer is changed.
+  final ValueChanged<AnatomyLayer?> onLayerChanged;
 
   /// Called when a node is selected.
   final ValueChanged<String> onNodeSelected;
@@ -32,10 +40,23 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
-    final filteredNodes = widget.availableNodes.where((node) {
-      return node.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList()
-      ..sort();
+    // 1. Flatten and filter nodes based on selected layer and search query
+    final List<String> filteredNodes = [];
+    if (widget.activeLayer != null) {
+      // Only show nodes from the selected layer
+      final layerNodes = widget.nodesByLayer[widget.activeLayer] ?? [];
+      filteredNodes.addAll(layerNodes.where((node) {
+        return node.toLowerCase().contains(_searchQuery.toLowerCase());
+      }));
+    } else {
+      // Show all nodes from all layers
+      for (final layerNodes in widget.nodesByLayer.values) {
+        filteredNodes.addAll(layerNodes.where((node) {
+          return node.toLowerCase().contains(_searchQuery.toLowerCase());
+        }));
+      }
+    }
+    filteredNodes.sort();
 
     return FrostedHUD(
       impactPoint: Offset.zero,
@@ -46,7 +67,96 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
         padding: allPadding16,
         child: Column(
           children: [
-            // 1. Search Field
+            // 1. Layer Filters
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: MyoSegmentedButton<AnatomyLayer?>(
+                value: widget.activeLayer,
+                onSelectionChanged: (value) {
+                  // If tapping already selected, toggle off
+                  if (value == widget.activeLayer) {
+                    widget.onLayerChanged(null);
+                  } else {
+                    widget.onLayerChanged(value);
+                  }
+                },
+                segments: [
+                  MyoSegment(
+                    value: AnatomyLayer.skeletal,
+                    label: '',
+                    icon: Tooltip(
+                      message: 'SKELETAL',
+                      child: MyoIcon(
+                        intent: 'bone',
+                        size: 18,
+                        color: widget.activeLayer == AnatomyLayer.skeletal
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                  MyoSegment(
+                    value: AnatomyLayer.muscular,
+                    label: '',
+                    icon: Tooltip(
+                      message: 'MUSCULAR',
+                      child: MyoIcon(
+                        intent: 'activity',
+                        size: 18,
+                        color: widget.activeLayer == AnatomyLayer.muscular
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                  MyoSegment(
+                    value: AnatomyLayer.nervous,
+                    label: '',
+                    icon: Tooltip(
+                      message: 'NERVOUS',
+                      child: MyoIcon(
+                        intent: 'cpu',
+                        size: 18,
+                        color: widget.activeLayer == AnatomyLayer.nervous
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                  MyoSegment(
+                    value: AnatomyLayer.cardiovascular,
+                    label: '',
+                    icon: Tooltip(
+                      message: 'CARDIO',
+                      child: MyoIcon(
+                        intent: 'heart',
+                        size: 18,
+                        color: widget.activeLayer == AnatomyLayer.cardiovascular
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                  MyoSegment(
+                    value: AnatomyLayer.joints,
+                    label: '',
+                    icon: Tooltip(
+                      message: 'JOINTS',
+                      child: MyoIcon(
+                        intent: 'link',
+                        size: 18,
+                        color: widget.activeLayer == AnatomyLayer.joints
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            verticalMargin16,
+
+            // 2. Search Field
             MyoTextField(
               hint: 'SEARCH_KINETIC_CHAIN...',
               autofocus: true,
@@ -55,7 +165,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
             ),
             verticalMargin16,
 
-            // 2. Node List
+            // 3. Node List
             Expanded(
               child: filteredNodes.isEmpty
                   ? Center(
@@ -66,7 +176,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                     )
                   : ListView.separated(
                       itemCount: filteredNodes.length,
-                      separatorBuilder: (_, _) => const MyoDivider(),
+                      separatorBuilder: (_, __) => const MyoDivider(),
                       itemBuilder: (context, index) {
                         final node = filteredNodes[index];
                         return MyoListTile(

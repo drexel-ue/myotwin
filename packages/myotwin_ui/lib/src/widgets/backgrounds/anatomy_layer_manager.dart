@@ -105,6 +105,65 @@ class AnatomyLayerManager {
     _layerRoots[layer]?.visible = isVisible;
   }
 
+  /// Extracts all mesh-bearing node names from the loaded layers, grouped by system.
+  Map<AnatomyLayer, List<String>> getAvailableNodesByLayer() {
+    final Map<AnatomyLayer, List<String>> result = {};
+    for (final entry in _layerRoots.entries) {
+      final names = <String>[];
+      _collectNodeNames(entry.value, names);
+      if (names.isNotEmpty) {
+        result[entry.key] = names..sort();
+      }
+    }
+    return result;
+  }
+
+  void _collectNodeNames(Node node, List<String> names) {
+    // Only collect nodes that actually have a mesh (are visible parts)
+    if (node.mesh != null && node.name.isNotEmpty) {
+      names.add(node.name);
+    }
+    for (final child in node.children) {
+      _collectNodeNames(child, names);
+    }
+  }
+
+  /// Isolates a specific layer by making it solid and ghosting all others.
+  /// If [activeLayer] is null, restores the default HUD state.
+  void isolateLayer(AnatomyLayer? activeLayer) {
+    if (activeLayer == null) {
+      // Restore Default HUD State
+      for (final entry in _layerRoots.entries) {
+        final layer = entry.key;
+        final node = entry.value;
+
+        if (layer == AnatomyLayer.skeletal) {
+          node.visible = true;
+          _applyMaterial(node, _baseMaterial);
+        } else if (layer == AnatomyLayer.muscular) {
+          node.visible = true;
+          _applyMaterial(node, _ghostMaterial);
+        } else {
+          node.visible = false;
+        }
+      }
+      return;
+    }
+
+    // Isolate the requested layer
+    for (final entry in _layerRoots.entries) {
+      final layer = entry.key;
+      final node = entry.value;
+
+      node.visible = true;
+      if (layer == activeLayer) {
+        _applyMaterial(node, _baseMaterial);
+      } else {
+        _applyMaterial(node, _ghostMaterial);
+      }
+    }
+  }
+
   /// Applies a heatmap highlight to a specific mesh by name.
   void highlightNode(String nodeName, flutter.Color color) {
     final colorVec = Vector4(

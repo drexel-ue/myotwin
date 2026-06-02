@@ -7,6 +7,7 @@ export 'src/widgets/actions/myo_icon_button.dart';
 export 'src/widgets/actions/myo_segmented_button.dart';
 export 'src/widgets/actions/quick_command_menu.dart';
 export 'src/widgets/backgrounds/interactive_grid.dart';
+export 'src/widgets/backgrounds/anatomy_layer_manager.dart';
 export 'src/widgets/backgrounds/myo_anatomy_canvas.dart';
 export 'src/widgets/backgrounds/myo_canvas.dart';
 export 'src/widgets/backgrounds/precision_grid_background.dart';
