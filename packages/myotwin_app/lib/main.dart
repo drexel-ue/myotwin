@@ -50,7 +50,7 @@ Future<void> main() async {
   // We select the model based on the target platform to ensure memory stability.
   final isMobile = !kIsWeb && (Platform.isIOS || Platform.isAndroid);
   final modelUri = isMobile
-      ? 'hf://lmstudio-community/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q4_K_M.gguf'
+      ? 'hf://mradermacher/Llama-3.2-1B-FitnessAssistant-GGUF/Llama-3.2-1B-FitnessAssistant.Q4_K_M.gguf'
       : 'hf://ggml-org/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q8_0.gguf';
 
   unawaited(

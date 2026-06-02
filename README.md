@@ -2,6 +2,8 @@
 
 **A biomechanical coaching app that thinks about you.**
 
+🚀 **New to the project?** Read the **[Developer Orientation Guide](docs/ORIENTATION.md)** to get started.
+
 No static screens. No navigation tabs. No walls of text from an AI. Just a 3D body model and an intelligence that assembles the right interface for *your* body, *right now*.
 
 ---
