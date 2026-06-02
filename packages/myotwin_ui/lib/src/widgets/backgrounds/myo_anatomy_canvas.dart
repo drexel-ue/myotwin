@@ -39,6 +39,10 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   double _radius = 2.4; // Zoom distance
   vm.Vector3 _targetPos = vm.Vector3(0.0, 0.85, 0.0); // Focus point (abdomen)
 
+  // Tracking for seamless delta-based gestures
+  double _lastScale = 1.0;
+  int _lastPointerCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -99,8 +103,20 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
     }
   }
 
+  void _handleScaleStart(ScaleStartDetails details) {
+    _lastScale = 1.0;
+    _lastPointerCount = details.pointerCount;
+  }
+
   void _handleScaleUpdate(ScaleUpdateDetails details) {
     setState(() {
+      // 1. Handle Pointer Count Changes (Seamless Handoff)
+      if (details.pointerCount != _lastPointerCount) {
+        _lastScale = details.scale;
+        _lastPointerCount = details.pointerCount;
+      }
+
+      // 2. Resolve Interaction Mode
       final isPanning =
           details.pointerCount >= 2 ||
           HardwareKeyboard.instance.logicalKeysPressed
@@ -108,9 +124,9 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
           HardwareKeyboard.instance.logicalKeysPressed
               .contains(LogicalKeyboardKey.shiftRight);
 
+      // 3. Apply Transformations
       if (isPanning) {
         // --- Omni-Directional Pan Math ---
-        // Calculate camera vectors based on current rotation
         final camX = _radius * math.sin(_phi) * math.cos(_theta);
         final camY = _radius * math.cos(_phi);
         final camZ = _radius * math.sin(_phi) * math.sin(_theta);
@@ -119,6 +135,9 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
         final right = vm.Vector3(0.0, 1.0, 0.0).cross(forward).normalized();
         final up = forward.cross(right).normalized();
 
+        // Translate the target position relative to camera view
+        // Drag right (dx > 0) -> Move target LEFT (-right) -> Model appears to move RIGHT
+        // Drag down (dy > 0) -> Move target UP (+up) -> Model appears to move DOWN
         _targetPos -= right * (details.focalPointDelta.dx * 0.005);
         _targetPos += up * (details.focalPointDelta.dy * 0.005);
       } else {
@@ -128,18 +147,18 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
             (_phi - details.focalPointDelta.dy * 0.01).clamp(0.1, math.pi - 0.1);
       }
 
-      // Handle Zoom (2-Finger Pinch on Mobile)
-      if (details.scale != 1.0) {
-        _radius = (_radius / details.scale).clamp(1.0, 10.0);
-      }
+      // 4. Handle Zoom (Delta-based to avoid exponential jumps)
+      final scaleDelta = details.scale / _lastScale;
+      _radius = (_radius / scaleDelta).clamp(0.1, 50.0);
+      _lastScale = details.scale;
     });
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
       setState(() {
-        // Handle Mouse Wheel Zoom
-        _radius = (_radius + event.scrollDelta.dy * 0.005).clamp(1.0, 10.0);
+        // Handle Mouse Wheel Zoom with higher sensitivity
+        _radius = (_radius + event.scrollDelta.dy * 0.08).clamp(0.1, 50.0);
       });
     }
   }
@@ -163,6 +182,7 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
         child: GestureDetector(
           // Use deferToChild so we only block background hits if our silhouette hitTest passes
           behavior: HitTestBehavior.deferToChild,
+          onScaleStart: _handleScaleStart,
           onScaleUpdate: _handleScaleUpdate,
           child: CustomPaint(
             painter: _ScenePainter(

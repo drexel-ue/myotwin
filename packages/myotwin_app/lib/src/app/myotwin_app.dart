@@ -192,7 +192,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                     final initError = widget.agent.initializationError;
 
                     final double progress;
-                    String status = _status;
+                    var status = _status;
 
                     if (initError != null) {
                       progress = realProgress;
