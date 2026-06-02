@@ -49,9 +49,11 @@ class _MyoChatListState extends State<MyoChatList> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return ShaderMask(
+    return SafeArea(
+      bottom: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return ShaderMask(
           // 1. Create the gradient mask
           shaderCallback: (rect) {
             return const LinearGradient(
@@ -112,8 +114,9 @@ class _MyoChatListState extends State<MyoChatList> {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 }
 
 class _ChatEntry extends StatelessWidget {
