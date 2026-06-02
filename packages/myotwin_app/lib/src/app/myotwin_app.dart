@@ -185,7 +185,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                       key: const ValueKey('myo_canvas'),
                       fabState: widget.fabState,
                       backgroundChild: const InteractiveGrid(
-                        child: emptyWidget,
+                        child: MyoAnatomyCanvas(),
                       ),
                       chatChild: BlocBuilder<ChatCubit, ChatState>(
                         builder: (context, state) {

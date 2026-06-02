@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_scene/scene.dart';
 import 'package:llamadart/llamadart.dart';
 import 'package:myotwin_app/src/app/myotwin_app.dart';
 import 'package:myotwin_app/src/infrastructure/ai/local_motus_agent.dart';
@@ -24,6 +25,9 @@ Future<void> main() async {
   // 1. Instantiate the local LLM agent and database.
   final motusAgent = LocalMotusAgent();
   final database = MyoTwinDatabase();
+
+  // 1.1 Initialize 3D engine resources.
+  unawaited(Scene.initializeStaticResources());
 
   // 2. Wrap the app with MultiProvider for DI.
   runApp(
