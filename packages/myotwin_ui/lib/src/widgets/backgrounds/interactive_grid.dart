@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A pannable/flashable container that hosts a precision grid background
@@ -89,7 +88,6 @@ class _InteractiveGridState extends State<InteractiveGrid>
     debugPrint('>> INTERACTIVE_GRID: TRIGGERING_BACKGROUND_RESET');
     _cameraPan.value = Offset.zero;
     widget.onLongPress?.call();
-    unawaited(HapticFeedback.mediumImpact());
   }
 
   Future<void> _onPanEnd(DragEndDetails details) async {

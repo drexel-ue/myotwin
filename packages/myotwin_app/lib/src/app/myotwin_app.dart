@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myotwin_app/src/app/boot_screen.dart';
 import 'package:myotwin_app/src/application/chat/chat_cubit.dart';
@@ -95,6 +96,8 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
   bool _showGoalExplorer = false;
   String _status = 'INITIALIZING_MOTUS_CORE...';
 
+  final _anatomyResetTrigger = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
@@ -113,6 +116,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
   @override
   void dispose() {
     _perceivedController.dispose();
+    _anatomyResetTrigger.dispose();
     widget.agent.removeListener(_checkHandoff);
     super.dispose();
   }
@@ -187,8 +191,22 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                       key: const ValueKey('myo_canvas'),
                       fabState: widget.fabState,
                       backgroundChild: InteractiveGrid(
+                        onLongPress: () {
+                          // --- CINEMATIC RESET PROTOCOL ---
+                          // 1. Ignite the visual noise and haptics
+                          triggerGlitch();
+                          unawaited(HapticFeedback.heavyImpact());
+
+                          // 2. Wait for the peak of the glitch to mask the jump
+                          Timer(const Duration(milliseconds: 150), () {
+                            if (mounted) {
+                              _anatomyResetTrigger.value++;
+                            }
+                          });
+                        },
                         child: MyoAnatomyCanvas(
                           activeNodes: state.activeGoal?.metadata.targetAnatomyNodes ?? [],
+                          resetTrigger: _anatomyResetTrigger,
                         ),
                       ),
                       chatChild: MyoChatList(messages: state.messages),
