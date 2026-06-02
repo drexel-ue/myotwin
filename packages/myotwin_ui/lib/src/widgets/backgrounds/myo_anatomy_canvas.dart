@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:myotwin_ui/src/widgets/backgrounds/anatomy_layer_manager.dart';
@@ -26,17 +28,18 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   final Scene _scene = Scene();
   late final AnatomyLayerManager _manager;
   bool _isInitialized = false;
-  
+
   // Camera State
   double _phi = math.pi / 2; // Latitude
   double _theta = -math.pi / 2; // Longitude (Facing the user)
-  double _radius = 5.0;       // Zoom distance
+  double _radius = 2.4; // Zoom distance
+  vm.Vector3 _targetPos = vm.Vector3(0.0, 0.85, 0.0); // Focus point (abdomen)
 
   @override
   void initState() {
     super.initState();
     _manager = AnatomyLayerManager(_scene);
-    
+
     // Setup Lighting
     _scene.directionalLight = DirectionalLight()
       ..color = vm.Vector3(1.0, 1.0, 1.0)
@@ -73,35 +76,74 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
 
   void _handleScaleUpdate(ScaleUpdateDetails details) {
     setState(() {
-      _theta -= details.focalPointDelta.dx * 0.01;
-      _phi = (_phi - details.focalPointDelta.dy * 0.01).clamp(0.1, math.pi - 0.1);
-      
-      // Zoom logic
+      final isPanning =
+          details.pointerCount >= 2 ||
+          HardwareKeyboard.instance.logicalKeysPressed
+              .contains(LogicalKeyboardKey.shiftLeft) ||
+          HardwareKeyboard.instance.logicalKeysPressed
+              .contains(LogicalKeyboardKey.shiftRight);
+
+      if (isPanning) {
+        // --- Omni-Directional Pan Math ---
+        // Calculate camera vectors based on current rotation
+        final camX = _radius * math.sin(_phi) * math.cos(_theta);
+        final camY = _radius * math.cos(_phi);
+        final camZ = _radius * math.sin(_phi) * math.sin(_theta);
+
+        final forward = -vm.Vector3(camX, camY, camZ).normalized();
+        final right = vm.Vector3(0.0, 1.0, 0.0).cross(forward).normalized();
+        final up = forward.cross(right).normalized();
+
+        // Translate the target position relative to camera view
+        // Drag right (dx > 0) -> Move target LEFT (-right) -> Model appears to move RIGHT
+        // Drag down (dy > 0) -> Move target UP (+up) -> Model appears to move DOWN
+        _targetPos -= right * (details.focalPointDelta.dx * 0.005);
+        _targetPos += up * (details.focalPointDelta.dy * 0.005);
+      } else {
+        // Handle Orbit (Drag on Desktop/Mobile)
+        _theta -= details.focalPointDelta.dx * 0.01;
+        _phi =
+            (_phi - details.focalPointDelta.dy * 0.01).clamp(0.1, math.pi - 0.1);
+      }
+
+      // Handle Zoom (2-Finger Pinch on Mobile)
       if (details.scale != 1.0) {
-        _radius = (_radius / details.scale).clamp(2.0, 10.0);
+        _radius = (_radius / details.scale).clamp(1.0, 10.0);
       }
     });
   }
 
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is PointerScrollEvent) {
+      setState(() {
+        // Handle Mouse Wheel Zoom
+        _radius = (_radius + event.scrollDelta.dy * 0.005).clamp(1.0, 10.0);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Calculate camera position based on spherical coordinates
+    // Calculate camera position based on spherical coordinates relative to target
     final x = _radius * math.sin(_phi) * math.cos(_theta);
     final y = _radius * math.cos(_phi);
     final z = _radius * math.sin(_phi) * math.sin(_theta);
 
     final camera = PerspectiveCamera(
-      position: vm.Vector3(x, y, z),
-      target: vm.Vector3(0.0, 0.0, 0.0),
+      position: _targetPos + vm.Vector3(x, y, z),
+      target: _targetPos,
       up: vm.Vector3(0.0, 1.0, 0.0),
     );
 
-    return GestureDetector(
-      onScaleUpdate: _handleScaleUpdate,
-      child: CustomPaint(
-        painter: _ScenePainter(
-          scene: _scene,
-          camera: camera,
+    return Listener(
+      onPointerSignal: _handlePointerSignal,
+      child: GestureDetector(
+        onScaleUpdate: _handleScaleUpdate,
+        child: CustomPaint(
+          painter: _ScenePainter(
+            scene: _scene,
+            camera: camera,
+          ),
         ),
       ),
     );
