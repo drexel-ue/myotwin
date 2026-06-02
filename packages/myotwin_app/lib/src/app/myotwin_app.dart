@@ -108,9 +108,21 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
 
     _perceivedController.addListener(_checkHandoff);
     widget.agent.addListener(_checkHandoff);
+    widget.agent.loadingProgress.addListener(_checkHandoff);
 
     // Start the cinematic boot "scan"
     unawaited(_perceivedController.forward());
+  }
+
+  @override
+  void didUpdateWidget(covariant _MyoStartupOrchestrator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.agent != oldWidget.agent) {
+      oldWidget.agent.removeListener(_checkHandoff);
+      oldWidget.agent.loadingProgress.removeListener(_checkHandoff);
+      widget.agent.addListener(_checkHandoff);
+      widget.agent.loadingProgress.addListener(_checkHandoff);
+    }
   }
 
   @override
@@ -118,16 +130,20 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
     _perceivedController.dispose();
     _anatomyResetTrigger.dispose();
     widget.agent.removeListener(_checkHandoff);
+    widget.agent.loadingProgress.removeListener(_checkHandoff);
     super.dispose();
   }
 
   void _checkHandoff() {
     if (_readyToTransition) return;
 
+    final isModelReady = widget.agent.isInitialized;
+    final isScanFinished = _perceivedController.value >= 1.0;
+
     // We only transition when:
     // 1. The actual model is loaded.
     // 2. The perceived cinematic "scan" animation is finished.
-    if (widget.agent.isInitialized && _perceivedController.isCompleted) {
+    if (isModelReady && isScanFinished) {
       setState(() {
         _status = 'SYSTEM_READY_FOR_INPUT';
       });
@@ -168,65 +184,88 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                   animation: Listenable.merge([
                     _perceivedController,
                     widget.agent.loadingProgress,
+                    widget.agent, // Listen for isInitialized changes
                   ]),
                   builder: (context, _) {
-                    // The UI shows whichever is higher: the real download or the cinematic scan.
-                    // This masks instant loads while still respecting slow downloads.
-                    final progress = math.max(
-                      _perceivedController.value,
-                      widget.agent.loadingProgress.value,
-                    );
+                    final realProgress = widget.agent.loadingProgress.value;
+                    final scanProgress = _perceivedController.value;
+                    final initError = widget.agent.initializationError;
+
+                    final double progress;
+                    String status = _status;
+
+                    if (initError != null) {
+                      progress = realProgress;
+                      status = 'FATAL_CORE_ERROR: ${initError.toUpperCase()}';
+                    } else if (widget.agent.isInitialized) {
+                      // Model is ready, follow the cinematic scan to completion.
+                      progress = scanProgress;
+                    } else {
+                      // Model is still loading.
+                      // We show scan progress but CAP it at 90% visually
+                      // unless the real progress has overtaken it.
+                      progress =
+                          math.max(math.min(scanProgress, 0.9), realProgress);
+
+                      if (scanProgress > 0.8) {
+                        status =
+                            'DOWNLOADING_MODEL_RESOURCES... (${(realProgress * 100).toInt()}%)';
+                      }
+                    }
 
                     return BootScreen(
                       progress: progress,
-                      status: _status,
-                    );
-                    },
-                    )
-                    : Stack(
-                    children: [
-                    BlocBuilder<ChatCubit, ChatState>(
-                  builder: (context, state) {
-                    return MyoCanvas(
-                      key: const ValueKey('myo_canvas'),
-                      fabState: widget.fabState,
-                      backgroundChild: InteractiveGrid(
-                        onLongPress: () {
-                          // --- CINEMATIC RESET PROTOCOL ---
-                          // 1. Ignite the visual noise and haptics
-                          triggerGlitch();
-                          unawaited(HapticFeedback.heavyImpact());
-
-                          // 2. Wait for the peak of the glitch to mask the jump
-                          Timer(const Duration(milliseconds: 150), () {
-                            if (mounted) {
-                              _anatomyResetTrigger.value++;
-                            }
-                          });
-                        },
-                        child: MyoAnatomyCanvas(
-                          activeNodes: state.activeGoal?.metadata.targetAnatomyNodes ?? [],
-                          resetTrigger: _anatomyResetTrigger,
-                        ),
-                      ),
-                      chatChild: MyoChatList(messages: state.messages),
-                      onMessageSubmitted: (value) async {
-                        return context.read<ChatCubit>().submit(value);
-                      },
-                      onShowChatChanged: (visible) {
-                        widget.fabState.value =
-                            visible ? HoloState.listening : HoloState.idle;
-                      },
-                      onCommandNodeSelected: (node) {
-                        // Node 4 is the mock Goal Explorer
-                        if (node == '4') {
-                          setState(() => _showGoalExplorer = true);
-                        }
-                      },
+                      status: status,
                     );
                   },
-                ),
-                if (_showGoalExplorer)
+                )
+              : Stack(
+                  key: const ValueKey('hud_main'),
+                  children: [
+                    BlocBuilder<ChatCubit, ChatState>(
+                      builder: (context, state) {
+                        return MyoCanvas(
+                          key: const ValueKey('myo_canvas'),
+                          fabState: widget.fabState,
+                          backgroundChild: InteractiveGrid(
+                            onLongPress: () {
+                              // --- CINEMATIC RESET PROTOCOL ---
+                              // 1. Ignite the visual noise and haptics
+                              triggerGlitch();
+                              unawaited(HapticFeedback.heavyImpact());
+
+                              // 2. Wait for the peak of the glitch to mask the jump
+                              Timer(const Duration(milliseconds: 150), () {
+                                if (mounted) {
+                                  _anatomyResetTrigger.value++;
+                                }
+                              });
+                            },
+                            child: MyoAnatomyCanvas(
+                              activeNodes:
+                                  state.activeGoal?.metadata.targetAnatomyNodes ??
+                                      [],
+                              resetTrigger: _anatomyResetTrigger,
+                            ),
+                          ),
+                          chatChild: MyoChatList(messages: state.messages),
+                          onMessageSubmitted: (value) async {
+                            return context.read<ChatCubit>().submit(value);
+                          },
+                          onShowChatChanged: (visible) {
+                            widget.fabState.value =
+                                visible ? HoloState.listening : HoloState.idle;
+                          },
+                          onCommandNodeSelected: (node) {
+                            // Node 4 is the mock Goal Explorer
+                            if (node == '4') {
+                              setState(() => _showGoalExplorer = true);
+                            }
+                          },
+                        );
+                      },
+                    ),
+                    if (_showGoalExplorer)
                       Positioned.fill(
                         child: Padding(
                           padding: allPadding32,
@@ -242,10 +281,13 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                   return GoalExplorerSurface(
                                     goals: snapshot.data ?? [],
                                     onGoalSelected: (goal) async {
-                                      await context.read<ChatCubit>().switchGoal(goal.id);
+                                      await context
+                                          .read<ChatCubit>()
+                                          .switchGoal(goal.id);
                                       setState(() => _showGoalExplorer = false);
                                     },
-                                    onClose: () => setState(() => _showGoalExplorer = false),
+                                    onClose: () =>
+                                        setState(() => _showGoalExplorer = false),
                                   );
                                 },
                               ),

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_scene/scene.dart';
@@ -45,12 +47,15 @@ Future<void> main() async {
   );
 
   // 3. Initiate model initialization in the background.
-  // We use Gemma 4 E2B Q4_K_M as our default mobile brain.
+  // We select the model based on the target platform to ensure memory stability.
+  final isMobile = !kIsWeb && (Platform.isIOS || Platform.isAndroid);
+  final modelUri = isMobile
+      ? 'hf://lmstudio-community/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q4_K_M.gguf'
+      : 'hf://ggml-org/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q8_0.gguf';
+
   unawaited(
     motusAgent.initialize(
-      ModelSource.parse(
-        'hf://ggml-org/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q8_0.gguf',
-      ),
+      ModelSource.parse(modelUri),
     ),
   );
 }

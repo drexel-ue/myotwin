@@ -15,12 +15,16 @@ class LocalMotusAgent extends ChangeNotifier implements MotusAgent {
   final LlamaEngine _engine;
   ChatSession? _session;
   bool _isInitialized = false;
+  String? _initializationError;
 
   /// Notifies about model loading or downloading progress (0.0 to 1.0).
   final ValueNotifier<double> loadingProgress = ValueNotifier(0.0);
 
   /// Whether the agent has successfully loaded a model and is ready for inference.
   bool get isInitialized => _isInitialized;
+
+  /// Returns the error message if initialization failed.
+  String? get initializationError => _initializationError;
 
   /// Loads an LLM model into memory.
   ///
@@ -30,21 +34,30 @@ class LocalMotusAgent extends ChangeNotifier implements MotusAgent {
     ModelLoadOptions? options,
     String systemPrompt = 'You are Motus, a biomechanical coaching intelligence.',
   }) async {
+    _initializationError = null;
     loadingProgress.value = 0.0;
-    await _engine.loadModelSource(
-      source,
-      options: options ?? ModelLoadOptions(),
-      onProgress: (progress) {
-        final fraction = progress.fraction;
-        if (fraction != null) {
-          loadingProgress.value = fraction;
-        }
-      },
-    );
-    _session = ChatSession(_engine, systemPrompt: systemPrompt);
-    _isInitialized = true;
-    loadingProgress.value = 1.0;
     notifyListeners();
+
+    try {
+      await _engine.loadModelSource(
+        source,
+        options: options ?? ModelLoadOptions(),
+        onProgress: (progress) {
+          final fraction = progress.fraction;
+          if (fraction != null) {
+            loadingProgress.value = fraction;
+          }
+        },
+      );
+      _session = ChatSession(_engine, systemPrompt: systemPrompt);
+      _isInitialized = true;
+      loadingProgress.value = 1.0;
+    } catch (e) {
+      _initializationError = e.toString();
+      _isInitialized = false;
+    } finally {
+      notifyListeners();
+    }
   }
 
   @override
