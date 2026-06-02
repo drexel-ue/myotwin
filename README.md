@@ -79,11 +79,11 @@ Core entities use strict relational schemas. Derivative, Motus-shaped data uses 
 ```
 myotwin/
 ├── packages/
-│   ├── shared_core/          # Entities, interfaces, biomechanical services, enums
-│   ├── motus_hub/            # Dart server — LLM orchestration, tool calling, research
-│   ├── myotwin_mobile/       # Flutter mobile app
-│   ├── myotwin_desktop/      # Flutter desktop app
-│   └── myotwin_test_support/ # Mock repositories and test utilities
+│   ├── shared_core/    # Entities, interfaces, and unstructured JSON extension types
+│   ├── myotwin_ui/      # High-fidelity HUD components, 3D anatomy viewport, and themes
+│   ├── myotwin_app/     # Unified multi-platform application (iOS, Android, macOS)
+│   ├── myotwin_catalog/ # Component gallery and interactive GenUI stories
+│   └── motus_server/    # Dart-based orchestration hub for research and research sync
 ```
 
 ---
@@ -96,9 +96,9 @@ myotwin/
 | Generative UI | [genui](https://pub.dev/packages/genui) (A2UI protocol) |
 | Schema Builder | [json_schema_builder](https://pub.dev/packages/json_schema_builder) |
 | Database | [drift](https://pub.dev/packages/drift) (SQLite, background isolate) |
-| Local Inference | Gemma 4 E2B (~2.1B params, Q4_K_M) via llamadart (llama.cpp) |
+| Local Inference | Gemma 4 E2B (Unsloth Q4_K_M for mobile, Q8_0 for desktop) via llamadart |
 | Server Inference | Ollama (OpenAI-compatible API) |
-| 3D Rendering | flutter_glTF / Layered mesh with custom shaders |
+| 3D Rendering | [flutter_scene](https://pub.dev/packages/flutter_scene) (Native Impeller Engine) |
 | Device Discovery | [bonsoir](https://pub.dev/packages/bonsoir) (mDNS/Zeroconf) |
 | Build | Melos (monorepo management) |
 
@@ -111,31 +111,21 @@ myotwin/
 - Flutter ≥ 3.35.7
 - Dart ≥ 3.x
 - (Optional) Ollama server on local network for server-side inference
-- (Optional) Unraid or similar server for GPU-accelerated research
 
 ### Setup
 
 ```bash
 # Bootstrap the melos monorepo
 cd myotwin
-bash bootstrap.sh
-
-# Or manually run melos bootstrap
 melos bootstrap
 ```
 
 ### Run
 
 ```bash
-# Mobile
-melos run:myotwin:mobile:run
-# or
-cd packages/myotwin_mobile
+# Run the application (all platforms)
+cd packages/myotwin_app
 flutter run
-
-# Desktop
-cd packages/myotwin_desktop
-flutter run -d macos
 ```
 
 ### Lint & Format
@@ -155,17 +145,23 @@ MyoTwin uses a black-and-white cyberpunk / HUD aesthetic with deliberate color o
 
 ## Documentation
 
+### Core Specifications
 | Document | Purpose |
 |---|---|
 | [docs/PRODUCT.md](docs/PRODUCT.md) | Product specification — GenUI architecture, surface types, Motus intelligence, data model |
 | [docs/MULTI_MODEL_ARCHITECTURE.md](docs/MULTI_MODEL_ARCHITECTURE.md) | Multi-model LLM strategy — Gemma E2B + LoRA adapters (fitness, medical, biomechanics) |
 | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Visual design tokens, palette, typography, motion, widget specs |
 | [docs/MOTUS_TOOL_SPEC.md](docs/MOTUS_TOOL_SPEC.md) | Tool calling interface for Motus (calculators, database, UI orchestration) |
-| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Architecture rules, decision log, agent instructions, commit conventions, project state |
+| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Architecture rules, decision log, agent instructions, commit conventions |
 | [docs/VISION.md](docs/VISION.md) | Feature backlog and roadmap |
-| [docs/3D_ASSET_REQUIREMENTS.md](docs/3D_ASSET_REQUIREMENTS.md) | GLB anatomy model specifications |
-| [docs/SESSION_HANDOFF_TEMPLATE.md](docs/SESSION_HANDOFF_TEMPLATE.md) | Agent session handoff format |
-| [docs/SYSTEM_HEALTH.md](docs/SYSTEM_HEALTH.md) | Architectural drift, TODOs, known issues |
+
+### [Technical Feature References](docs/features/)
+Deep-dives into specific implemented subsystems.
+- [**3D Digital Twin**](docs/features/3d_digital_twin.md): Anatomy viewport, shaders, and heatmap logic.
+- [**Biomechanical Intelligence**](docs/features/biomechanical_intelligence.md): Semantic context, kinetic chain awareness, and context switching.
+- [**Interactive GenUI Model**](docs/features/interactive_genui_model.md): Hardware-inspired HUD interactions (FAB sliders, rotary menus).
+- [**Unstructured Data Strategy**](docs/features/unstructured_data_strategy.md): Drift JSONB and Dart 3.3 Extension Type wrappers.
+- [**3D Asset Pipeline**](docs/features/3d_asset_pipeline.md): Blender-to-Flutter workflow and optimization.
 
 ---
 
