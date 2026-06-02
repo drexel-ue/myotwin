@@ -177,26 +177,27 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                       progress: progress,
                       status: _status,
                     );
-                  },
-                )
-              : Stack(
-                  children: [
-                    MyoCanvas(
+                    },
+                    )
+                    : Stack(
+                    children: [
+                    BlocBuilder<ChatCubit, ChatState>(
+                  builder: (context, state) {
+                    return MyoCanvas(
                       key: const ValueKey('myo_canvas'),
                       fabState: widget.fabState,
-                      backgroundChild: const InteractiveGrid(
-                        child: MyoAnatomyCanvas(),
+                      backgroundChild: InteractiveGrid(
+                        child: MyoAnatomyCanvas(
+                          activeNodes: state.activeGoal?.metadata.targetAnatomyNodes ?? [],
+                        ),
                       ),
-                      chatChild: BlocBuilder<ChatCubit, ChatState>(
-                        builder: (context, state) {
-                          return MyoChatList(messages: state.messages);
-                        },
-                      ),
+                      chatChild: MyoChatList(messages: state.messages),
                       onMessageSubmitted: (value) async {
                         return context.read<ChatCubit>().submit(value);
                       },
                       onShowChatChanged: (visible) {
-                        widget.fabState.value = visible ? HoloState.listening : HoloState.idle;
+                        widget.fabState.value =
+                            visible ? HoloState.listening : HoloState.idle;
                       },
                       onCommandNodeSelected: (node) {
                         // Node 4 is the mock Goal Explorer
@@ -204,8 +205,10 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                           setState(() => _showGoalExplorer = true);
                         }
                       },
-                    ),
-                    if (_showGoalExplorer)
+                    );
+                  },
+                ),
+                if (_showGoalExplorer)
                       Positioned.fill(
                         child: Padding(
                           padding: allPadding32,

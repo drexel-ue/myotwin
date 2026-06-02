@@ -106,6 +106,12 @@ USER_INPUT: $message
     return rows.map(_mapGoalToDomain).toList();
   }
 
+  /// Fetches a specific goal by its ID.
+  Future<domain.Goal?> getGoal(String id) async {
+    final row = await (_db.select(_db.goals)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return row != null ? _mapGoalToDomain(row) : null;
+  }
+
   domain.Goal _mapGoalToDomain(Goal row) {
     return domain.Goal(
       id: row.id,

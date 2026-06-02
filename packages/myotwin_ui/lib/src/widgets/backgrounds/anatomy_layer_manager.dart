@@ -125,4 +125,21 @@ class AnatomyLayerManager {
       }
     }
   }
+
+  /// Resets all layers to their default base or ghost materials, clearing highlights.
+  void clearHighlights() {
+    if (_layerRoots[AnatomyLayer.skeletal] case final node?) {
+      _applyMaterial(node, _baseMaterial);
+    }
+    if (_layerRoots[AnatomyLayer.muscular] case final node?) {
+      _applyMaterial(node, _ghostMaterial);
+    }
+    // Other layers are hidden by default, but we should reset their materials too if we ever show them.
+    for (final layer in AnatomyLayer.values) {
+      if (layer == AnatomyLayer.skeletal || layer == AnatomyLayer.muscular) continue;
+      if (_layerRoots[layer] case final node?) {
+        _applyMaterial(node, _baseMaterial);
+      }
+    }
+  }
 }

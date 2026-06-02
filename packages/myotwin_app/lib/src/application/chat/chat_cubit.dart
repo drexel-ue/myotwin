@@ -14,7 +14,7 @@ class ChatState {
     this.isThinking = false,
     this.isResponding = false,
     this.isTransitioning = false,
-    this.activeGoalId,
+    this.activeGoal,
   });
 
   /// Full conversation history from the database.
@@ -33,7 +33,10 @@ class ChatState {
   final bool isTransitioning;
 
   /// The current active goal context.
-  final String? activeGoalId;
+  final Goal? activeGoal;
+
+  /// Shortcut for the active goal ID.
+  String? get activeGoalId => activeGoal?.id;
 
   /// Creates a copy of this state with the given fields replaced.
   ChatState copyWith({
@@ -42,7 +45,7 @@ class ChatState {
     bool? isThinking,
     bool? isResponding,
     bool? isTransitioning,
-    String? activeGoalId,
+    Goal? activeGoal,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -50,7 +53,7 @@ class ChatState {
       isThinking: isThinking ?? this.isThinking,
       isResponding: isResponding ?? this.isResponding,
       isTransitioning: isTransitioning ?? this.isTransitioning,
-      activeGoalId: activeGoalId ?? this.activeGoalId,
+      activeGoal: activeGoal ?? this.activeGoal,
     );
   }
 }
@@ -69,7 +72,9 @@ class ChatCubit extends Cubit<ChatState> {
   /// Hydrates the chat history and ensures an active goal exists.
   Future<void> initialize() async {
     final goalId = await _repository.getOrCreateActiveGoalId();
-    emit(state.copyWith(activeGoalId: goalId));
+    final goal = await _repository.getGoal(goalId);
+    
+    emit(state.copyWith(activeGoal: goal));
 
     await _historySubscription?.cancel();
     _historySubscription = _repository.watchMessages(goalId).listen((messages) {
@@ -80,13 +85,14 @@ class ChatCubit extends Cubit<ChatState> {
   /// Submits a user message and triggers the AI response stream.
   /// Returns true if the interaction was successful.
   Future<bool> submit(String text) async {
-    if (state.activeGoalId == null || text.trim().isEmpty) return false;
+    final goalId = state.activeGoalId;
+    if (goalId == null || text.trim().isEmpty) return false;
 
     try {
       // 1. Persist the user's message
       final userIntent = IntentRecord(
         id: const Uuid().v4(),
-        goalId: state.activeGoalId!,
+        goalId: goalId,
         type: IntentType.chat,
         scheduledTime: DateTime.now(),
         reason: 'USER_INPUT',
@@ -134,7 +140,7 @@ class ChatCubit extends Cubit<ChatState> {
       // 3. Persist finalized Motus response
       final agentIntent = IntentRecord(
         id: responseId,
-        goalId: state.activeGoalId!,
+        goalId: goalId,
         type: IntentType.chat,
         scheduledTime: DateTime.now(),
         reason: 'MOTUS_RESPONSE',
@@ -175,10 +181,13 @@ class ChatCubit extends Cubit<ChatState> {
 
     // 3. Swap the database subscription
     await _historySubscription?.cancel();
+    
+    final newGoal = await _repository.getGoal(newGoalId);
+    
     _historySubscription = _repository.watchMessages(newGoalId).listen((messages) {
       emit(
         state.copyWith(
-          activeGoalId: newGoalId,
+          activeGoal: newGoal,
           messages: messages,
         ),
       );

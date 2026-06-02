@@ -3,13 +3,20 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_scene/scene.dart';
+import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:myotwin_ui/src/widgets/backgrounds/anatomy_layer_manager.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// A high-fidelity 3D anatomy viewport that loads and renders layered GLB models.
 class MyoAnatomyCanvas extends StatefulWidget {
   /// Creates a [MyoAnatomyCanvas].
-  const MyoAnatomyCanvas({super.key});
+  const MyoAnatomyCanvas({
+    super.key,
+    this.activeNodes = const [],
+  });
+
+  /// The list of anatomical nodes to highlight in the heatmap.
+  final List<String> activeNodes;
 
   @override
   State<MyoAnatomyCanvas> createState() => _MyoAnatomyCanvasState();
@@ -18,6 +25,7 @@ class MyoAnatomyCanvas extends StatefulWidget {
 class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   final Scene _scene = Scene();
   late final AnatomyLayerManager _manager;
+  bool _isInitialized = false;
   
   // Camera State
   double _phi = math.pi / 2; // Latitude
@@ -38,8 +46,29 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
     _scene.environmentIntensity = 0.5;
 
     unawaited(_manager.initialize().then((_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _applyHighlights();
+        });
+      }
     }));
+  }
+
+  @override
+  void didUpdateWidget(covariant MyoAnatomyCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_isInitialized && widget.activeNodes != oldWidget.activeNodes) {
+      _applyHighlights();
+    }
+  }
+
+  void _applyHighlights() {
+    _manager.clearHighlights();
+    final theme = context.myoTheme;
+    for (final node in widget.activeNodes) {
+      _manager.highlightNode(node, theme.accentHot);
+    }
   }
 
   void _handleScaleUpdate(ScaleUpdateDetails details) {
