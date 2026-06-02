@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>FLTEnableFlutterGPU</key>
+	<true/>
+	<key>FLTEnableImpeller</key>
+    <true/>
 </dict>
 </plist>
