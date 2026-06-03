@@ -68,83 +68,80 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
         child: Column(
           children: [
             // 1. Layer Filters
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: MyoSegmentedButton<AnatomyLayer?>(
-                value: widget.activeLayer,
-                allowUnselect: true,
-                onSelectionChanged: (value) {
-                  // If tapping already selected, toggle off
-                  if (value == widget.activeLayer) {
-                    widget.onLayerChanged(null);
-                  } else {
-                    widget.onLayerChanged(value);
-                  }
-                },
-                segments: [
-                  MyoSegment(
-                    value: AnatomyLayer.skeletal,
-                    label: '',
-                    icon: const Tooltip(
-                      message: 'SKELETAL',
-                      child: MyoIcon(
-                        intent: 'bone',
-                        size: 18,
-                      ),
+            MyoSegmentedButton<AnatomyLayer?>(
+              value: widget.activeLayer,
+              allowUnselect: true,
+              onSelectionChanged: (value) {
+                // If tapping already selected, toggle off
+                if (value == widget.activeLayer) {
+                  widget.onLayerChanged(null);
+                } else {
+                  widget.onLayerChanged(value);
+                }
+              },
+              segments: const [
+                MyoSegment(
+                  value: AnatomyLayer.skeletal,
+                  label: '',
+                  icon: Tooltip(
+                    message: 'SKELETAL',
+                    child: MyoIcon(
+                      intent: 'bone',
+                      size: 18,
                     ),
                   ),
-                  MyoSegment(
-                    value: AnatomyLayer.muscular,
-                    label: '',
-                    icon: const Tooltip(
-                      message: 'MUSCULAR',
-                      child: MyoIcon(
-                        intent: 'activity',
-                        size: 18,
-                      ),
+                ),
+                MyoSegment(
+                  value: AnatomyLayer.muscular,
+                  label: '',
+                  icon: Tooltip(
+                    message: 'MUSCULAR',
+                    child: MyoIcon(
+                      intent: 'activity',
+                      size: 18,
                     ),
                   ),
-                  MyoSegment(
-                    value: AnatomyLayer.nervous,
-                    label: '',
-                    icon: const Tooltip(
-                      message: 'NERVOUS',
-                      child: MyoIcon(
-                        intent: 'cpu',
-                        size: 18,
-                      ),
+                ),
+                MyoSegment(
+                  value: AnatomyLayer.nervous,
+                  label: '',
+                  icon: Tooltip(
+                    message: 'NERVOUS',
+                    child: MyoIcon(
+                      intent: 'cpu',
+                      size: 18,
                     ),
                   ),
-                  MyoSegment(
-                    value: AnatomyLayer.cardiovascular,
-                    label: '',
-                    icon: const Tooltip(
-                      message: 'CARDIO',
-                      child: MyoIcon(
-                        intent: 'heart',
-                        size: 18,
-                      ),
+                ),
+                MyoSegment(
+                  value: AnatomyLayer.cardiovascular,
+                  label: '',
+                  icon: Tooltip(
+                    message: 'CARDIO',
+                    child: MyoIcon(
+                      intent: 'heart',
+                      size: 18,
                     ),
                   ),
-                  MyoSegment(
-                    value: AnatomyLayer.joints,
-                    label: '',
-                    icon: const Tooltip(
-                      message: 'JOINTS',
-                      child: MyoIcon(
-                        intent: 'link',
-                        size: 18,
-                      ),
+                ),
+                MyoSegment(
+                  value: AnatomyLayer.joints,
+                  label: '',
+                  icon: Tooltip(
+                    message: 'JOINTS',
+                    child: MyoIcon(
+                      intent: 'link',
+                      size: 18,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             verticalMargin16,
 
             // 2. Search Field
             MyoTextField(
-              hint: 'SEARCH_KINETIC_CHAIN...',
+              hint: 'SEARCH_NODES...',
               autofocus: true,
               prefixIcon: const MyoIcon(intent: 'target', size: 18),
               onChanged: (value) => setState(() => _searchQuery = value),

@@ -82,11 +82,15 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   void didUpdateWidget(covariant MyoAnatomyCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_isInitialized) {
-      if (widget.activeNodes != oldWidget.activeNodes) {
-        _applyHighlights();
-      }
-      if (widget.activeLayer != oldWidget.activeLayer) {
+      final nodesChanged = widget.activeNodes != oldWidget.activeNodes;
+      final layerChanged = widget.activeLayer != oldWidget.activeLayer;
+
+      if (layerChanged) {
         _manager.isolateLayer(widget.activeLayer);
+      }
+
+      if (nodesChanged || layerChanged) {
+        _applyHighlights();
       }
     }
     if (widget.resetTrigger != oldWidget.resetTrigger) {

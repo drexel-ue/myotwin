@@ -87,58 +87,61 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
       child: ClipRRect(
         borderRadius: theme.radiusSm,
         child: Row(
-          mainAxisSize: .min,
           children: widget.segments.map((segment) {
             final isSelected = segment.value == widget.value;
             final isPreviouslySelected = segment.value == _previousValue;
             final shouldGlitch = isSelected || isPreviouslySelected;
 
-            final foregroundColor = isSelected ? theme.surface : theme.onSurfaceDim;
+            final foregroundColor =
+                isSelected ? theme.surface : theme.onSurfaceDim;
 
-            return GestureDetector(
-              onTap: () {
-                if (!isSelected || widget.allowUnselect) {
-                  _previousValue = widget.value;
-                  triggerGlitch();
-                  widget.onSelectionChanged(segment.value);
-                }
-              },
-              child: HoloGlitch(
-                phase: glitchPhase,
-                intensity: shouldGlitch ? glitchIntensity : 0,
-                severity: 0.15,
-                child: Container(
-                  padding: horizontalPadding16,
-                  decoration: BoxDecoration(
-                    color: isSelected ? theme.onSurface : Colors.transparent,
-                    border: Border(
-                      right: BorderSide(
-                        color: theme.outline,
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  if (!isSelected || widget.allowUnselect) {
+                    _previousValue = widget.value;
+                    triggerGlitch();
+                    widget.onSelectionChanged(segment.value);
+                  }
+                },
+                child: HoloGlitch(
+                  phase: glitchPhase,
+                  intensity: shouldGlitch ? glitchIntensity : 0,
+                  severity: 0.15,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isSelected ? theme.onSurface : Colors.transparent,
+                      border: Border(
+                        right: BorderSide(
+                          color: theme.outline,
+                        ),
                       ),
                     ),
-                  ),
-                  child: Center(
-                    child: IconTheme(
-                      data: IconThemeData(
-                        color: foregroundColor,
-                        size: 18,
-                      ),
-                      child: DefaultTextStyle(
-                        style: theme.glitch.copyWith(
+                    child: Center(
+                      child: IconTheme(
+                        data: IconThemeData(
                           color: foregroundColor,
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          size: 18,
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (segment.icon != null) ...[
-                              segment.icon!,
-                              if (segment.label.isNotEmpty) horizontalMargin8,
+                        child: DefaultTextStyle(
+                          style: theme.glitch.copyWith(
+                            color: foregroundColor,
+                            fontSize: 12,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (segment.icon != null) ...[
+                                segment.icon!,
+                                if (segment.label.isNotEmpty) horizontalMargin8,
+                              ],
+                              if (segment.label.isNotEmpty) Text(segment.label),
                             ],
-                            if (segment.label.isNotEmpty) Text(segment.label),
-                          ],
+                          ),
                         ),
                       ),
                     ),
