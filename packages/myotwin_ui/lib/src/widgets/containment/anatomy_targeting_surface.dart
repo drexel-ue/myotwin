@@ -8,6 +8,7 @@ class AnatomyTargetingSurface extends StatefulWidget {
     super.key,
     required this.nodesByLayer,
     required this.activeLayer,
+    required this.selectedNodes,
     required this.onLayerChanged,
     required this.onNodeSelected,
     required this.onClose,
@@ -18,6 +19,9 @@ class AnatomyTargetingSurface extends StatefulWidget {
 
   /// The currently isolated layer.
   final AnatomyLayer? activeLayer;
+
+  /// The list of currently targeted nodes.
+  final List<String> selectedNodes;
 
   /// Called when the isolated layer is changed.
   final ValueChanged<AnatomyLayer?> onLayerChanged;
@@ -164,6 +168,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                         final node = filteredNodes[index];
                         return MyoListTile(
                           title: node,
+                          isSelected: widget.selectedNodes.contains(node),
                           trailing: const MyoIcon(intent: 'crosshair', size: 16),
                           onTap: () => widget.onNodeSelected(node),
                         );

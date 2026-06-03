@@ -50,7 +50,7 @@ class AnatomyLayerManager {
       ..roughnessFactor = 0.5;
 
     _ghostMaterial = PhysicallyBasedMaterial()
-      ..baseColorFactor = Vector4(1.0, 1.0, 1.0, 0.2) // 20% white
+      ..baseColorFactor = Vector4(1.0, 1.0, 1.0, 0.1) // 10% white
       ..metallicFactor = 1.0
       ..roughnessFactor = 0.3
       ..alphaMode = AlphaMode.blend;
@@ -150,7 +150,7 @@ class AnatomyLayerManager {
       return;
     }
 
-    // Isolate the requested layer
+    // Isolate the requested layer: everything visible, others ghosted at 10%
     for (final entry in _layerRoots.entries) {
       final layer = entry.key;
       final node = entry.value;

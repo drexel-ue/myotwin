@@ -309,6 +309,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                           child: AnatomyTargetingSurface(
                             nodesByLayer: _availableNodes,
                             activeLayer: _activeLayer,
+                            selectedNodes: _manualActiveNodes,
                             onLayerChanged: (layer) {
                               setState(() => _activeLayer = layer);
                             },

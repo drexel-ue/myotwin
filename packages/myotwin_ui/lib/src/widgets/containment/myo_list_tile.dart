@@ -54,54 +54,71 @@ class _MyoListTileState extends State<MyoListTile>
       phase: glitchPhase,
       intensity: glitchIntensity,
       severity: 0.2,
-      child: InkWell(
-        onTap: () {
-          triggerGlitch();
-          widget.onTap?.call();
-        },
-        splashColor: theme.outline.withValues(alpha: 0.2),
-        highlightColor: theme.outline.withValues(alpha: 0.1),
-        child: Container(
-          padding: widget.padding ?? horizontalPadding12 + verticalPadding8,
-          decoration: BoxDecoration(
-            border: widget.isSelected ? Border(left: BorderSide(color: theme.accentHot, width: 2)) : null,
-          ),
-          child: Row(
-            children: [
-              if (widget.leading != null) ...[
-                widget.leading!,
-                horizontalMargin12,
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: .stretch,
-                  mainAxisSize: .min,
+      child: Material(
+        color: widget.isSelected ? theme.onSurface : Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            triggerGlitch();
+            widget.onTap?.call();
+          },
+          splashColor: theme.outline.withValues(alpha: 0.2),
+          highlightColor: theme.outline.withValues(alpha: 0.1),
+          child: Container(
+            padding: widget.padding ?? horizontalPadding12 + verticalPadding8,
+            decoration: BoxDecoration(
+              border: widget.isSelected
+                  ? Border(left: BorderSide(color: theme.accentHot, width: 2))
+                  : null,
+            ),
+            child: IconTheme(
+              data: IconThemeData(
+                color: widget.isSelected ? theme.surface : theme.onSurface,
+                size: 16,
+              ),
+              child: DefaultTextStyle(
+                style: theme.bodyMedium.copyWith(
+                  color:
+                      widget.isSelected ? theme.surface : theme.onSurfaceMedium,
+                  fontWeight:
+                      widget.isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      widget.title,
-                      style: theme.bodyMedium.copyWith(
-                        color: widget.isSelected ? theme.white : theme.onSurfaceMedium,
-                        fontWeight: widget.isSelected ? .w600 : .normal,
+                    if (widget.leading != null) ...[
+                      widget.leading!,
+                      horizontalMargin12,
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.title,
+                          ),
+                          if (widget.subtitle case final String subtitle) ...[
+                            verticalMargin4,
+                            Text(
+                              subtitle,
+                              style: theme.bodySmall.copyWith(
+                                color: widget.isSelected
+                                    ? theme.surface
+                                    : theme.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (widget.subtitle case final String subtitle) ...[
-                      verticalMargin4,
-                      Text(
-                        subtitle,
-                        style: theme.bodySmall.copyWith(
-                          color: theme.onSurface,
-                          fontWeight: .w600,
-                        ),
-                      ),
+                    if (widget.trailing != null) ...[
+                      horizontalMargin12,
+                      widget.trailing!,
                     ],
                   ],
                 ),
               ),
-              if (widget.trailing != null) ...[
-                horizontalMargin12,
-                widget.trailing!,
-              ],
-            ],
+            ),
           ),
         ),
       ),
