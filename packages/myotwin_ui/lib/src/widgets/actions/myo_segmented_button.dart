@@ -31,6 +31,7 @@ class MyoSegmentedButton<T> extends StatefulWidget {
     required this.onSelectionChanged,
     required this.segments,
     this.size,
+    this.allowUnselect = false,
   });
 
   /// The currently selected value.
@@ -44,6 +45,10 @@ class MyoSegmentedButton<T> extends StatefulWidget {
 
   /// The height of the segmented button. Defaults to [spacing48].
   final double? size;
+
+  /// Whether to allow unselecting the current segment by tapping it again.
+  /// If true, tapping an active segment will still fire [onSelectionChanged].
+  final bool allowUnselect;
 
   @override
   State<MyoSegmentedButton<T>> createState() => _MyoSegmentedButtonState<T>();
@@ -90,7 +95,7 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
 
             return GestureDetector(
               onTap: () {
-                if (!isSelected) {
+                if (!isSelected || widget.allowUnselect) {
                   _previousValue = widget.value;
                   triggerGlitch();
                   widget.onSelectionChanged(segment.value);

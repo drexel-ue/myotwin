@@ -85,7 +85,6 @@ class _InteractiveGridState extends State<InteractiveGrid>
   }
 
   void _onLongPress() {
-    debugPrint('>> INTERACTIVE_GRID: TRIGGERING_BACKGROUND_RESET');
     _cameraPan.value = Offset.zero;
     widget.onLongPress?.call();
   }

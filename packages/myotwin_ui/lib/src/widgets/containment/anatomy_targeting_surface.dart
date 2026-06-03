@@ -72,6 +72,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
               scrollDirection: Axis.horizontal,
               child: MyoSegmentedButton<AnatomyLayer?>(
                 value: widget.activeLayer,
+                allowUnselect: true,
                 onSelectionChanged: (value) {
                   // If tapping already selected, toggle off
                   if (value == widget.activeLayer) {
