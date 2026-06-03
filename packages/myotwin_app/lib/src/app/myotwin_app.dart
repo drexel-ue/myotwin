@@ -305,7 +305,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                         top: 32,
                         bottom: 32,
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 300),
+                          constraints: const BoxConstraints(maxWidth: 340),
                           child: AnatomyTargetingSurface(
                             nodesByLayer: _availableNodes,
                             activeLayer: _activeLayer,
