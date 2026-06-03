@@ -102,15 +102,17 @@ class _MyoIconState extends State<MyoIcon> with SingleTickerProviderStateMixin, 
   @override
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
-    final iconColor = widget.color ?? theme.white;
+    final iconTheme = IconTheme.of(context);
+    final iconColor = widget.color ?? iconTheme.color ?? theme.white;
+    final iconSize = widget.size;
 
     if (_resolvedPath != null) {
       // THE HAPPY PATH: Successfully resolved intent to an SVG
       return SvgPicture.asset(
         _resolvedPath!,
         package: 'myotwin_ui',
-        width: widget.size,
-        height: widget.size,
+        width: iconSize,
+        height: iconSize,
         colorFilter: .mode(iconColor, .srcIn),
       );
     }

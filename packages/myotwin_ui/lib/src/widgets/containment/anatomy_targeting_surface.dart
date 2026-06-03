@@ -85,70 +85,55 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                   MyoSegment(
                     value: AnatomyLayer.skeletal,
                     label: '',
-                    icon: Tooltip(
+                    icon: const Tooltip(
                       message: 'SKELETAL',
                       child: MyoIcon(
                         intent: 'bone',
                         size: 18,
-                        color: widget.activeLayer == AnatomyLayer.skeletal
-                            ? Colors.black
-                            : Colors.white,
                       ),
                     ),
                   ),
                   MyoSegment(
                     value: AnatomyLayer.muscular,
                     label: '',
-                    icon: Tooltip(
+                    icon: const Tooltip(
                       message: 'MUSCULAR',
                       child: MyoIcon(
                         intent: 'activity',
                         size: 18,
-                        color: widget.activeLayer == AnatomyLayer.muscular
-                            ? Colors.black
-                            : Colors.white,
                       ),
                     ),
                   ),
                   MyoSegment(
                     value: AnatomyLayer.nervous,
                     label: '',
-                    icon: Tooltip(
+                    icon: const Tooltip(
                       message: 'NERVOUS',
                       child: MyoIcon(
                         intent: 'cpu',
                         size: 18,
-                        color: widget.activeLayer == AnatomyLayer.nervous
-                            ? Colors.black
-                            : Colors.white,
                       ),
                     ),
                   ),
                   MyoSegment(
                     value: AnatomyLayer.cardiovascular,
                     label: '',
-                    icon: Tooltip(
+                    icon: const Tooltip(
                       message: 'CARDIO',
                       child: MyoIcon(
                         intent: 'heart',
                         size: 18,
-                        color: widget.activeLayer == AnatomyLayer.cardiovascular
-                            ? Colors.black
-                            : Colors.white,
                       ),
                     ),
                   ),
                   MyoSegment(
                     value: AnatomyLayer.joints,
                     label: '',
-                    icon: Tooltip(
+                    icon: const Tooltip(
                       message: 'JOINTS',
                       child: MyoIcon(
                         intent: 'link',
                         size: 18,
-                        color: widget.activeLayer == AnatomyLayer.joints
-                            ? Colors.black
-                            : Colors.white,
                       ),
                     ),
                   ),

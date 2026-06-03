@@ -93,6 +93,8 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
             final isPreviouslySelected = segment.value == _previousValue;
             final shouldGlitch = isSelected || isPreviouslySelected;
 
+            final foregroundColor = isSelected ? theme.surface : theme.onSurfaceDim;
+
             return GestureDetector(
               onTap: () {
                 if (!isSelected || widget.allowUnselect) {
@@ -108,8 +110,7 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
                 child: Container(
                   padding: horizontalPadding16,
                   decoration: BoxDecoration(
-                    color:
-                        isSelected ? theme.surfaceElevated : Colors.transparent,
+                    color: isSelected ? theme.onSurface : Colors.transparent,
                     border: Border(
                       right: BorderSide(
                         color: theme.outline,
@@ -117,26 +118,29 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
                     ),
                   ),
                   child: Center(
-                    child: Row(
-                      mainAxisSize: .min,
-                      mainAxisAlignment: .center,
-                      children: [
-                        if (segment.icon != null) ...[
-                          segment.icon!,
-                          if (segment.label.isNotEmpty) horizontalMargin8,
-                        ],
-                        if (segment.label.isNotEmpty)
-                          Text(
-                            segment.label,
-                            style: theme.glitch.copyWith(
-                              color: isSelected
-                                  ? theme.onSurface
-                                  : theme.onSurfaceDim,
-                              fontSize: 12,
-                              fontWeight: isSelected ? .bold : .normal,
-                            ),
-                          ),
-                      ],
+                    child: IconTheme(
+                      data: IconThemeData(
+                        color: foregroundColor,
+                        size: 18,
+                      ),
+                      child: DefaultTextStyle(
+                        style: theme.glitch.copyWith(
+                          color: foregroundColor,
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (segment.icon != null) ...[
+                              segment.icon!,
+                              if (segment.label.isNotEmpty) horizontalMargin8,
+                            ],
+                            if (segment.label.isNotEmpty) Text(segment.label),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
