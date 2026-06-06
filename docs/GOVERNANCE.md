@@ -73,8 +73,12 @@ Decisions are permanent architectural commitments. New decisions go here at the 
 | D47 | On-device model: Gemma 4 E2B (~2.1B params, Q4_K_M) | Fits iPhone RAM (~250–500 MB via Neural Engine), ~11 tok/s, 8K context, sufficient for real-time interaction. E4B (~5 GB) reserved for desktop/macOS only |
 | D48 | Multi-model architecture with LoRA adapters | One base model + domain-specific adapters (fitness_coach, medical_advisor, biomechanics_expert). Adapters loaded dynamically per call, not three separate models in memory |
 | D49 | Intent-driven adapter routing | Lightweight classification (~5ms) selects appropriate LoRA adapter. Routes to fitness, medical, or biomechanics expertise per query |
-| D50 | llamadart native backends: Metal/CoreML default on iOS | iOS uses Metal via llamadart consolidation (non-configurable). Server-side and Linux/Windows use Vulkan. All cross-platform, no manual native edits required |
-| D51 | Model sourcing: HuggingFace GGUF files via `hf://` protocol | llamadart downloads/models cached via `ModelSource.parse('hf://owner/repo/model-Q4_K_M.gguf')`. Bundle small LoRA adapters with app, cache base model on first run |
+| D50 | llamadart native backends: Metal/CoreML default on iOS | iOS uses Metal via llamadart consolidation (non-configurable). Server-side and Linux/Windows use Vulkan. All cross-platform, no manual native edits required | 2026-05-15 |
+| D51 | Model sourcing: HuggingFace GGUF files via `hf://` protocol | llamadart downloads/models cached via `ModelSource.parse('hf://owner/repo/model-Q4_K_M.gguf')`. Bundle small LoRA adapters with app, cache base model on first run | 2026-05-15 |
+| D52 | Service-Repository-Cubit (SRC) Pattern | Enforce strict separation: Services (external), Repositories (domain), Cubits (UI state). | 2026-06-06 |
+| D53 | Loggable Interface | Mandate `toDiagnosticString()` and `toSummaryString()` for all state and domain models. | 2026-06-06 |
+| D54 | LoggerService (mason_logger) | Centralized, high-signal diagnostics using CLI-style formatting (progress, success, etc.). | 2026-06-06 |
+| D55 | Specialized UI Controllers | Use `ChangeNotifier` controllers for complex component logic (radial math, timers, waveforms). | 2026-06-06 |
 
 ---
 
@@ -89,34 +93,48 @@ The app does not use static routes. It uses a Registry of `CatalogItems` dynamic
 - **Idempotent**: Same `surfaceId` → same UI on re-render.
 - **Safe Destruction**: `dispose()` must tear down all `StreamSubscription`s, `AnimationController`s, and `DataModel` bindings.
 
-### 2. Monorepo Rules
+### 2. Service-Repository-Cubit Hierarchy
+
+Every logical flow must follow the SRC direction:
+- **Cubits** MUST NOT touch Services directly. They must use Repositories.
+- **Repositories** MUST NOT manage UI state. They orchestrate Services to return domain data.
+- **Services** MUST BE single-concern wrappers for a single external resource or platform feature.
+
+### 3. Logging & Traceability
+
+- **Contract**: All Bloc/Cubit states and Domain entities MUST implement the `Loggable` interface.
+- **Visibility**: Every state transition MUST be logged via `MyoBlocObserver` using the diagnostic string.
+- **Diagnostics**: Use `LoggerService.progress()` for any async task exceeding 200ms to provide console feedback.
+
+### 4. Monorepo Rules
 
 - Packages are independent — no cross-package imports except through `shared_core`.
 - `myotwin_mobile` and `myotwin_desktop` never import each other.
 - `motus_hub` never imports Flutter packages.
 
-### 3. Performance
-
-- **16ms rule**: Any operation >16ms → background Isolate or `compute()`.
+### 5. Performance
+...
 - All Drift queries on background isolate via `DatabaseIsolate`.
 - LLM prompt construction/parsing in `motus_hub`, not on UI thread.
 
-### 4. Data Integrity
+### 6. UI Controllers
 
-- Schema in `shared_core`. 16+ Drift tables matching product spec.
-- Every data point includes `SourceType`: manual, computed, vision, rag.
-- Result<T, Failure> pattern for all LLM/DB calls.
+Complex widgets (like `QuickCommandMenu` or `MyoCanvas`) MUST extract state-heavy logic (timers, radial math, physics simulations) into a dedicated `ChangeNotifier` Controller. 
+- The Widget's `State` should be restricted to `AnimationController`s and `FocusNode`s.
+
+### 7. Data Integrity
+...
 - JSONB columns for evolving, Motus-shaped data (Goal metadata, dynamic fields, feedback patterns).
 
-### 5. Clean Architecture
+### 8. Clean Architecture
 
 ```
-Data Layer:    Drift DAOs + API Clients (motus_hub)
-Domain Layer:  Pure Dart Entities + Use Cases (shared_core)
-Presentation:  CatalogItem builders + Surface controllers (mobile/desktop)
+Data Layer:    Drift DAOs + API Clients (Services)
+Domain Layer:  Repositories orchestrating Services (Repositories)
+Presentation:  Cubits + UI Controllers + CatalogItems (Presentation)
 ```
 
-### 6. Surface Anti-Patterns
+### 9. Surface Anti-Patterns
 
 | Anti-Pattern | Correct Alternative |
 |---|---|

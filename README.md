@@ -81,11 +81,11 @@ Core entities use strict relational schemas. Derivative, Motus-shaped data uses 
 ```
 myotwin/
 ├── packages/
-│   ├── shared_core/    # Entities, interfaces, and unstructured JSON extension types
-│   ├── myotwin_ui/      # High-fidelity HUD components, 3D anatomy viewport, and themes
-│   ├── myotwin_app/     # Unified multi-platform application (iOS, Android, macOS)
+│   ├── shared_core/    # Entities, interfaces, LoggerService, and Loggable contract
+│   ├── myotwin_ui/      # HUD components, 3D viewport, and specialized UI Controllers
+│   ├── myotwin_app/     # Multi-platform app (iOS, Android, macOS) with Repositories/Cubits
 │   ├── myotwin_catalog/ # Component gallery and interactive GenUI stories
-│   └── motus_server/    # Dart-based orchestration hub for research and research sync
+│   └── motus_server/    # Dart orchestration hub for research and research sync
 ```
 
 ---
@@ -95,11 +95,12 @@ myotwin/
 | Layer | Technology |
 |---|---|
 | Framework | Flutter (latest stable) |
+| Architecture | Service-Repository-Cubit (layered decoupling) |
+| Logging | [mason_logger](https://pub.dev/packages/mason_logger) (structured diagnostics) |
 | Generative UI | [genui](https://pub.dev/packages/genui) (A2UI protocol) |
 | Schema Builder | [json_schema_builder](https://pub.dev/packages/json_schema_builder) |
 | Database | [drift](https://pub.dev/packages/drift) (SQLite, background isolate) |
-| Local Inference | Gemma 4 E2B (Unsloth Q4_K_M for mobile, Q8_0 for desktop) via llamadart |
-| Server Inference | Ollama (OpenAI-compatible API) |
+| Local Inference | Gemma 4 E2B via llamadart |
 | 3D Rendering | [flutter_scene](https://pub.dev/packages/flutter_scene) (Native Impeller Engine) |
 | Device Discovery | [bonsoir](https://pub.dev/packages/bonsoir) (mDNS/Zeroconf) |
 | Build | Melos (monorepo management) |

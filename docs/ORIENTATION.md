@@ -40,7 +40,26 @@ We avoid frequent SQL migrations by using a hybrid data model.
 
 ---
 
-## 3. Knowledge Points & External Resources
+## 3. Application Architecture: Service-Repository-Cubit
+
+MyoTwin follows a strict layered decoupling pattern to ensure testability and high-signal traceability.
+
+### The Flow of Responsibility
+1.  **Services (Single-Concern)**: Low-level wrappers for external resources. 
+    *   *Examples*: `LoggerService` (Diagnostics), `DatabaseService` (Drift), `MotusService` (Local LLM).
+2.  **Repositories (Domain Orchestration)**: Orchestrate multiple services to manage a conceptual domain.
+    *   *Examples*: `ChatRepository` (AI + Persistence), `SettingsRepository` (Prefs + FileSystem).
+3.  **Cubits (UI State)**: Manage the immediate state of a widget tree and call Repositories for logic.
+    *   *Example*: `ChatCubit` (isThinking, messageList).
+
+### Logging & Diagnostics
+We use [mason_logger](https://pub.dev/packages/mason_logger) via the `LoggerService` to create a "black box" for the application.
+*   **Loggable Contract**: All state and domain models implement the `Loggable` interface, providing both detailed diagnostics and high-level summaries.
+*   **Automatic Traceability**: The `MyoBlocObserver` automatically logs every state transition using these descriptive strings.
+
+---
+
+## 4. Knowledge Points & External Resources
 
 If you encounter a concept that seems "alien," check these resources:
 
@@ -48,18 +67,20 @@ If you encounter a concept that seems "alien," check these resources:
 | :--- | :--- |
 | **Monorepo Management** | [Melos Documentation](https://melos.invertase.dev/) |
 | **State Management** | [Flutter BLoC / Cubit](https://bloclibrary.dev/) |
+| **Structured Logging** | [mason_logger](https://pub.dev/packages/mason_logger) |
 | **Reactive Database** | [Drift (formerly Moor)](https://drift.simonbinder.eu/) |
 | **Service Discovery** | [Bonsoir (Zeroconf/mDNS)](https://pub.dev/packages/bonsoir) |
 | **Vector Math** | [vector_math package](https://pub.dev/packages/vector_math) |
 
 ---
 
-## 4. Setting Up Your HUD
+## 5. Setting Up Your HUD
 
 1.  Run `melos bootstrap` to link all internal packages.
 2.  Open **`packages/myotwin_app`**. This is the entry point for all platforms.
 3.  Target **macOS** or **iPhone** (ensure Impeller is enabled).
 4.  Launch and watch the "Cinematic Boot" sequence.
+5.  **Audit the Logs**: Check your console for high-signal formatted output from the `LoggerService`.
 
 ---
 
