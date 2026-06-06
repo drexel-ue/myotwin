@@ -35,10 +35,9 @@ class MyoAnatomyCanvas extends StatefulWidget {
   State<MyoAnatomyCanvas> createState() => _MyoAnatomyCanvasState();
 }
 
-class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
+class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProviderStateMixin {
   final Scene _scene = Scene();
   late final AnatomyLayerManager _manager;
-  bool _isInitialized = false;
 
   // Camera State
   double _phi = math.pi / 2; // Latitude
@@ -53,24 +52,24 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   @override
   void initState() {
     super.initState();
-    _manager = AnatomyLayerManager(_scene, logger: context.myoLogger);
+    _manager = AnatomyLayerManager(_scene, vsync: this, logger: context.myoLogger);
 
     // Setup Lighting
-    _scene.directionalLight = DirectionalLight()
-      ..color = vm.Vector3(1.0, 1.0, 1.0)
-      ..direction = vm.Vector3(1.0, -1.0, 1.0).normalized()
-      ..intensity = 2.0;
+    _scene
+      ..directionalLight = (DirectionalLight()
+        ..color = vm.Vector3(1.0, 1.0, 1.0)
+        ..direction = vm.Vector3(1.0, -1.0, 1.0).normalized()
+        ..intensity = 2.0)
+      ..environmentIntensity = 0.5;
 
-    _scene.environmentIntensity = 0.5;
+    _manager.addListener(_handleManagerUpdate);
 
     unawaited(
       _manager.initialize().then((_) {
         if (mounted) {
-          setState(() {
-            _isInitialized = true;
-            _applyHighlights();
-            _manager.isolateLayer(widget.activeLayer);
-          });
+          _manager
+            ..isolateLayer(widget.activeLayer)
+            ..setHighlights(widget.activeNodes, context.myoTheme.accentHot);
           widget.onNodesLoaded?.call(_manager.getAvailableNodesByLayer());
         }
       }),
@@ -82,16 +81,12 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   @override
   void didUpdateWidget(covariant MyoAnatomyCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_isInitialized) {
-      final nodesChanged = widget.activeNodes != oldWidget.activeNodes;
-      final layerChanged = widget.activeLayer != oldWidget.activeLayer;
-
-      if (layerChanged) {
+    if (_manager.isInitialized) {
+      if (widget.activeLayer != oldWidget.activeLayer) {
         _manager.isolateLayer(widget.activeLayer);
       }
-
-      if (nodesChanged || layerChanged) {
-        _applyHighlights();
+      if (widget.activeNodes != oldWidget.activeNodes) {
+        _manager.setHighlights(widget.activeNodes, context.myoTheme.accentHot);
       }
     }
     if (widget.resetTrigger != oldWidget.resetTrigger) {
@@ -102,8 +97,15 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
 
   @override
   void dispose() {
+    _manager
+      ..removeListener(_handleManagerUpdate)
+      ..dispose();
     widget.resetTrigger?.removeListener(_resetView);
     super.dispose();
+  }
+
+  void _handleManagerUpdate() {
+    if (mounted) setState(() {});
   }
 
   void _resetView() {
@@ -113,14 +115,6 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
       _radius = 2.4;
       _targetPos = vm.Vector3(0.0, 0.85, 0.0);
     });
-  }
-
-  void _applyHighlights() {
-    _manager.clearHighlights();
-    final theme = context.myoTheme;
-    for (final node in widget.activeNodes) {
-      _manager.highlightNode(node, theme.accentHot);
-    }
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
@@ -195,7 +189,7 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
       builder: (context, constraints) {
         // Calculate screen-space offsets for all active highlights
         final projectedTooltips = <String, Offset>{};
-        if (_isInitialized) {
+        if (_manager.isInitialized) {
           for (final node in widget.activeNodes) {
             final screenPos = _manager.projectNodeToScreen(
               node,
