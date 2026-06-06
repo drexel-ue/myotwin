@@ -246,6 +246,15 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     _overlayEntry?.markNeedsBuild();
   }
 
+  void _handleHover(Offset globalPosition) {
+    if (!_isOpen || _fabCenterGlobal == null) return;
+    _startTimer();
+
+    _lastFingerAngle = _getFingerAngle(globalPosition);
+    _updateHover(globalPosition);
+    _overlayEntry?.markNeedsBuild();
+  }
+
   void _handleScroll(double delta) {
     if (!_isOpen) return;
     _startTimer();
@@ -402,6 +411,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
           activeTooltipIndex: _activeTooltipIndex,
           onInteractionStart: _handleInteractionStart,
           onInteractionUpdate: _handleInteractionUpdate,
+          onHoverUpdate: _handleHover,
           onInteractionEnd: _handleInteractionEnd,
           onScroll: _handleScroll,
           onClose: _closeMenu,
@@ -452,6 +462,7 @@ class _QuickCommandOverlayContent extends StatelessWidget {
     required this.activeTooltipIndex,
     required this.onInteractionStart,
     required this.onInteractionUpdate,
+    required this.onHoverUpdate,
     required this.onInteractionEnd,
     required this.onScroll,
     required this.onClose,
@@ -475,6 +486,7 @@ class _QuickCommandOverlayContent extends StatelessWidget {
   final int? activeTooltipIndex;
   final ValueChanged<Offset> onInteractionStart;
   final ValueChanged<Offset> onInteractionUpdate;
+  final ValueChanged<Offset> onHoverUpdate;
   final ValueChanged<Offset?> onInteractionEnd;
   final ValueChanged<double> onScroll;
   final VoidCallback onClose;
@@ -521,7 +533,7 @@ class _QuickCommandOverlayContent extends StatelessWidget {
               }
             },
             onPointerMove: (event) => onInteractionUpdate(event.position),
-            onPointerHover: (event) => onInteractionUpdate(event.position),
+            onPointerHover: (event) => onHoverUpdate(event.position),
             onPointerSignal: (event) {
               if (event is PointerScrollEvent) {
                 onScroll(event.scrollDelta.dy);
