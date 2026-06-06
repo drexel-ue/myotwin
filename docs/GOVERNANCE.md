@@ -119,8 +119,9 @@ Every logical flow must follow the SRC direction:
 
 ### 6. UI Controllers
 
-Complex widgets (like `QuickCommandMenu` or `MyoCanvas`) MUST extract state-heavy logic (timers, radial math, physics simulations) into a dedicated `ChangeNotifier` Controller. 
+Complex widgets (like `QuickCommandMenu`, `MyoCanvas`, or `MyoAnatomyCanvas`) MUST extract state-heavy logic (timers, radial math, physics simulations, or 3D scene reconciliation) into a dedicated `ChangeNotifier` Controller or Manager. 
 - The Widget's `State` should be restricted to `AnimationController`s and `FocusNode`s.
+- **Example**: `AnatomyLayerManager` handles all PBR material interpolation and node indexing, while `MyoAnatomyCanvas` simply provides the vsync and viewport.
 
 ### 7. Data Integrity
 ...

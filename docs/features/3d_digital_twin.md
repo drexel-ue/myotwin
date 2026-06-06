@@ -8,16 +8,18 @@ Phase 2 of MyoTwin integrates a multi-layered, interactive 3D anatomy model dire
 ## Architecture
 
 ### 1. `AnatomyLayerManager`
-The central orchestrator for the 3D scene lifecycle.
+The central orchestrator for the 3D scene lifecycle, implemented as an animated `ChangeNotifier`.
 - **Asynchronous Loading**: Loads the 6 multi-megabyte GLB assets in parallel to prevent UI thread stutter.
-- **Hierarchical Traversal**: Automatically walks the 3D node tree to apply materials and locate target segments.
-- **System Management**: Maintains references to individual system roots (Skeletal, Muscular, Nervous, etc.) for independent visibility control.
+- **Indexed Registry**: Builds a `Map<String, List<Node>>` during load for $O(1)$ lookup performance when highlighting specific nodes.
+- **Declarative Reconciliation**: Manages visual state via a single `reconcile()` path, ensuring isolation and highlights never conflict.
+- **Animated Transitions**: Uses internal `AnimationController`s to drive smooth PBR property fades and rhythmic highlight pulses.
 
 ### 2. Tactical PBR Shaders
-Instead of static textures, MyoTwin uses procedural **Physically Based Rendering (PBR)** materials to maintain a high-contrast, tactical aesthetic:
-- **Base Material**: A high-metallic (0.9), dark-grey finish that catches rim lights to define anatomical volume.
-- **Ghost Material (X-Ray)**: A transparent blend mode with 20% opacity white, used to reveal underlying systems (e.g., seeing bones through muscles).
-- **Heatmap Material**: A high-intensity emissive shader used to highlight specific nodes in response to AI context.
+MyoTwin uses 6 unique **Physically Based Rendering (PBR)** materials (one per layer) to allow independent, synchronized animations:
+- **Solid Material**: Used for the isolated system (90% alpha for a holographic feel).
+- **Muscular Material**: A specialized isolated state (60% alpha) that allows X-ray visibility into deeper muscle layers and the skeleton.
+- **Ghost Material**: A low-opacity (10%) blend mode used for non-isolated systems to provide anatomical context.
+- **Pulsing Highlight Material**: A high-intensity emissive shader with a 1.5s rhythmic pulse, assigned to nodes matching the current AI context.
 
 ---
 
@@ -51,11 +53,12 @@ graph TD
     Goal --> Cubit[ChatCubit State]
     Cubit -- "activeNodes" --> Canvas[MyoAnatomyCanvas]
     Canvas --> Manager[AnatomyLayerManager]
-    Manager --> Clear[Clear Previous Highlights]
-    Clear --> Traverse[Traverse Node Graph]
-    Traverse -- "Match Name" --> Highlight[Apply Emissive Highlight]
+    Manager --> State[Update Declarative State]
+    State --> Reconcile[Reconcile Visuals]
+    Reconcile --> Registry[Lookup in O1 Registry]
+    Registry --> Pulse[Start Emissive Pulse Animation]
+    Reconcile --> Fade[Interpolate Layer Alphas]
 ```
 
 ### Automated Targeting
-Whenever the AI identifies relevant body parts (e.g., `Biceps_L`) in the current context, the `AnatomyLayerManager` recursively searches the 3D node tree for that string. The matching mesh is then re-assigned a glowing emissive material in the 3D scene, visually connecting the AI's intelligence with the physical digital twin.
- Greenland
+Whenever the AI identifies relevant body parts (e.g., `Biceps_L`), the `AnatomyLayerManager` instantly retrieves the nodes from its **Indexed Registry**. These nodes are temporarily re-assigned to the **Pulsing Highlight Material**, creating a rhythmic glow that draws the user's eye to the biomechanical focus point.
