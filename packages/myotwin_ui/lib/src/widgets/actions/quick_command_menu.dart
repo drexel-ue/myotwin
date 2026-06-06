@@ -237,14 +237,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     if (distance > widget.radius * 0.4) {
       if (delta.abs() > 0.01) {
         _isDragging = true;
-        final visibleSpread = _currentPosition.getMaxSpread();
-        final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-
-        if (totalSweep > visibleSpread) {
-          final maxScroll = totalSweep - visibleSpread;
-          _scrollAngle += delta;
-          _scrollAngle = _scrollAngle.clamp(-maxScroll, 0.0);
-        }
+        _scrollAngle += delta;
       }
     }
 
@@ -260,15 +253,8 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     // Map pixel scroll to angular rotation (approx 0.005 radians per pixel)
     final angularDelta = -delta * 0.005;
 
-    final visibleSpread = _currentPosition.getMaxSpread();
-    final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
-
-    if (totalSweep > visibleSpread) {
-      final maxScroll = totalSweep - visibleSpread;
-      _scrollAngle += angularDelta;
-      _scrollAngle = _scrollAngle.clamp(-maxScroll, 0.0);
-      _overlayEntry?.markNeedsBuild();
-    }
+    _scrollAngle += angularDelta;
+    _overlayEntry?.markNeedsBuild();
   }
 
   void _handleInteractionEnd(Offset? globalPosition) {
