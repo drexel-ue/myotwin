@@ -46,8 +46,7 @@ class FrostedHUD extends StatefulWidget {
   State<FrostedHUD> createState() => _FrostedHUDState();
 }
 
-class _FrostedHUDState extends State<FrostedHUD>
-    with SingleTickerProviderStateMixin, HoloGlitchLogicMixin {
+class _FrostedHUDState extends State<FrostedHUD> with SingleTickerProviderStateMixin, HoloGlitchLogicMixin {
   late final Ticker _ticker;
   Duration _lastTime = Duration.zero;
 
@@ -91,8 +90,7 @@ class _FrostedHUDState extends State<FrostedHUD>
     const bleedInsets = EdgeInsets.all(bleedValue);
 
     return Stack(
-      clipBehavior:
-          Clip.none, // Critical: Allows the BleedMargin to overflow the Stack
+      clipBehavior: Clip.none, // Critical: Allows the BleedMargin to overflow the Stack
       children: [
         // --- LAYER 1: The Stable Glass ---
         // Because BleedMargin hides the 32px padding from the Stack's layout,
@@ -180,8 +178,7 @@ class _FrostedHUDContent extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(titleText.toUpperCase(),
-                              style: theme.headlineMedium),
+                          child: Text(titleText.toUpperCase(), style: theme.headlineMedium),
                         ),
                         if (onClose != null)
                           MyoIconButton(
@@ -252,8 +249,7 @@ class _RadiatingHUDPainter extends CustomPainter {
     final metric = metricsList.first;
     final totalPerimeter = metric.length;
 
-    final impactDistance =
-        _getDistanceOfPointOnPath(metric, impactPoint, totalPerimeter);
+    final impactDistance = _getDistanceOfPointOnPath(metric, impactPoint, totalPerimeter);
 
     final halfSpread = (totalPerimeter / 2) * progress;
 
@@ -273,8 +269,7 @@ class _RadiatingHUDPainter extends CustomPainter {
     canvas.drawPath(activeLaserPath, laserPaint);
   }
 
-  double _getDistanceOfPointOnPath(
-      PathMetric metric, Offset target, double perimeter) {
+  double _getDistanceOfPointOnPath(PathMetric metric, Offset target, double perimeter) {
     var minDistance = double.infinity;
     var targetedOffset = 0.0;
 

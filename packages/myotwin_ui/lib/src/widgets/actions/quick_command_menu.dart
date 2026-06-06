@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 /// The relative position of the quick menu on the screen.
@@ -104,7 +105,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutBack);
+    _menuAnimation = CurvedAnimation(parent: _menuController, curve: Curves.easeOutExpo);
 
     _tooltipController = AnimationController(
       vsync: this,
@@ -165,6 +166,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     }
     _isOpen = true;
     unawaited(_menuController.forward());
+    _startTimer();
   }
 
   void _closeMenu() {
@@ -204,6 +206,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     _lastFingerAngle = _getFingerAngle(globalPosition);
     _isDragging = false;
     _updateHover(globalPosition);
+    _startTimer();
   }
 
   bool _isOutsideActiveArea(Offset globalPosition) {
@@ -219,6 +222,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
 
   void _handleInteractionUpdate(Offset globalPosition) {
     if (!_isOpen || _fabCenterGlobal == null) return;
+    _startTimer();
 
     final dx = globalPosition.dx - _fabCenterGlobal!.dx;
     final dy = globalPosition.dy - _fabCenterGlobal!.dy;
@@ -247,6 +251,24 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     _lastFingerAngle = currentAngle;
     _updateHover(globalPosition);
     _overlayEntry?.markNeedsBuild();
+  }
+
+  void _handleScroll(double delta) {
+    if (!_isOpen) return;
+    _startTimer();
+
+    // Map pixel scroll to angular rotation (approx 0.005 radians per pixel)
+    final angularDelta = -delta * 0.005;
+
+    final visibleSpread = _currentPosition.getMaxSpread();
+    final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
+
+    if (totalSweep > visibleSpread) {
+      final maxScroll = totalSweep - visibleSpread;
+      _scrollAngle += angularDelta;
+      _scrollAngle = _scrollAngle.clamp(-maxScroll, 0.0);
+      _overlayEntry?.markNeedsBuild();
+    }
   }
 
   void _handleInteractionEnd(Offset? globalPosition) {
@@ -395,6 +417,7 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
           onInteractionStart: _handleInteractionStart,
           onInteractionUpdate: _handleInteractionUpdate,
           onInteractionEnd: _handleInteractionEnd,
+          onScroll: _handleScroll,
           onClose: _closeMenu,
           isOutsideActiveArea: _isOutsideActiveArea,
         );
@@ -414,6 +437,10 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
         },
         onLongPressMoveUpdate: (details) => _handleInteractionUpdate(details.globalPosition),
         onLongPressEnd: (details) => _handleInteractionEnd(details.globalPosition),
+        onSecondaryTapDown: (details) {
+          _openMenu();
+          _handleInteractionStart(details.globalPosition);
+        },
         child: widget.child,
       ),
     );
@@ -440,6 +467,7 @@ class _QuickCommandOverlayContent extends StatelessWidget {
     required this.onInteractionStart,
     required this.onInteractionUpdate,
     required this.onInteractionEnd,
+    required this.onScroll,
     required this.onClose,
     required this.isOutsideActiveArea,
   });
@@ -462,6 +490,7 @@ class _QuickCommandOverlayContent extends StatelessWidget {
   final ValueChanged<Offset> onInteractionStart;
   final ValueChanged<Offset> onInteractionUpdate;
   final ValueChanged<Offset?> onInteractionEnd;
+  final ValueChanged<double> onScroll;
   final VoidCallback onClose;
   final bool Function(Offset) isOutsideActiveArea;
 
@@ -474,7 +503,6 @@ class _QuickCommandOverlayContent extends StatelessWidget {
     final visibleSpread = position.getMaxSpread();
     final totalSweep = (itemCount - 1) * preferredSpacing;
     final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
-    const fadeZone = math.pi / 8;
 
     // Determine safe zone for the Frosted Bloom based on FAB position
     final bloomCenter = switch (position) {
@@ -507,6 +535,12 @@ class _QuickCommandOverlayContent extends StatelessWidget {
               }
             },
             onPointerMove: (event) => onInteractionUpdate(event.position),
+            onPointerHover: (event) => onInteractionUpdate(event.position),
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent) {
+                onScroll(event.scrollDelta.dy);
+              }
+            },
             onPointerUp: (event) {
               if (!isOutsideActiveArea(event.position)) {
                 onInteractionEnd(event.position);
@@ -572,26 +606,10 @@ class _QuickCommandOverlayContent extends StatelessWidget {
         ...List.generate(itemCount, (index) {
           final itemAngle = startAngle + (index * preferredSpacing) + scrollAngle;
 
-          var angularDiff = (itemAngle - midpoint).abs();
-          if (angularDiff > math.pi) angularDiff = 2 * math.pi - angularDiff;
-
-          final edgeDist = (visibleSpread / 2) - angularDiff;
-          var targetOpacity = 1.0;
-          var scaleShrink = 1.0;
-
-          if (edgeDist <= 0) {
-            targetOpacity = 0.0;
-            scaleShrink = 0.4;
-          } else if (edgeDist < fadeZone) {
-            final ratio = edgeDist / fadeZone;
-            targetOpacity = ratio;
-            scaleShrink = 0.4 + (0.6 * ratio);
-          }
-
           return AnimatedBuilder(
             animation: menuAnimation,
             builder: (context, child) {
-              final finalOpacity = (targetOpacity * menuAnimation.value).clamp(0.0, 1.0);
+              final finalOpacity = menuAnimation.value;
               final isHovered = hoveredIndex == index;
               final currentRadius = menuAnimation.value * radius;
 
@@ -604,7 +622,7 @@ class _QuickCommandOverlayContent extends StatelessWidget {
               );
 
               final baseScale = menuAnimation.value.clamp(0.0, 1.0);
-              final finalScale = baseScale * scaleShrink * (isHovered ? 1.15 : 1.0);
+              final finalScale = baseScale * (isHovered ? 1.15 : 1.0);
 
               return CompositedTransformFollower(
                 link: layerLink,
@@ -685,11 +703,7 @@ extension on QuickMenuPosition {
   }
 
   double getMaxSpread() {
-    return switch (this) {
-      QuickMenuPosition.left => 3 * math.pi / 4,
-      QuickMenuPosition.center => math.pi,
-      QuickMenuPosition.right => 3 * math.pi / 4,
-    };
+    return 2 * math.pi;
   }
 }
 

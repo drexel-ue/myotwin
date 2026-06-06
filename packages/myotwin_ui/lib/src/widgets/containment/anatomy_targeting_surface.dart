@@ -33,8 +33,7 @@ class AnatomyTargetingSurface extends StatefulWidget {
   final VoidCallback onClose;
 
   @override
-  State<AnatomyTargetingSurface> createState() =>
-      _AnatomyTargetingSurfaceState();
+  State<AnatomyTargetingSurface> createState() => _AnatomyTargetingSurfaceState();
 }
 
 class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
@@ -45,19 +44,23 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
     final theme = context.myoTheme;
 
     // 1. Flatten and filter nodes based on selected layer and search query
-    final List<String> filteredNodes = [];
+    final filteredNodes = <String>[];
     if (widget.activeLayer != null) {
       // Only show nodes from the selected layer
       final layerNodes = widget.nodesByLayer[widget.activeLayer] ?? [];
-      filteredNodes.addAll(layerNodes.where((node) {
-        return node.toLowerCase().contains(_searchQuery.toLowerCase());
-      }));
+      filteredNodes.addAll(
+        layerNodes.where((node) {
+          return node.toLowerCase().contains(_searchQuery.toLowerCase());
+        }),
+      );
     } else {
       // Show all nodes from all layers
       for (final layerNodes in widget.nodesByLayer.values) {
-        filteredNodes.addAll(layerNodes.where((node) {
-          return node.toLowerCase().contains(_searchQuery.toLowerCase());
-        }));
+        filteredNodes.addAll(
+          layerNodes.where((node) {
+            return node.toLowerCase().contains(_searchQuery.toLowerCase());
+          }),
+        );
       }
     }
     filteredNodes.sort();
@@ -163,7 +166,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                     )
                   : ListView.separated(
                       itemCount: filteredNodes.length,
-                      separatorBuilder: (_, __) => const MyoDivider(),
+                      separatorBuilder: (_, _) => const MyoDivider(),
                       itemBuilder: (context, index) {
                         final node = filteredNodes[index];
                         return MyoListTile(

@@ -28,8 +28,7 @@ class InteractiveGrid extends StatefulWidget {
   State<InteractiveGrid> createState() => _InteractiveGridState();
 }
 
-class _InteractiveGridState extends State<InteractiveGrid>
-    with SingleTickerProviderStateMixin {
+class _InteractiveGridState extends State<InteractiveGrid> with SingleTickerProviderStateMixin {
   final _cameraPan = ValueNotifier<Offset>(Offset.zero);
   Offset _velocity = Offset.zero;
 

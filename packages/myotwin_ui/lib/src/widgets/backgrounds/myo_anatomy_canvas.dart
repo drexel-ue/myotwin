@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
-import 'package:myotwin_ui/src/widgets/backgrounds/anatomy_layer_manager.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// A high-fidelity 3D anatomy viewport that loads and renders layered GLB models.
@@ -64,16 +63,18 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
 
     _scene.environmentIntensity = 0.5;
 
-    unawaited(_manager.initialize().then((_) {
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-          _applyHighlights();
-          _manager.isolateLayer(widget.activeLayer);
-        });
-        widget.onNodesLoaded?.call(_manager.getAvailableNodesByLayer());
-      }
-    }));
+    unawaited(
+      _manager.initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+            _applyHighlights();
+            _manager.isolateLayer(widget.activeLayer);
+          });
+          widget.onNodesLoaded?.call(_manager.getAvailableNodesByLayer());
+        }
+      }),
+    );
 
     widget.resetTrigger?.addListener(_resetView);
   }
@@ -138,10 +139,8 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
       // 2. Resolve Interaction Mode
       final isPanning =
           details.pointerCount >= 2 ||
-          HardwareKeyboard.instance.logicalKeysPressed
-              .contains(LogicalKeyboardKey.shiftLeft) ||
-          HardwareKeyboard.instance.logicalKeysPressed
-              .contains(LogicalKeyboardKey.shiftRight);
+          HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftLeft) ||
+          HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftRight);
 
       // 3. Apply Transformations
       if (isPanning) {
@@ -160,8 +159,7 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
       } else {
         // Handle Orbit (Drag on Desktop/Mobile)
         _theta -= details.focalPointDelta.dx * 0.01;
-        _phi =
-            (_phi - details.focalPointDelta.dy * 0.01).clamp(0.1, math.pi - 0.1);
+        _phi = (_phi - details.focalPointDelta.dy * 0.01).clamp(0.1, math.pi - 0.1);
       }
 
       // 4. Handle Zoom (Delta-based to avoid exponential jumps)

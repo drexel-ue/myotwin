@@ -66,9 +66,7 @@ class _MyoListTileState extends State<MyoListTile>
           child: Container(
             padding: widget.padding ?? horizontalPadding12 + verticalPadding8,
             decoration: BoxDecoration(
-              border: widget.isSelected
-                  ? Border(left: BorderSide(color: theme.accentHot, width: 2))
-                  : null,
+              border: widget.isSelected ? Border(left: BorderSide(color: theme.accentHot, width: 2)) : null,
             ),
             child: IconTheme(
               data: IconThemeData(
@@ -77,10 +75,8 @@ class _MyoListTileState extends State<MyoListTile>
               ),
               child: DefaultTextStyle(
                 style: theme.bodyMedium.copyWith(
-                  color:
-                      widget.isSelected ? theme.surface : theme.onSurfaceMedium,
-                  fontWeight:
-                      widget.isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: widget.isSelected ? theme.surface : theme.onSurfaceMedium,
+                  fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
                 child: Row(
                   children: [
@@ -101,9 +97,7 @@ class _MyoListTileState extends State<MyoListTile>
                             Text(
                               subtitle,
                               style: theme.bodySmall.copyWith(
-                                color: widget.isSelected
-                                    ? theme.surface
-                                    : theme.onSurface,
+                                color: widget.isSelected ? theme.surface : theme.onSurface,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

@@ -45,12 +45,14 @@ class AnatomyLayerManager {
   Future<void> initialize() async {
     // 1. Setup Tactical PBR Materials
     _baseMaterial = PhysicallyBasedMaterial()
-      ..baseColorFactor = Vector4(0.1, 0.1, 0.1, 1.0) // Dark Grey
+      ..baseColorFactor =
+          Vector4(0.1, 0.1, 0.1, 1.0) // Dark Grey
       ..metallicFactor = 0.9
       ..roughnessFactor = 0.5;
 
     _ghostMaterial = PhysicallyBasedMaterial()
-      ..baseColorFactor = Vector4(1.0, 1.0, 1.0, 0.1) // 10% white
+      ..baseColorFactor =
+          Vector4(1.0, 1.0, 1.0, 0.1) // 10% white
       ..metallicFactor = 1.0
       ..roughnessFactor = 0.3
       ..alphaMode = AlphaMode.blend;
@@ -65,7 +67,7 @@ class AnatomyLayerManager {
     if (_layerRoots[AnatomyLayer.muscular] case final node?) {
       _applyMaterial(node, _ghostMaterial);
     }
-    
+
     // Hide other systems for now
     _layerRoots[AnatomyLayer.nervous]?.visible = false;
     _layerRoots[AnatomyLayer.cardiovascular]?.visible = false;
@@ -107,7 +109,7 @@ class AnatomyLayerManager {
 
   /// Extracts all mesh-bearing node names from the loaded layers, grouped by system.
   Map<AnatomyLayer, List<String>> getAvailableNodesByLayer() {
-    final Map<AnatomyLayer, List<String>> result = {};
+    final result = <AnatomyLayer, List<String>>{};
     for (final entry in _layerRoots.entries) {
       final names = <String>[];
       _collectNodeNames(entry.value, names);
@@ -153,9 +155,9 @@ class AnatomyLayerManager {
     // Isolate the requested layer: everything visible, others ghosted at 10%
     for (final entry in _layerRoots.entries) {
       final layer = entry.key;
-      final node = entry.value;
+      final node = entry.value
 
-      node.visible = true;
+      ..visible = true;
       if (layer == activeLayer) {
         _applyMaterial(node, _baseMaterial);
       } else {

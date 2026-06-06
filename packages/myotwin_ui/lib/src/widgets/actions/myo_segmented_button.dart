@@ -92,8 +92,7 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
             final isPreviouslySelected = segment.value == _previousValue;
             final shouldGlitch = isSelected || isPreviouslySelected;
 
-            final foregroundColor =
-                isSelected ? theme.surface : theme.onSurfaceDim;
+            final foregroundColor = isSelected ? theme.surface : theme.onSurfaceDim;
 
             return Expanded(
               child: GestureDetector(
@@ -127,9 +126,7 @@ class _MyoSegmentedButtonState<T> extends State<MyoSegmentedButton<T>>
                           style: theme.glitch.copyWith(
                             color: foregroundColor,
                             fontSize: 12,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
