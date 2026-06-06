@@ -1,12 +1,13 @@
 import 'package:shared_core/src/domain/enums.dart';
 import 'package:shared_core/src/domain/extension_types.dart';
 import 'package:shared_core/src/domain/goal.dart';
+import 'package:shared_core/src/infrastructure/logging/loggable.dart';
 
 /// The bridge between Motus's intelligence and the Generative UI.
 ///
 /// An [IntentRecord] is a database object created when Motus makes a decision.
 /// it carries the "why" and the payload required to assemble a GenUI surface.
-class IntentRecord {
+class IntentRecord implements Loggable {
   /// Creates an [IntentRecord].
   const IntentRecord({
     required this.id,
@@ -75,4 +76,13 @@ class IntentRecord {
       researchNoteIds: researchNoteIds,
     );
   }
+
+  @override
+  String toDiagnosticString() => 'IntentRecord(id: $id, type: ${type.name}, reason: $reason)';
+
+  @override
+  String toSummaryString() => '[${type.name.toUpperCase()}] : $reason';
+
+  @override
+  String toString() => toDiagnosticString();
 }

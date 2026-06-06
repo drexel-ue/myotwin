@@ -6,7 +6,7 @@ import 'package:shared_core/shared_core.dart';
 import 'package:uuid/uuid.dart';
 
 /// The UI state for the HUD chat interaction.
-class ChatState {
+class ChatState implements Loggable {
   /// Creates a [ChatState].
   const ChatState({
     this.messages = const [],
@@ -56,6 +56,16 @@ class ChatState {
       activeGoal: activeGoal ?? this.activeGoal,
     );
   }
+
+  @override
+  String toDiagnosticString() =>
+      'ChatState(msgs: ${messages.length}, thinking: $isThinking, responding: $isResponding, goal: ${activeGoal?.label})';
+
+  @override
+  String toSummaryString() => 'CHAT: ${messages.length} msgs | GOAL: ${activeGoal?.label}';
+
+  @override
+  String toString() => toDiagnosticString();
 }
 
 /// Manages the dynamic chat interaction loop and AI streaming.

@@ -1,6 +1,11 @@
+export 'package:shared_core/shared_core.dart';
+
+export 'src/controllers/audio_visualizer_controller.dart';
+export 'src/controllers/quick_command_controller.dart';
 export 'src/extensions/responsive_context.dart';
 export 'src/theme/layout.dart';
 export 'src/theme/myotwin_theme.dart';
+export 'src/utils/radial_geometry.dart';
 export 'src/widgets/actions/animated_holo_fab.dart';
 export 'src/widgets/actions/glitch_button.dart';
 export 'src/widgets/actions/myo_icon_button.dart';

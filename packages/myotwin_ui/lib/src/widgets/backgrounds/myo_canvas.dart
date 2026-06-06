@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +19,7 @@ class MyoCanvas extends StatefulWidget {
     required this.backgroundChild,
     required this.chatChild,
     required this.onShowChatChanged,
-    this.voiceAmplitudes,
+    this.audioController,
     this.onMessageSubmitted,
     this.fabState,
     this.onCommandNodeSelected,
@@ -37,8 +36,9 @@ class MyoCanvas extends StatefulWidget {
   /// {@macro myo_canvas.chat_child}
   final ValueChanged<bool> onShowChatChanged;
 
-  /// A listenable list of normalized amplitude values for the voice visualizer.
-  final ValueNotifier<List<double>>? voiceAmplitudes;
+  /// An optional controller to drive the voice visualizer.
+  /// If null, the canvas manages one internally.
+  final AudioVisualizerController? audioController;
 
   /// Called when a message is submitted from the text input.
   /// Returns true if the message was successfully processed.
@@ -64,12 +64,8 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
   final _textGlitchTrigger = ValueNotifier<int>(0);
   final _voiceGlitchTrigger = ValueNotifier<int>(0);
 
-  // Fallback for voice visualizer if none provided
-  late final ValueNotifier<List<double>> _internalVoiceAmplitudes;
-
-  // Stub animation state
-  Timer? _stubTimer;
-  double _stubPhase = 0.0;
+  // Audio visualizer management
+  late final AudioVisualizerController _audioController;
 
   // Text input management
   final TextEditingController _textController = TextEditingController();
@@ -79,7 +75,7 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
   void initState() {
     super.initState();
     _chatOffsetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _internalVoiceAmplitudes = widget.voiceAmplitudes ?? ValueNotifier<List<double>>(List.filled(128, 0.0));
+    _audioController = widget.audioController ?? AudioVisualizerController();
     _fabState = widget.fabState ?? ValueNotifier<HoloState>(HoloState.idle);
 
     // Listen for mode changes to manage the stub timer
@@ -101,64 +97,11 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
       widget.onShowChatChanged(_showChat);
     }
 
-    // Only manage stub timer if no external amplitudes are provided
-    if (widget.voiceAmplitudes == null) {
-      if (mode == ArcSliderMode.voice) {
-        _startStubTimer();
-      } else {
-        _stopStubTimer();
-      }
+    if (mode == ArcSliderMode.voice) {
+      _audioController.start();
+    } else {
+      _audioController.stop();
     }
-  }
-
-  void _startStubTimer() {
-    _stubTimer?.cancel();
-    _stubTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      _updateStubAmplitudes();
-    });
-  }
-
-  void _stopStubTimer() {
-    _stubTimer?.cancel();
-    _stubTimer = null;
-    // Reset to flat line when stopping
-    _internalVoiceAmplitudes.value = List.filled(128, 0.0);
-  }
-
-  void _updateStubAmplitudes() {
-    // Steady phase progression for the traveling wave
-    _stubPhase += 0.15;
-
-    // Cycle repeats periodically. Pulse moves from 0 (center) to 1.5 (past edge).
-    final beatTime = (_stubPhase * 0.25) % 1.5;
-
-    const count = 128;
-    final newData = List.generate(count, (index) {
-      // Spatial progress: 0.0 at center (index 0), 1.0 at edge (index 127)
-      final progress = index / (count - 1);
-
-      // 1. Primary Pulse ("Dub")
-      final distance1 = (progress - beatTime).abs();
-      // Gaussian curve: creates a highly localized sharp peak
-      final envelope1 = math.exp(-(distance1 * distance1) * 80.0);
-      // Traveling carrier wave inside the pulse
-      final wave1 = math.sin((progress - _stubPhase) * math.pi * 12) * envelope1;
-
-      // 2. Secondary Pulse ("Lub") - trailing slightly behind
-      final distance2 = (progress - (beatTime - 0.15)).abs();
-      final envelope2 = math.exp(-(distance2 * distance2) * 120.0);
-      final wave2 = math.sin((progress - _stubPhase) * math.pi * 18) * envelope2 * 0.4;
-
-      // 3. Ambient baseline (very subtle constant vibration)
-      final ambient = math.sin(_stubPhase * 2 + progress * math.pi * 8) * 0.01;
-
-      // 4. Spatial Taper to ensure it stays locked at the sides
-      final edgeTaper = math.cos(progress * (math.pi / 2));
-
-      return (wave1 + wave2 + ambient) * edgeTaper * 1.6;
-    });
-
-    _internalVoiceAmplitudes.value = newData;
   }
 
   Future<void> _toggleChat() async {
@@ -204,16 +147,15 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
     if (widget.fabState == null) {
       _fabState.dispose();
     }
+    if (widget.audioController == null) {
+      _audioController.dispose();
+    }
     _sliderMode.dispose();
     _slideProgress.dispose();
     _textGlitchTrigger.dispose();
     _voiceGlitchTrigger.dispose();
-    _stubTimer?.cancel();
     _textController.dispose();
     _textFocusNode.dispose();
-    if (widget.voiceAmplitudes == null) {
-      _internalVoiceAmplitudes.dispose();
-    }
     super.dispose();
   }
 
@@ -305,7 +247,7 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
                           builder: (context, glitchKey, child) {
                             return MyoAudioOscilloscope(
                               glitchKey: glitchKey,
-                              amplitudes: _internalVoiceAmplitudes,
+                              amplitudes: _audioController.amplitudes,
                               isListening: isVoiceMode,
                             );
                           },

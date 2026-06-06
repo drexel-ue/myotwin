@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
-import 'package:shared_core/shared_core.dart';
 
 /// A full-HUD surface for exploring, filtering, and switching between goals.
 class GoalExplorerSurface extends StatefulWidget {

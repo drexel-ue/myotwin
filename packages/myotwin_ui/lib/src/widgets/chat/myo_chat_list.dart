@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:shared_core/shared_core.dart';
 
 /// A scrollable list of chat messages with velocity tracking and auto-scroll.
 class MyoChatList extends StatefulWidget {

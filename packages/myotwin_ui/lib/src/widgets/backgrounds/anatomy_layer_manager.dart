@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' as flutter;
 import 'package:flutter_scene/scene.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:vector_math/vector_math.dart';
 
 /// The distinct anatomical systems available in the MyoTwin 3D model.
@@ -28,9 +28,12 @@ enum AnatomyLayer {
 /// Orchestrates the loading and visual state of the 3D anatomy model.
 class AnatomyLayerManager {
   /// Creates an [AnatomyLayerManager] for a specific [Scene].
-  AnatomyLayerManager(this._scene);
+  AnatomyLayerManager(this._scene, {this.logger});
 
   final Scene _scene;
+
+  /// Optional logger for tracking engine initialization and asset loading.
+  final LoggerService? logger;
 
   // Root nodes for each layer
   final Map<AnatomyLayer, Node> _layerRoots = {};
@@ -43,6 +46,8 @@ class AnatomyLayerManager {
 
   /// Initializes the materials and loads all 3D assets into the scene.
   Future<void> initialize() async {
+    final initProgress = logger?.progress('INITIALIZING_ANATOMY_ENGINE');
+
     // 1. Setup Tactical PBR Materials
     _baseMaterial = PhysicallyBasedMaterial()
       ..baseColorFactor =
@@ -58,7 +63,13 @@ class AnatomyLayerManager {
       ..alphaMode = AlphaMode.blend;
 
     // 2. Load all layers asynchronously
-    await Future.wait(AnatomyLayer.values.map(_loadLayer));
+    try {
+      await Future.wait(AnatomyLayer.values.map(_loadLayer));
+      initProgress?.complete('ANATOMY_ENGINE_READY');
+    } catch (e) {
+      initProgress?.fail('ANATOMY_ENGINE_LOAD_FAILED');
+      rethrow;
+    }
 
     // 3. Apply Initial Shader Logic
     if (_layerRoots[AnatomyLayer.skeletal] case final node?) {
@@ -77,14 +88,17 @@ class AnatomyLayerManager {
 
   Future<void> _loadLayer(AnatomyLayer layer) async {
     final assetName = 'myotwin_${layer.name}';
+    final layerProgress = logger?.progress('LOADING_LAYER_${layer.name.toUpperCase()}');
+
     try {
       final node = await Node.fromGlbAsset('assets/models/$assetName.glb');
       node.name = 'LAYER_${layer.name.toUpperCase()}';
       _layerRoots[layer] = node;
       _scene.add(node);
-      debugPrint('Loaded Anatomy Layer: ${layer.name}');
+      layerProgress?.complete();
     } catch (e) {
-      debugPrint('Failed to load Anatomy Layer (${layer.name}): $e');
+      layerProgress?.fail();
+      logger?.error('Failed to load Anatomy Layer (${layer.name})', error: e);
     }
   }
 
@@ -156,8 +170,8 @@ class AnatomyLayerManager {
     for (final entry in _layerRoots.entries) {
       final layer = entry.key;
       final node = entry.value
-
       ..visible = true;
+
       if (layer == activeLayer) {
         _applyMaterial(node, _baseMaterial);
       } else {

@@ -1,12 +1,13 @@
 import 'package:shared_core/src/domain/enums.dart';
 import 'package:shared_core/src/domain/extension_types.dart';
 import 'package:shared_core/src/domain/intent_record.dart';
+import 'package:shared_core/src/infrastructure/logging/loggable.dart';
 
 /// Represents a long-term biological or performance objective.
 ///
 /// Goals are the parent containers for all [IntentRecord]s, hypotheses,
 /// and progress records tracked by Motus.
-class Goal {
+class Goal implements Loggable {
   /// Creates a [Goal].
   const Goal({
     required this.id,
@@ -51,4 +52,13 @@ class Goal {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  String toDiagnosticString() => 'Goal(id: $id, label: $label, status: ${status.name})';
+
+  @override
+  String toSummaryString() => '[$label] : ${status.name.toUpperCase()}';
+
+  @override
+  String toString() => toDiagnosticString();
 }

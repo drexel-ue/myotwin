@@ -53,7 +53,7 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> {
   @override
   void initState() {
     super.initState();
-    _manager = AnatomyLayerManager(_scene);
+    _manager = AnatomyLayerManager(_scene, logger: context.myoLogger);
 
     // Setup Lighting
     _scene.directionalLight = DirectionalLight()

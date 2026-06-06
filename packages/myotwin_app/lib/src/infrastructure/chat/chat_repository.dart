@@ -4,19 +4,26 @@ import 'package:shared_core/shared_core.dart' as domain;
 import 'package:uuid/uuid.dart';
 
 /// Orchestrates the persistence and generation of [domain.IntentRecord]s.
+///
+/// Coordinates between [MyoTwinDatabase] (persistence) and [domain.MotusAgent]
+/// (inference) while using [domain.LoggerService] for diagnostics.
 class ChatRepository {
   /// Creates a [ChatRepository].
   ChatRepository({
     required MyoTwinDatabase database,
     required domain.MotusAgent agent,
+    required domain.LoggerService logger,
   }) : _db = database,
-       _agent = agent;
+       _agent = agent,
+       _logger = logger;
 
   final MyoTwinDatabase _db;
   final domain.MotusAgent _agent;
+  final domain.LoggerService _logger;
 
   /// Returns a stream of all [domain.IntentRecord]s for the given [goalId].
   Stream<List<domain.IntentRecord>> watchMessages(String goalId) {
+    _logger.detail('CHAT_REPOSITORY: WATCHING_MESSAGES: $goalId');
     return (_db.select(_db.intentRecords)
           ..where((t) => t.goalId.equals(goalId))
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
@@ -26,6 +33,7 @@ class ChatRepository {
 
   /// Initiates an AI response stream with global biomechanical context.
   Stream<String> getResponseStream(String message, {List<domain.IntentRecord>? context}) async* {
+    _logger.detail('CHAT_REPOSITORY: GET_RESPONSE_STREAM: $message');
     final report = await _generateSituationReport();
     final augmentedMessage =
         '''
@@ -58,6 +66,7 @@ USER_INPUT: $message
 
   /// Persists a new [domain.IntentRecord] to the database.
   Future<void> saveIntent(domain.IntentRecord intent) async {
+    _logger.detail('CHAT_REPOSITORY: SAVE_INTENT: ${intent.id} | REASON: ${intent.reason}');
     await _db
         .into(_db.intentRecords)
         .insert(
@@ -84,6 +93,8 @@ USER_INPUT: $message
             .getSingleOrNull();
 
     if (existing != null) return existing.id;
+
+    _logger.info('CHAT_REPOSITORY: CREATING_DEFAULT_SESSION_GOAL');
 
     final id = const Uuid().v4();
     await _db
