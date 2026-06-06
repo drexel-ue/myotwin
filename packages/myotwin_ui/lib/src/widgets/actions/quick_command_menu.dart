@@ -320,17 +320,6 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
     final totalSweep = (widget.itemCount - 1) * widget.preferredSpacing;
     final startAngle = midpoint - math.min(totalSweep, visibleSpread) / 2;
 
-    // --- FOCUS WINDOW LOGIC ---
-    final isScrollable = totalSweep > visibleSpread;
-    var focusWindowHalfAngle = visibleSpread / 2;
-
-    if (isScrollable) {
-      focusWindowHalfAngle = (visibleSpread * 0.35) / 2;
-      if (focusWindowHalfAngle < widget.preferredSpacing * 0.6) {
-        focusWindowHalfAngle = widget.preferredSpacing * 0.6;
-      }
-    }
-
     int? closestIndex;
     var minDiff = double.infinity;
 
@@ -339,21 +328,14 @@ class _QuickCommandMenuState extends State<QuickCommandMenu> with TickerProvider
       itemAngle = itemAngle % (2 * math.pi);
       if (itemAngle < 0) itemAngle += 2 * math.pi;
 
-      var diffFromMidpoint = (itemAngle - midpoint).abs();
-      if (diffFromMidpoint > math.pi) {
-        diffFromMidpoint = 2 * math.pi - diffFromMidpoint;
+      var diffFromFinger = (itemAngle - fingerAngle).abs();
+      if (diffFromFinger > math.pi) {
+        diffFromFinger = 2 * math.pi - diffFromFinger;
       }
 
-      if (diffFromMidpoint <= focusWindowHalfAngle) {
-        var diffFromFinger = (itemAngle - fingerAngle).abs();
-        if (diffFromFinger > math.pi) {
-          diffFromFinger = 2 * math.pi - diffFromFinger;
-        }
-
-        if (diffFromFinger < minDiff) {
-          minDiff = diffFromFinger;
-          closestIndex = i;
-        }
+      if (diffFromFinger < minDiff) {
+        minDiff = diffFromFinger;
+        closestIndex = i;
       }
     }
 
