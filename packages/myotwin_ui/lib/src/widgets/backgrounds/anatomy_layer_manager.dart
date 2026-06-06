@@ -193,13 +193,19 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       // Default HUD State: Skeletal Solid, Muscular Ghosted, Others Hidden
       return switch (layer) {
         AnatomyLayer.skeletal => 1.0,
-        AnatomyLayer.muscular => 0.1,
+        AnatomyLayer.muscular => 0.6,
         _ => 0.0,
       };
     }
 
-    // Isolation Mode: Selection Solid, others 10% ghosted
-    return layer == _isolatedLayer ? 1.0 : 0.1;
+    // Isolation Mode: Selection "Solid", others 10% ghosted
+    if (layer == _isolatedLayer) {
+      // Muscles are layered; use 60% opacity to see deeper structures.
+      // Other layers are slightly transparent (90%) for a holographic feel.
+      return layer == AnatomyLayer.muscular ? 0.6 : 0.9;
+    }
+
+    return 0.2;
   }
 
   /// Isolates a specific layer.
