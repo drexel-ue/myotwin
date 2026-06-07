@@ -107,99 +107,102 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
   /// * **Motion** — seven duration tiers and four easing curves
   ///
   /// This is the instance injected via [MyoTwinThemeDataFactory.build].
-  factory MyoTwinTheme.dark() {
-    return const MyoTwinTheme(
-      surface: Color(0xFF0A0A0A),
-      surfaceElevated: Color(0xFF111111),
-      surfaceElevated2: Color(0xFF1A1A1A),
-      surfaceElevated3: Color(0xFF222222),
-      outline: Color(0xFF2A2A2A),
-      outlineDim: Color(0xFF1F1F1F),
-      inset: Color(0xFF000000),
-      onSurface: Color(0xFFE0E0E0),
-      onSurfaceMedium: Color(0xFF999999),
-      onSurfaceDim: Color(0xFF666666),
-      white: Color(0xFFFFFFFF),
-      black: Color(0xFF000000),
-      accent: Color(0xFFA0A0A0),
-      accentHot: Color(0xFFC8C8C8),
-      heatLow: Color(0xFF556060),
-      heatMed: Color(0xFF4A5A4A),
-      heatHigh: Color(0xFF604030),
-      heatCritical: Color(0xFF703030),
-      linkFaint: Color(0xFF3A5A4A),
-      linkStrong: Color(0xFF6A8A7A),
-      success: Color(0xFF607060),
-      error: Color(0xFF803030),
+  factory MyoTwinTheme.dark({
+    Color accent = const Color(0xFFA0A0A0),
+    Color accentHot = const Color(0xFFC8C8C8),
+  }) {
+    return MyoTwinTheme(
+      surface: const Color(0xFF0A0A0A),
+      surfaceElevated: const Color(0xFF111111),
+      surfaceElevated2: const Color(0xFF1A1A1A),
+      surfaceElevated3: const Color(0xFF222222),
+      outline: const Color(0xFF2A2A2A),
+      outlineDim: const Color(0xFF1F1F1F),
+      inset: const Color(0xFF000000),
+      onSurface: const Color(0xFFE0E0E0),
+      onSurfaceMedium: const Color(0xFF999999),
+      onSurfaceDim: const Color(0xFF666666),
+      white: const Color(0xFFFFFFFF),
+      black: const Color(0xFF000000),
+      accent: accent,
+      accentHot: accentHot,
+      heatLow: const Color(0xFF556060),
+      heatMed: const Color(0xFF4A5A4A),
+      heatHigh: const Color(0xFF604030),
+      heatCritical: const Color(0xFF703030),
+      linkFaint: const Color(0xFF3A5A4A),
+      linkStrong: const Color(0xFF6A8A7A),
+      success: const Color(0xFF607060),
+      error: const Color(0xFF803030),
 
       // Explicit Logical Pixel Letter-Spacing calculation mapping tracking percentages
-      displayLarge: TextStyle(
+      displayLarge: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 32.0,
         fontWeight: .w700,
         letterSpacing: 32.0 * -0.02,
       ),
-      displayMedium: TextStyle(
+      displayMedium: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 24.0,
         fontWeight: .w700,
         letterSpacing: 24.0 * -0.01,
       ),
-      headlineLarge: TextStyle(
+      headlineLarge: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 20.0,
         fontWeight: .w600,
         letterSpacing: 20.0 * -0.01,
       ),
-      headlineMedium: TextStyle(
+      headlineMedium: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 16.0,
         fontWeight: .w600,
         letterSpacing: 0.0,
       ),
-      title: TextStyle(
+      title: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 14.0,
         fontWeight: .w600,
         letterSpacing: 0.0,
       ),
-      bodyLarge: TextStyle(
+      bodyLarge: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 16.0,
         fontWeight: .w400,
         letterSpacing: 16.0 * -0.01,
       ),
-      bodyMedium: TextStyle(
+      bodyMedium: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 14.0,
         fontWeight: .w400,
         letterSpacing: 14.0 * -0.01,
       ),
-      bodySmall: TextStyle(
+      bodySmall: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 12.0,
         fontWeight: .w400,
         letterSpacing: 0.0,
       ),
-      caption: TextStyle(
+      caption: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 11.0,
         fontWeight: .w400,
         letterSpacing: 0.0,
       ),
-      overline: TextStyle(
+      overline: const TextStyle(
         fontFamily: 'SpaceMono',
         fontSize: 10.0,
         fontWeight: .w600,
         letterSpacing: 10.0 * 0.03,
       ),
-      terminal: TextStyle(
+      terminal: const TextStyle(
         fontFamily: 'JetBrainsMono',
         fontSize: 14.0,
         fontWeight: .w400,
         letterSpacing: 14.0 * -0.02,
       ),
-      glitch: TextStyle(
+      glitch: const TextStyle(
         fontFamily: 'JetBrainsMono',
         fontSize: 14.0,
         fontWeight: .w700,
@@ -207,18 +210,18 @@ class MyoTwinTheme extends ThemeExtension<MyoTwinTheme> {
       ),
 
       radiusNone: .zero,
-      radiusSm: .all(.circular(4.0)),
-      radiusMd: .all(.circular(8.0)),
-      radiusLg: .all(.circular(16.0)),
-      radiusFull: .all(.circular(999.0)),
+      radiusSm: const .all(.circular(4.0)),
+      radiusMd: const .all(.circular(8.0)),
+      radiusLg: const .all(.circular(16.0)),
+      radiusFull: const .all(.circular(999.0)),
 
-      motionFast: Duration(milliseconds: 80),
-      motionNormal: Duration(milliseconds: 250),
-      motionSlow: Duration(milliseconds: 400),
-      motionSlower: Duration(milliseconds: 600),
-      motionGlitch: Duration(milliseconds: 120),
-      motionHolographic: Duration(milliseconds: 500),
-      motionFeedback: Duration(milliseconds: 60),
+      motionFast: const Duration(milliseconds: 80),
+      motionNormal: const Duration(milliseconds: 250),
+      motionSlow: const Duration(milliseconds: 400),
+      motionSlower: const Duration(milliseconds: 600),
+      motionGlitch: const Duration(milliseconds: 120),
+      motionHolographic: const Duration(milliseconds: 500),
+      motionFeedback: const Duration(milliseconds: 60),
 
       curveDecelerate: Curves.decelerate,
       curveEaseOut: Curves.easeOut,
@@ -591,15 +594,18 @@ class StepsCurve extends Curve {
 /// * [ThemeData.extensions] → the [MyoTwinTheme] extension
 class MyoTwinThemeDataFactory {
   /// Builds a [ThemeData] ready to use in [MaterialApp.theme].
-  static ThemeData build() {
-    final extensions = MyoTwinTheme.dark();
+  static ThemeData build({Color? accent, Color? accentHot}) {
+    final extensions = MyoTwinTheme.dark(
+      accent: accent ?? const Color(0xFFA0A0A0),
+      accentHot: accentHot ?? const Color(0xFFC8C8C8),
+    );
 
     return ThemeData(
-      brightness: .dark,
+      brightness: Brightness.dark,
       scaffoldBackgroundColor: extensions.surface,
       dividerColor: extensions.outline,
       extensions: [extensions],
-      colorScheme: .dark(
+      colorScheme: ColorScheme.dark(
         surface: extensions.surface,
         error: extensions.error,
         onSurface: extensions.onSurface,

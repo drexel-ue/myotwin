@@ -206,6 +206,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                         final iconIntent = switch (index) {
                           4 => 'target',
                           3 => 'crosshair',
+                          9 => 'gear',
                           _ => 'task',
                         };
                         return MyoIconButton(
@@ -227,7 +228,7 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                           'REVERT LADDER',
                           'X-RAY OVERLAY',
                           'BODY HEATMAP',
-                          'CALIBRATE',
+                          'THEME_SETTINGS',
                         ];
                         return tooltips[index];
                       },

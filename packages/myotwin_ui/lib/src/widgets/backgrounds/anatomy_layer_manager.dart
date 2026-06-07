@@ -39,6 +39,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   AnatomyLayer? _isolatedLayer;
   final Set<String> _highlightedNodes = {};
   flutter.Color _highlightColor = flutter.Colors.cyan;
+  double _roughness = 0.25;
   bool _isInitialized = false;
 
   // The Registry: Map<NodeName, List<Nodes>> for O(1) highlight lookups.
@@ -62,13 +63,22 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       _layerMaterials[layer] = PhysicallyBasedMaterial()
         ..baseColorFactor = Vector4(0.1, 0.1, 0.1, 1.0)
         ..metallicFactor = 0.9
-        ..roughnessFactor = 0.5;
+        ..roughnessFactor = _roughness;
     }
 
     _highlightMaterial
-      ..baseColorFactor =
-          Vector4(0.0, 1.0, 1.0, 1.0) // Default Cyan
-      ..emissiveFactor = Vector4(0.0, 1.0, 1.0, 1.0);
+      ..baseColorFactor = Vector4(
+        _highlightColor.r,
+        _highlightColor.g,
+        _highlightColor.b,
+        1.0,
+      )
+      ..emissiveFactor = Vector4(
+        _highlightColor.r,
+        _highlightColor.g,
+        _highlightColor.b,
+        1.0,
+      );
   }
 
   /// Initializes the materials and loads all 3D assets into the scene.
@@ -138,9 +148,6 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       final material = entry.value;
 
       final targetAlpha = _calculateTargetAlpha(layer);
-      // Interpolate from current alpha (effectively)
-      // Note: for simplicity in this MVP, we lerp toward the goal.
-      // A more robust system would track 'startAlpha'.
       final currentAlpha = material.baseColorFactor.w;
       final newAlpha = currentAlpha + (targetAlpha - currentAlpha) * t;
 
@@ -172,7 +179,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       // Default HUD State: Skeletal Solid, Muscular Ghosted, Others Hidden
       return switch (layer) {
         AnatomyLayer.skeletal => 1.0,
-        AnatomyLayer.muscular => 0.6,
+        AnatomyLayer.muscular => 0.1,
         _ => 0.0,
       };
     }
@@ -184,7 +191,23 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       return layer == AnatomyLayer.muscular ? 0.6 : 0.9;
     }
 
-    return 0.2;
+    return 0.1;
+  }
+
+  /// Updates the model roughness property.
+  void updateRoughness(double roughness) {
+    _roughness = roughness;
+    for (final material in _layerMaterials.values) {
+      material.roughnessFactor = _roughness;
+    }
+    _highlightMaterial.roughnessFactor = _roughness;
+    notifyListeners();
+  }
+
+  /// Updates the highlight color.
+  void updateHighlightColor(flutter.Color color) {
+    _highlightColor = color;
+    reconcile();
   }
 
   /// Isolates a specific layer.
@@ -209,7 +232,6 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   }
 
   /// Re-traverses the registry once to assign either Layer-Material or Highlight-Material.
-  /// This is called only when the *membership* of the highlight set changes.
   void _refreshMaterialAssignments() {
     // 1. Reset all nodes to their layer materials
     for (final entry in _layerRoots.entries) {

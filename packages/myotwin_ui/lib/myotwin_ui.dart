@@ -25,6 +25,7 @@ export 'src/widgets/containment/frosted_hud.dart';
 export 'src/widgets/containment/goal_explorer_surface.dart';
 export 'src/widgets/containment/myo_divider.dart';
 export 'src/widgets/containment/myo_list_tile.dart';
+export 'src/widgets/containment/theme_settings_surface.dart';
 export 'src/widgets/effects/bleed_margin.dart';
 export 'src/widgets/effects/holo_glitch.dart';
 export 'src/widgets/effects/holo_glitch_mixin.dart';

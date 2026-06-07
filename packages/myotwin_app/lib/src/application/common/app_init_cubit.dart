@@ -133,21 +133,32 @@ class AppInitCubit extends Cubit<AppInitState> {
         return;
       }
 
-      emit(state.copyWith(
-        isModelLoaded: true,
-        progress: 1.0,
-        status: 'SYSTEM_ONLINE',
-        isReady: true,
-      ));
-      
-      _logger.success('APP_INIT: BOOT_SEQUENCE_COMPLETE');
-      addLog('SYNCHRONIZATION_SUCCESSFUL');
-      addLog('SYSTEM_READY_FOR_DEPLOYMENT');
+      _logger.success('APP_INIT: MODEL_READY');
+      addLog('MOTUS_CORE_INITIALIZED');
     } catch (e, stack) {
       _logger.error('APP_INIT: FATAL_ERROR', error: e, stackTrace: stack);
       addLog('CRITICAL_SYSTEM_FAILURE');
       emit(state.copyWith(error: e.toString(), status: 'CRITICAL_FAILURE'));
     }
+  }
+
+  /// Performs semantic indexing of the anatomical map.
+  /// 
+  /// (Deprecated: Semantic map is now pre-compiled, but kept for future dynamic GLBs)
+  Future<void> indexAnatomy(Map<AnatomyLayer, List<String>> nodesByLayer) async {
+    if (state.isReady) return;
+    
+    // MODEL LOADED: All critical data is enriched and ready.
+    emit(state.copyWith(
+      isModelLoaded: true,
+      progress: 1.0,
+      status: 'SYSTEM_ONLINE',
+      isReady: true,
+    ));
+    
+    _logger.success('APP_INIT: BOOT_SEQUENCE_COMPLETE');
+    addLog('SYNCHRONIZATION_SUCCESSFUL');
+    addLog('SYSTEM_READY_FOR_DEPLOYMENT');
   }
 
   void _onMotusProgress() {

@@ -17,6 +17,9 @@ class MyoAnatomyCanvas extends StatefulWidget {
     this.resetTrigger,
     this.activeLayer,
     this.onNodesLoaded,
+    required this.accentColor,
+    required this.highlightColor,
+    required this.roughness,
   });
 
   /// The list of anatomical nodes to highlight in the heatmap.
@@ -30,6 +33,15 @@ class MyoAnatomyCanvas extends StatefulWidget {
 
   /// Called when the 3D models are fully loaded and node names are available.
   final ValueChanged<Map<AnatomyLayer, List<String>>>? onNodesLoaded;
+
+  /// The primary accent color for lighting.
+  final Color accentColor;
+
+  /// The color for anatomical highlights.
+  final Color highlightColor;
+
+  /// The material roughness.
+  final double roughness;
 
   @override
   State<MyoAnatomyCanvas> createState() => _MyoAnatomyCanvasState();
@@ -54,13 +66,9 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
     super.initState();
     _manager = AnatomyLayerManager(_scene, vsync: this, logger: context.myoLogger);
 
-    // Setup Lighting
-    _scene
-      ..directionalLight = (DirectionalLight()
-        ..color = vm.Vector3(1.0, 1.0, 1.0)
-        ..direction = vm.Vector3(1.0, -1.0, 1.0).normalized()
-        ..intensity = 2.0)
-      ..environmentIntensity = 0.5;
+    // Initial Lighting
+    _updateLighting(widget.accentColor);
+    _scene.environmentIntensity = 0.6;
 
     _manager.addListener(_handleManagerUpdate);
 
@@ -68,8 +76,9 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
       _manager.initialize().then((_) {
         if (mounted) {
           _manager
+            ..updateRoughness(widget.roughness)
             ..isolateLayer(widget.activeLayer)
-            ..setHighlights(widget.activeNodes, context.myoTheme.accentHot);
+            ..setHighlights(widget.activeNodes, widget.highlightColor);
           widget.onNodesLoaded?.call(_manager.getAvailableNodesByLayer());
         }
       }),
@@ -85,14 +94,28 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
       if (widget.activeLayer != oldWidget.activeLayer) {
         _manager.isolateLayer(widget.activeLayer);
       }
-      if (widget.activeNodes != oldWidget.activeNodes) {
-        _manager.setHighlights(widget.activeNodes, context.myoTheme.accentHot);
+      if (widget.activeNodes != oldWidget.activeNodes || 
+          widget.highlightColor != oldWidget.highlightColor) {
+        _manager.setHighlights(widget.activeNodes, widget.highlightColor);
+      }
+      if (widget.roughness != oldWidget.roughness) {
+        _manager.updateRoughness(widget.roughness);
+      }
+      if (widget.accentColor != oldWidget.accentColor) {
+        _updateLighting(widget.accentColor);
       }
     }
     if (widget.resetTrigger != oldWidget.resetTrigger) {
       oldWidget.resetTrigger?.removeListener(_resetView);
       widget.resetTrigger?.addListener(_resetView);
     }
+  }
+
+  void _updateLighting(Color color) {
+    _scene.directionalLight = DirectionalLight()
+      ..color = vm.Vector3(color.r, color.g, color.b)
+      ..direction = vm.Vector3(1.0, -1.0, 1.0).normalized()
+      ..intensity = 2.0;
   }
 
   @override
