@@ -58,15 +58,16 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
     }
 
     // 2. Perform semantic search and intersect with physical availability
-    final filteredNodes = semanticService
-        .search(
-          _searchQuery,
-          // We no longer pass the layer to the semantic service (JSON-based)
-          // to prevent miscategorization leakage.
-        )
-        .where((node) => physicalLayerIds.contains(node.id))
-        .toList()
-      ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
+    final filteredNodes =
+        semanticService
+            .search(
+              _searchQuery,
+              // We no longer pass the layer to the semantic service (JSON-based)
+              // to prevent miscategorization leakage.
+            )
+            .where((node) => physicalLayerIds.contains(node.id))
+            .toList()
+          ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
 
     return FrostedHUD(
       impactPoint: Offset.zero,

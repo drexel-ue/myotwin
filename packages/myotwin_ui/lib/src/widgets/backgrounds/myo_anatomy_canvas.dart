@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -196,6 +197,16 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // --- SMART HITBOX CALCULATION ---
+    // Calculate tilt progress normalized 0.0 (center) to 1.0 (pole)
+    final tiltProgress = (math.pi / 2 - _phi).abs() / (math.pi / 2 - 0.1);
+
+    // Lerp between user-calibrated values
+    // Base (pi/2): tightness 0.65, height 1.63
+    // Pole (top): tightness 0.46, height 1.64
+    final currentTightness = ui.lerpDouble(0.65, 0.46, tiltProgress)!;
+    final currentHeight = ui.lerpDouble(1.63, 1.64, tiltProgress)!;
+
     // Calculate camera position based on spherical coordinates relative to target
     final x = _radius * math.sin(_phi) * math.cos(_theta);
     final y = _radius * math.cos(_phi);
@@ -240,9 +251,12 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
                       scene: _scene,
                       camera: camera,
                       viewportSize: constraints.biggest,
+                      tightness: currentTightness,
+                      height: currentHeight,
                     ),
                   ),
                 ),
+
                 // Render 3D-Anchored Tooltips
                 ...projectedTooltips.entries.map((entry) {
                   return Positioned(
@@ -293,11 +307,15 @@ class _ScenePainter extends CustomPainter {
     required this.scene,
     required this.camera,
     required this.viewportSize,
+    required this.tightness,
+    required this.height,
   });
 
   final Scene scene;
   final Camera camera;
   final Size viewportSize;
+  final double tightness;
+  final double height;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -305,18 +323,65 @@ class _ScenePainter extends CustomPainter {
     scene.render(camera, canvas, viewport: Offset.zero & size);
   }
 
+  Rect? _calculateHitBox() {
+    final viewProj = camera.getViewTransform(viewportSize);
+
+    // Dynamic width and depth based on tightness
+    final w = 0.4 * tightness;
+    final d = 0.25 * tightness;
+
+    // Center the height adjustment around the vertical midpoint (0.9m)
+    const centerY = 0.9;
+    final halfH = height / 2;
+    final yMin = centerY - halfH;
+    final yMax = centerY + halfH;
+
+    final bounds3D = [
+      vm.Vector3(-w, yMin, -d),
+      vm.Vector3(w, yMin, -d),
+      vm.Vector3(-w, yMax, -d),
+      vm.Vector3(w, yMax, -d),
+      vm.Vector3(-w, yMin, d),
+      vm.Vector3(w, yMin, d),
+      vm.Vector3(-w, yMax, d),
+      vm.Vector3(w, yMax, d),
+    ];
+
+    var minX = double.infinity;
+    var maxX = -double.infinity;
+    var minY = double.infinity;
+    var maxY = -double.infinity;
+
+    for (final p in bounds3D) {
+      final clipPos = viewProj.transform(vm.Vector4(p.x, p.y, p.z, 1.0));
+      if (clipPos.w > 0) {
+        final ndcX = clipPos.x / clipPos.w;
+        final ndcY = clipPos.y / clipPos.w;
+
+        final screenX = (ndcX + 1.0) / 2.0 * viewportSize.width;
+        final screenY = (1.0 - ndcY) / 2.0 * viewportSize.height;
+
+        if (screenX < minX) minX = screenX;
+        if (screenX > maxX) maxX = screenX;
+        if (screenY < minY) minY = screenY;
+        if (screenY > maxY) maxY = screenY;
+      }
+    }
+
+    if (minX == double.infinity) return null;
+
+    // Add 24px padding to the hit box for fat fingers
+    return Rect.fromLTRB(minX - 24, minY - 24, maxX + 24, maxY + 24);
+  }
+
   @override
   bool hitTest(Offset position) {
-    // SILHOUETTE HIT-TESTING HEURISTIC
-    final centerX = viewportSize.width / 2;
-    final hitWidth = viewportSize.width * 0.25; // 50% total width
-
-    // If the touch is within the horizontal central silhouette, claim the hit.
-    return (position.dx - centerX).abs() < hitWidth;
+    final rect = _calculateHitBox();
+    return rect?.contains(position) ?? false;
   }
 
   @override
   bool shouldRepaint(covariant _ScenePainter oldDelegate) {
-    return true; // We repaint every frame to handle animations/interpolations
+    return oldDelegate.tightness != tightness || oldDelegate.height != height;
   }
 }
