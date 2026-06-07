@@ -21,10 +21,10 @@ class ThemeSettings implements Loggable {
 
   /// Creates [ThemeSettings] from a JSON map.
   factory ThemeSettings.fromJson(Map<String, dynamic> json) => ThemeSettings(
-        accentColor: Color(json['accentColor'] as int),
-        highlightColor: Color(json['highlightColor'] as int),
-        modelRoughness: (json['modelRoughness'] as num).toDouble(),
-      );
+    accentColor: Color(json['accentColor'] as int),
+    highlightColor: Color(json['highlightColor'] as int),
+    modelRoughness: (json['modelRoughness'] as num).toDouble(),
+  );
 
   /// The primary neon accent color for UI elements and lighting.
   final Color accentColor;
@@ -60,8 +60,8 @@ class ThemeSettings implements Loggable {
 
   /// Converts settings to a JSON-compatible map for persistence.
   Map<String, dynamic> toJson() => {
-        'accentColor': accentColor.toARGB32(),
-        'highlightColor': highlightColor.toARGB32(),
-        'modelRoughness': modelRoughness,
-      };
+    'accentColor': accentColor.toARGB32(),
+    'highlightColor': highlightColor.toARGB32(),
+    'modelRoughness': modelRoughness,
+  };
 }

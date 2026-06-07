@@ -86,7 +86,7 @@ class ThemeSettingsSurface extends StatelessWidget {
                                 color: color.withValues(alpha: 0.5),
                                 blurRadius: 8.0,
                                 spreadRadius: 1.0,
-                              )
+                              ),
                             ]
                           : null,
                     ),
@@ -122,7 +122,7 @@ class ThemeSettingsSurface extends StatelessWidget {
                                 color: color.withValues(alpha: 0.5),
                                 blurRadius: 8.0,
                                 spreadRadius: 1.0,
-                              )
+                              ),
                             ]
                           : null,
                     ),
@@ -157,7 +157,9 @@ class ThemeSettingsSurface extends StatelessWidget {
             ),
             verticalMargin8,
             Text(
-              roughness < 0.3 ? 'MODE: HIGH_POLISHED' : (roughness > 0.7 ? 'MODE: MATTE_CARBON' : 'MODE: TACTICAL_COMPOSITE'),
+              roughness < 0.3
+                  ? 'MODE: HIGH_POLISHED'
+                  : (roughness > 0.7 ? 'MODE: MATTE_CARBON' : 'MODE: TACTICAL_COMPOSITE'),
               style: theme.caption.copyWith(fontSize: 9, color: theme.onSurfaceDim),
             ),
           ],

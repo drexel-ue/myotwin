@@ -36,11 +36,13 @@ class _BootScreenState extends State<BootScreen> {
 
   void _scrollToBottom() {
     if (_terminalScrollController.hasClients && !_userIsScrolling) {
-      unawaited(_terminalScrollController.animateTo(
-        _terminalScrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      ));
+      unawaited(
+        _terminalScrollController.animateTo(
+          _terminalScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        ),
+      );
     }
   }
 
@@ -121,7 +123,8 @@ class _BootScreenState extends State<BootScreen> {
                           onNotification: (notification) {
                             if (notification is UserScrollNotification) {
                               // If user is at the bottom, allow auto-scroll again
-                              _userIsScrolling = _terminalScrollController.position.pixels <
+                              _userIsScrolling =
+                                  _terminalScrollController.position.pixels <
                                   _terminalScrollController.position.maxScrollExtent - 10;
                             }
                             return false;

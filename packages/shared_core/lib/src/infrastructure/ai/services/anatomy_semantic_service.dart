@@ -53,8 +53,8 @@ class AnatomySemanticService extends ChangeNotifier {
       if (term.isEmpty) return true;
 
       return node.laymanName.toLowerCase().contains(term) ||
-             node.id.toLowerCase().contains(term) ||
-             node.regions.any((r) => r.toLowerCase().contains(term));
+          node.id.toLowerCase().contains(term) ||
+          node.regions.any((r) => r.toLowerCase().contains(term));
     }).toList();
   }
 

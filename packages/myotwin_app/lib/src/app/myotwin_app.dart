@@ -92,9 +92,7 @@ class _MyoStartupOrchestrator extends StatefulWidget {
 }
 
 class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
-    with
-        TickerProviderStateMixin,
-        HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
+    with TickerProviderStateMixin, HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
   late final AnimationController _perceivedController;
   bool _readyToTransition = false;
   bool _showGoalExplorer = false;
@@ -209,8 +207,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                           return context.read<ChatCubit>().submit(value);
                         },
                         onShowChatChanged: (visible) {
-                          widget.fabState.value =
-                              visible ? HoloState.listening : HoloState.idle;
+                          widget.fabState.value = visible ? HoloState.listening : HoloState.idle;
                         },
                         onCommandNodeSelected: (node) {
                           if (node == '4') {
@@ -314,8 +311,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                   child: BlocBuilder<AppInitCubit, AppInitState>(
                     builder: (context, state) {
                       final scanProgress = _perceivedController.value;
-                      final progress = state.isReady ? scanProgress
-                        : (scanProgress * 0.9).clamp(0.0, 1.0);
+                      final progress = state.isReady ? scanProgress : (scanProgress * 0.9).clamp(0.0, 1.0);
 
                       return BootScreen(
                         progress: progress,

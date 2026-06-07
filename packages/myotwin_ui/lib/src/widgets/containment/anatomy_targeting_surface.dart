@@ -53,14 +53,15 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
     final availableIds = widget.nodesByLayer.values.expand((e) => e).toSet();
 
     // 2. Perform semantic search and filter by physical availability
-    final filteredNodes = semanticService
-        .search(
-          _searchQuery,
-          layer: widget.activeLayer,
-        )
-        .where((node) => availableIds.contains(node.id))
-        .toList()
-      ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
+    final filteredNodes =
+        semanticService
+            .search(
+              _searchQuery,
+              layer: widget.activeLayer,
+            )
+            .where((node) => availableIds.contains(node.id))
+            .toList()
+          ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
 
     return FrostedHUD(
       impactPoint: Offset.zero,

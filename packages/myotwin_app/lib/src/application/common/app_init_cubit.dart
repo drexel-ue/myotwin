@@ -88,7 +88,7 @@ class AppInitCubit extends Cubit<AppInitState> {
     final timestamp = DateTime.now().toIso8601String().split('T').last.substring(0, 8);
     final formatted = '[$timestamp] $message';
     final updatedLogs = [...state.logs, formatted];
-    
+
     // Keep a substantial history (100 entries)
     if (updatedLogs.length > 100) {
       updatedLogs.removeAt(0);
@@ -112,23 +112,25 @@ class AppInitCubit extends Cubit<AppInitState> {
       // 1. Load Semantic Map (Instant)
       emit(state.copyWith(status: 'LOADING_SEMANTIC_MAP...'));
       addLog('ACCESSING_SEMANTIC_ASSETS...');
-      
+
       final jsonString = await rootBundle.loadString('assets/models/semantic_anatomy.json');
       _semanticService.load(jsonString);
-      
+
       addLog('SEMANTIC_INDEX_READY: ${_semanticService.getAll().length}_NODES');
 
       // 2. Load Model (Slow)
       emit(state.copyWith(status: 'CONNECTING_TO_MOTUS_MODEL...'));
       addLog('INITIALIZING_NEURAL_CORE...');
-      
+
       await _motusService.initialize(ModelSource.parse(modelUri));
 
       if (_motusService.initializationError != null) {
-        emit(state.copyWith(
-          error: _motusService.initializationError,
-          status: 'FATAL_CORE_ERROR',
-        ));
+        emit(
+          state.copyWith(
+            error: _motusService.initializationError,
+            status: 'FATAL_CORE_ERROR',
+          ),
+        );
         addLog('FATAL_MODEL_LOAD_FAILED');
         return;
       }
@@ -143,19 +145,21 @@ class AppInitCubit extends Cubit<AppInitState> {
   }
 
   /// Performs semantic indexing of the anatomical map.
-  /// 
+  ///
   /// (Deprecated: Semantic map is now pre-compiled, but kept for future dynamic GLBs)
   Future<void> indexAnatomy(Map<AnatomyLayer, List<String>> nodesByLayer) async {
     if (state.isReady) return;
-    
+
     // MODEL LOADED: All critical data is enriched and ready.
-    emit(state.copyWith(
-      isModelLoaded: true,
-      progress: 1.0,
-      status: 'SYSTEM_ONLINE',
-      isReady: true,
-    ));
-    
+    emit(
+      state.copyWith(
+        isModelLoaded: true,
+        progress: 1.0,
+        status: 'SYSTEM_ONLINE',
+        isReady: true,
+      ),
+    );
+
     _logger.success('APP_INIT: BOOT_SEQUENCE_COMPLETE');
     addLog('SYNCHRONIZATION_SUCCESSFUL');
     addLog('SYSTEM_READY_FOR_DEPLOYMENT');
@@ -164,12 +168,14 @@ class AppInitCubit extends Cubit<AppInitState> {
   void _onMotusProgress() {
     final progress = _motusService.loadingProgress.value;
     if (!state.isReady) {
-      emit(state.copyWith(
-        progress: progress,
-        status: progress < 1.0 
-          ? 'DOWNLOADING_MODEL_RESOURCES... (${(progress * 100).toInt()}%)'
-          : 'SYNCHRONIZING_CORE...',
-      ));
+      emit(
+        state.copyWith(
+          progress: progress,
+          status: progress < 1.0
+              ? 'DOWNLOADING_MODEL_RESOURCES... (${(progress * 100).toInt()}%)'
+              : 'SYNCHRONIZING_CORE...',
+        ),
+      );
       if (progress >= 1.0) addLog('MODEL_RESOURCES_UNPACKED');
     }
   }

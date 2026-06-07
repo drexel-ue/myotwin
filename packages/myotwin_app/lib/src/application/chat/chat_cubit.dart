@@ -83,7 +83,7 @@ class ChatCubit extends Cubit<ChatState> {
   Future<void> initialize() async {
     final goalId = await _repository.getOrCreateActiveGoalId();
     final goal = await _repository.getGoal(goalId);
-    
+
     emit(state.copyWith(activeGoal: goal));
 
     await _historySubscription?.cancel();
@@ -191,9 +191,9 @@ class ChatCubit extends Cubit<ChatState> {
 
     // 3. Swap the database subscription
     await _historySubscription?.cancel();
-    
+
     final newGoal = await _repository.getGoal(newGoalId);
-    
+
     _historySubscription = _repository.watchMessages(newGoalId).listen((messages) {
       emit(
         state.copyWith(

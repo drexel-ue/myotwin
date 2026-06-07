@@ -21,7 +21,7 @@ class ThemeRepository {
   Future<ThemeSettings> loadSettings() async {
     _logger.detail('THEME_REPOSITORY: LOADING_SETTINGS');
     final raw = _storage.readString(_storageKey);
-    
+
     if (raw == null) {
       _logger.info('THEME_REPOSITORY: NO_PERSISTED_SETTINGS_FOUND_USING_DEFAULTS');
       return ThemeSettings.defaultTactical();

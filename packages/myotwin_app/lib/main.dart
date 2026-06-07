@@ -32,7 +32,7 @@ Future<void> main() async {
   final motusService = MotusService(logger: logger);
   final database = MyoTwinDatabase();
   final semanticService = AnatomySemanticService(logger: logger);
-  
+
   // 1.1 Persistent Storage & Theme
   final prefs = await SharedPreferences.getInstance();
   final storage = LocalStorageService(prefs);

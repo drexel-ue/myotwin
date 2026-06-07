@@ -94,8 +94,7 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
       if (widget.activeLayer != oldWidget.activeLayer) {
         _manager.isolateLayer(widget.activeLayer);
       }
-      if (widget.activeNodes != oldWidget.activeNodes || 
-          widget.highlightColor != oldWidget.highlightColor) {
+      if (widget.activeNodes != oldWidget.activeNodes || widget.highlightColor != oldWidget.highlightColor) {
         _manager.setHighlights(widget.activeNodes, widget.highlightColor);
       }
       if (widget.roughness != oldWidget.roughness) {
