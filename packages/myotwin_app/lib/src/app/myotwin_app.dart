@@ -266,6 +266,9 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                           }
                         });
                       },
+                      onClearSelections: () {
+                        setState(_manualActiveNodes.clear);
+                      },
                       onClose: () => setState(() => _showAnatomyTargeter = false),
                     ),
                   ),
@@ -278,8 +281,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                     builder: (context, state) {
                       final scanProgress = _perceivedController.value;
                       // Blend real progress with cinematic scan
-                      final progress = state.isReady 
-                        ? scanProgress 
+                      final progress = state.isReady ? scanProgress
                         : (scanProgress * 0.9).clamp(0.0, 1.0);
 
                       return BootScreen(

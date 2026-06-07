@@ -12,6 +12,7 @@ class AnatomyTargetingSurface extends StatefulWidget {
     required this.selectedNodes,
     required this.onLayerChanged,
     required this.onNodeSelected,
+    required this.onClearSelections,
     required this.onClose,
   });
 
@@ -29,6 +30,9 @@ class AnatomyTargetingSurface extends StatefulWidget {
 
   /// Called when a node is selected.
   final ValueChanged<String> onNodeSelected;
+
+  /// Called when all selections are cleared.
+  final VoidCallback onClearSelections;
 
   /// Called when the surface is dismissed.
   final VoidCallback onClose;
@@ -130,9 +134,36 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
               prefixIcon: const MyoIcon(intent: 'target', size: 18),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
-            verticalMargin16,
+            verticalMargin8,
 
-            // 3. Node List
+            // 3. Selection Summary & Clear
+            if (widget.selectedNodes.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${widget.selectedNodes.length} SELECTED',
+                    style: theme.caption.copyWith(color: theme.accentHot),
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onClearSelections,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                      child: Text(
+                        'CLEAR_ALL',
+                        style: theme.caption.copyWith(
+                          color: theme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            if (widget.selectedNodes.isNotEmpty) verticalMargin8,
+
+            // 4. Node List
             Expanded(
               child: filteredNodes.isEmpty
                   ? Center(
@@ -147,13 +178,13 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                       itemBuilder: (context, index) {
                         final node = filteredNodes[index];
                         final isSelected = widget.selectedNodes.contains(node.id);
-                        
+
                         return MyoListTile(
                           title: node.laymanName.toUpperCase(),
                           subtitle: node.id,
                           isSelected: isSelected,
                           trailing: MyoIcon(
-                            intent: isSelected ? 'crosshair' : 'target', 
+                            intent: isSelected ? 'crosshair' : 'target',
                             size: 16,
                             color: isSelected ? theme.accentHot : theme.onSurfaceDim,
                           ),
