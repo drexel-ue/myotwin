@@ -88,3 +88,6 @@ pubspec_overrides.yaml
 
 # Local config
 *.local
+
+# any model files
+*.gguf
