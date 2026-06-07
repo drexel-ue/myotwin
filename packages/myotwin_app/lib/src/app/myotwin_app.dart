@@ -199,6 +199,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                             onNodesLoaded: (nodes) {
                               if (_availableNodes.isEmpty) {
                                 setState(() => _availableNodes = nodes);
+                                context.read<AppInitCubit>().indexAnatomy(nodes).ignore();
                               }
                             },
                           ),

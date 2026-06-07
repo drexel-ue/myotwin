@@ -179,7 +179,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       // Default HUD State: Skeletal Solid, Muscular Ghosted, Others Hidden
       return switch (layer) {
         AnatomyLayer.skeletal => 1.0,
-        AnatomyLayer.muscular => 0.1,
+        AnatomyLayer.muscular => 0.4,
         _ => 0.0,
       };
     }
