@@ -141,8 +141,6 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.myoTheme;
-
     return BlocListener<AppInitCubit, AppInitState>(
       listenWhen: (prev, curr) => prev.isReady != curr.isReady,
       listener: (context, state) {
@@ -159,16 +157,127 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
           phase: glitchPhase,
           intensity: glitchIntensity,
           severity: 0.2,
-          child: AnimatedSwitcher(
-            duration: theme.motionHolographic,
-            switchInCurve: theme.curveEaseOut,
-            switchOutCurve: theme.curveDecelerate,
-            child: !_readyToTransition
-                ? BlocBuilder<AppInitCubit, AppInitState>(
+          child: Stack(
+            children: [
+              // THE MAIN HUD (Built in background to trigger anatomy discovery)
+              BlocBuilder<ChatCubit, ChatState>(
+                builder: (context, state) {
+                  return MyoCanvas(
+                    key: const ValueKey('myo_canvas'),
+                    fabState: widget.fabState,
+                    backgroundChild: InteractiveGrid(
+                      onLongPress: () {
+                        // --- CINEMATIC RESET PROTOCOL ---
+                        triggerGlitch();
+                        unawaited(HapticFeedback.heavyImpact());
+
+                        Timer(const Duration(milliseconds: 150), () {
+                          if (mounted) {
+                            setState(() {
+                              _manualActiveNodes.clear();
+                              _activeLayer = null;
+                              _anatomyResetTrigger.value++;
+                            });
+                          }
+                        });
+                      },
+                      child: MyoAnatomyCanvas(
+                        activeNodes: [
+                          ...state.activeGoal?.metadata.targetAnatomyNodes ?? [],
+                          ..._manualActiveNodes,
+                        ],
+                        activeLayer: _activeLayer,
+                        resetTrigger: _anatomyResetTrigger,
+                        onNodesLoaded: (nodes) {
+                          if (_availableNodes.isEmpty) {
+                            setState(() => _availableNodes = nodes);
+                            context.read<AppInitCubit>().debugDumpNodes(nodes).ignore();
+                          }
+                        },
+                      ),
+                    ),
+                    chatChild: MyoChatList(messages: state.messages),
+                    onMessageSubmitted: (value) async {
+                      return context.read<ChatCubit>().submit(value);
+                    },
+                    onShowChatChanged: (visible) {
+                      widget.fabState.value =
+                          visible ? HoloState.listening : HoloState.idle;
+                    },
+                    onCommandNodeSelected: (node) {
+                      if (node == '4') {
+                        setState(() => _showGoalExplorer = true);
+                      } else if (node == '3') {
+                        setState(() => _showAnatomyTargeter = true);
+                      }
+                    },
+                  );
+                },
+              ),
+
+              // OVERLAYS (Targeter, Explorer)
+              if (_showGoalExplorer)
+                Positioned.fill(
+                  child: Padding(
+                    padding: allPadding32,
+                    child: Align(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 600,
+                          maxHeight: 800,
+                        ),
+                        child: FutureBuilder<List<domain.Goal>>(
+                          future: context.read<ChatCubit>().fetchGoals(),
+                          builder: (context, snapshot) {
+                            return GoalExplorerSurface(
+                              goals: snapshot.data ?? [],
+                              onGoalSelected: (goal) async {
+                                await context.read<ChatCubit>().switchGoal(goal.id);
+                                setState(() => _showGoalExplorer = false);
+                              },
+                              onClose: () => setState(() => _showGoalExplorer = false),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_showAnatomyTargeter)
+                Positioned(
+                  right: 32,
+                  top: 32,
+                  bottom: 32,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    child: AnatomyTargetingSurface(
+                      nodesByLayer: _availableNodes,
+                      activeLayer: _activeLayer,
+                      selectedNodes: _manualActiveNodes,
+                      onLayerChanged: (layer) {
+                        setState(() => _activeLayer = layer);
+                      },
+                      onNodeSelected: (node) {
+                        setState(() {
+                          if (_manualActiveNodes.contains(node)) {
+                            _manualActiveNodes.remove(node);
+                          } else {
+                            _manualActiveNodes.add(node);
+                          }
+                        });
+                      },
+                      onClose: () => setState(() => _showAnatomyTargeter = false),
+                    ),
+                  ),
+                ),
+
+              // THE BOOT SCREEN (Sits on top until transition ready)
+              if (!_readyToTransition)
+                Positioned.fill(
+                  child: BlocBuilder<AppInitCubit, AppInitState>(
                     builder: (context, state) {
                       final scanProgress = _perceivedController.value;
-                      
-                      // Blend the real init progress with the cinematic scan progress
+                      // Blend real progress with cinematic scan
                       final progress = state.isReady 
                         ? scanProgress 
                         : (scanProgress * 0.9).clamp(0.0, 1.0);
@@ -178,123 +287,9 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                         status: state.status,
                       );
                     },
-                  )
-                : Stack(
-                    key: const ValueKey('hud_main'),
-                    children: [
-                      BlocBuilder<ChatCubit, ChatState>(
-                        builder: (context, state) {
-                          return MyoCanvas(
-                            key: const ValueKey('myo_canvas'),
-                            fabState: widget.fabState,
-                            backgroundChild: InteractiveGrid(
-                              onLongPress: () {
-                                // --- CINEMATIC RESET PROTOCOL ---
-                                triggerGlitch();
-                                unawaited(HapticFeedback.heavyImpact());
-
-                                Timer(const Duration(milliseconds: 150), () {
-                                  if (mounted) {
-                                    setState(() {
-                                      _manualActiveNodes.clear();
-                                      _activeLayer = null;
-                                      _anatomyResetTrigger.value++;
-                                    });
-                                  }
-                                });
-                              },
-                              child: MyoAnatomyCanvas(
-                                activeNodes: [
-                                  ...state.activeGoal?.metadata
-                                          .targetAnatomyNodes ??
-                                      [],
-                                  ..._manualActiveNodes,
-                                ],
-                                activeLayer: _activeLayer,
-                                resetTrigger: _anatomyResetTrigger,
-                                onNodesLoaded: (nodes) {
-                                  setState(() => _availableNodes = nodes);
-                                },
-                              ),
-                            ),
-                            chatChild: MyoChatList(messages: state.messages),
-                            onMessageSubmitted: (value) async {
-                              return context.read<ChatCubit>().submit(value);
-                            },
-                            onShowChatChanged: (visible) {
-                              widget.fabState.value =
-                                  visible ? HoloState.listening : HoloState.idle;
-                            },
-                            onCommandNodeSelected: (node) {
-                              if (node == '4') {
-                                setState(() => _showGoalExplorer = true);
-                              } else if (node == '3') {
-                                setState(() => _showAnatomyTargeter = true);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      if (_showGoalExplorer)
-                        Positioned.fill(
-                          child: Padding(
-                            padding: allPadding32,
-                            child: Align(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 600,
-                                  maxHeight: 800,
-                                ),
-                                child: FutureBuilder<List<domain.Goal>>(
-                                  future: context.read<ChatCubit>().fetchGoals(),
-                                  builder: (context, snapshot) {
-                                    return GoalExplorerSurface(
-                                      goals: snapshot.data ?? [],
-                                      onGoalSelected: (goal) async {
-                                        await context
-                                            .read<ChatCubit>()
-                                            .switchGoal(goal.id);
-                                        setState(() => _showGoalExplorer = false);
-                                      },
-                                      onClose: () =>
-                                          setState(() => _showGoalExplorer = false),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (_showAnatomyTargeter)
-                        Positioned(
-                          right: 32,
-                          top: 32,
-                          bottom: 32,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 340),
-                            child: AnatomyTargetingSurface(
-                              nodesByLayer: _availableNodes,
-                              activeLayer: _activeLayer,
-                              selectedNodes: _manualActiveNodes,
-                              onLayerChanged: (layer) {
-                                setState(() => _activeLayer = layer);
-                              },
-                              onNodeSelected: (node) {
-                                setState(() {
-                                  if (_manualActiveNodes.contains(node)) {
-                                    _manualActiveNodes.remove(node);
-                                  } else {
-                                    _manualActiveNodes.add(node);
-                                  }
-                                });
-                              },
-                              onClose: () =>
-                                  setState(() => _showAnatomyTargeter = false),
-                            ),
-                          ),
-                        ),
-                    ],
                   ),
+                ),
+            ],
           ),
         ),
       ),

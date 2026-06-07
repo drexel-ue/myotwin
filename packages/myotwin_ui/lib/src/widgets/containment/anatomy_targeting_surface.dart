@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
+import 'package:provider/provider.dart';
 
-/// A tactical sidebar for searching and targeting anatomical segments.
+/// A tactical sidebar for searching and targeting anatomical segments using semantic terms.
 class AnatomyTargetingSurface extends StatefulWidget {
   /// Creates an [AnatomyTargetingSurface].
   const AnatomyTargetingSurface({
@@ -42,28 +43,20 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
   @override
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
+    final semanticService = context.watch<AnatomySemanticService>();
 
-    // 1. Flatten and filter nodes based on selected layer and search query
-    final filteredNodes = <String>[];
-    if (widget.activeLayer != null) {
-      // Only show nodes from the selected layer
-      final layerNodes = widget.nodesByLayer[widget.activeLayer] ?? [];
-      filteredNodes.addAll(
-        layerNodes.where((node) {
-          return node.toLowerCase().contains(_searchQuery.toLowerCase());
-        }),
-      );
-    } else {
-      // Show all nodes from all layers
-      for (final layerNodes in widget.nodesByLayer.values) {
-        filteredNodes.addAll(
-          layerNodes.where((node) {
-            return node.toLowerCase().contains(_searchQuery.toLowerCase());
-          }),
-        );
-      }
-    }
-    filteredNodes.sort();
+    // 1. Create a set of all valid technical IDs currently in the 3D scene
+    final availableIds = widget.nodesByLayer.values.expand((e) => e).toSet();
+
+    // 2. Perform semantic search and filter by physical availability
+    final filteredNodes = semanticService
+        .search(
+          _searchQuery,
+          layer: widget.activeLayer,
+        )
+        .where((node) => availableIds.contains(node.id))
+        .toList()
+      ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
 
     return FrostedHUD(
       impactPoint: Offset.zero,
@@ -79,7 +72,6 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
               value: widget.activeLayer,
               allowUnselect: true,
               onSelectionChanged: (value) {
-                // If tapping already selected, toggle off
                 if (value == widget.activeLayer) {
                   widget.onLayerChanged(null);
                 } else {
@@ -92,10 +84,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                   label: '',
                   icon: Tooltip(
                     message: 'SKELETAL',
-                    child: MyoIcon(
-                      intent: 'bone',
-                      size: 18,
-                    ),
+                    child: MyoIcon(intent: 'bone', size: 18),
                   ),
                 ),
                 MyoSegment(
@@ -103,10 +92,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                   label: '',
                   icon: Tooltip(
                     message: 'MUSCULAR',
-                    child: MyoIcon(
-                      intent: 'activity',
-                      size: 18,
-                    ),
+                    child: MyoIcon(intent: 'activity', size: 18),
                   ),
                 ),
                 MyoSegment(
@@ -114,10 +100,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                   label: '',
                   icon: Tooltip(
                     message: 'NERVOUS',
-                    child: MyoIcon(
-                      intent: 'cpu',
-                      size: 18,
-                    ),
+                    child: MyoIcon(intent: 'cpu', size: 18),
                   ),
                 ),
                 MyoSegment(
@@ -125,10 +108,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                   label: '',
                   icon: Tooltip(
                     message: 'CARDIO',
-                    child: MyoIcon(
-                      intent: 'heart',
-                      size: 18,
-                    ),
+                    child: MyoIcon(intent: 'heart', size: 18),
                   ),
                 ),
                 MyoSegment(
@@ -136,10 +116,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                   label: '',
                   icon: Tooltip(
                     message: 'JOINTS',
-                    child: MyoIcon(
-                      intent: 'link',
-                      size: 18,
-                    ),
+                    child: MyoIcon(intent: 'link', size: 18),
                   ),
                 ),
               ],
@@ -148,7 +125,7 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
 
             // 2. Search Field
             MyoTextField(
-              hint: 'SEARCH_NODES...',
+              hint: 'SEMANTIC_SEARCH...',
               autofocus: true,
               prefixIcon: const MyoIcon(intent: 'target', size: 18),
               onChanged: (value) => setState(() => _searchQuery = value),
@@ -169,11 +146,18 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                       separatorBuilder: (_, _) => const MyoDivider(),
                       itemBuilder: (context, index) {
                         final node = filteredNodes[index];
+                        final isSelected = widget.selectedNodes.contains(node.id);
+                        
                         return MyoListTile(
-                          title: node,
-                          isSelected: widget.selectedNodes.contains(node),
-                          trailing: const MyoIcon(intent: 'crosshair', size: 16),
-                          onTap: () => widget.onNodeSelected(node),
+                          title: node.laymanName.toUpperCase(),
+                          subtitle: node.id,
+                          isSelected: isSelected,
+                          trailing: MyoIcon(
+                            intent: isSelected ? 'crosshair' : 'target', 
+                            size: 16,
+                            color: isSelected ? theme.accentHot : theme.onSurfaceDim,
+                          ),
+                          onTap: () => widget.onNodeSelected(node.id),
                         );
                       },
                     ),

@@ -1,7 +1,9 @@
+export 'src/domain/anatomy_node.dart';
 export 'src/domain/enums.dart';
 export 'src/domain/extension_types.dart';
 export 'src/domain/goal.dart';
 export 'src/domain/intent_record.dart';
 export 'src/domain/motus_agent.dart';
+export 'src/infrastructure/ai/services/anatomy_semantic_service.dart';
 export 'src/infrastructure/logging/loggable.dart';
 export 'src/infrastructure/logging/logger_service.dart';

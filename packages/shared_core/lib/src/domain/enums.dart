@@ -30,3 +30,24 @@ enum GoalStatus {
   /// No longer pursued by the user.
   abandoned,
 }
+
+/// The distinct anatomical systems available in the MyoTwin 3D model.
+enum AnatomyLayer {
+  /// All major bones.
+  skeletal,
+
+  /// Major muscle groups.
+  muscular,
+
+  /// Brain, spinal cord, and major nerves.
+  nervous,
+
+  /// Heart and major blood vessels.
+  cardiovascular,
+
+  /// Joint capsules and ligaments.
+  joints,
+
+  /// Points where muscles connect to bones.
+  insertions,
+}

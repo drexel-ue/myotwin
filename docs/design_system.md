@@ -92,7 +92,7 @@ A black-and-white cyberpunk/sci-fi aesthetic with glitch aesthetics, HUD-style l
 | `motion-slow` | `400ms` | `ease-in-out` | Bottom sheet slide up |
 | `motion-slower` | `600ms` | `decelerate` | Hot/cold FAB state change |
 | `motion-glitch` | `120ms` | `step-end` | Window open/close, boot screen |
-| `motion-holographic` | `500ms` | `ease-out` | Scene transitions (scan-in effect) |
+| `motion-holographic` | `600ms` | `ease-out` | Scene transitions (PBR alpha dissolves) |
 | `motion-feedback` | `60ms` | `ease-out` | Haptic response animation |
 
 | Motion Type | Parameter | Usage |
@@ -115,11 +115,13 @@ Used for bottom sheets, panel entrances. Content reveals left-to-right with a th
 #### 2. **Glitch Flicker**
 Used for window transitions, boot screens, error states. Frame-by-frame displacement: shift pixels horizontally ±2px in alternating directions for 3 frames, then restore.
 
-#### 3. **Holographic Fade**
-Used for scene transitions between views. Content appears to "materialize" from scan-lines: vertical bars at 40% opacity progressively fade in, creating a CRT boot-up effect.
+#### 3. **Holographic Fade (Layer Dissolve)**
+Used for scene transitions between anatomical views. Layers "materialize" or "dissolve" via PBR alpha interpolation. Instead of a uniform opacity shift, each layer transitions its PBR material properties independently, creating a volumetric "phasing" effect.
 
-#### 4. **Signal Pulse**
-Used for FAB hot state and active indicators. A circular ring expands from center at 3x per second, fading to 0 opacity.
+#### 4. **Signal Pulse (Anatomy & FAB)**
+Used for FAB hot state and anatomy node highlights. 
+- **FAB**: A circular ring expands from center at 3x per second.
+- **Anatomy**: Highlighted nodes (e.g., specific muscles) pulse their emissive intensity at a rhythmic 1.5s interval (0.6Hz), creating a breathing tactical glow.
 
 #### 5. **Data Stream**
 Used for chat message arrival. Text appears character-by-character (monospace font makes this feel like terminal output). Speed: 30ms per character.
@@ -170,13 +172,13 @@ Agent messages rendered with `terminal` font token. Typing indicator uses the `s
 
 ### Heatmap Body Map
 
-| Intensity | Color (vertex emissive) | Opacity |
+| Intensity / Mode | Color (vertex emissive) | Opacity |
 |---|---|---|
-| 0.0 | `#0A0A0A` | 0.0 |
-| 0.25 | `#3A4A4A` | 0.3 |
-| 0.50 | `#4A5A4A` | 0.5 |
-| 0.75 | `#604030` | 0.7 |
-| 1.0 | `#703030` | 0.95 |
+| 0.0 (Base) | `#1A1A1A` | 0.0 |
+| **Isolated Muscular** | Layer Material | **0.60** (X-ray depth) |
+| **Isolated (Other)** | Layer Material | **0.90** (Holographic solid) |
+| **Ghosted Context** | Layer Material | **0.10** (Structural anchor) |
+| **Active Highlight** | Emissive Pulse | **1.00** (Full focus) |
 
 ### Kinetic Chain Line
 

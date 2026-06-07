@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myotwin_app/src/application/common/app_init_cubit.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
 
 /// A HUD-themed loading screen for the application boot sequence.
-class BootScreen extends StatelessWidget {
+class BootScreen extends StatefulWidget {
   /// Creates a [BootScreen].
   const BootScreen({
     super.key,
@@ -17,6 +21,30 @@ class BootScreen extends StatelessWidget {
   final String status;
 
   @override
+  State<BootScreen> createState() => _BootScreenState();
+}
+
+class _BootScreenState extends State<BootScreen> {
+  final ScrollController _terminalScrollController = ScrollController();
+  bool _userIsScrolling = false;
+
+  @override
+  void dispose() {
+    _terminalScrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (_terminalScrollController.hasClients && !_userIsScrolling) {
+      unawaited(_terminalScrollController.animateTo(
+        _terminalScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      ));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.myoTheme;
 
@@ -25,7 +53,7 @@ class BootScreen extends StatelessWidget {
       body: InteractiveGrid(
         child: Center(
           child: Container(
-            width: 300,
+            width: 340,
             padding: allPadding24,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -40,7 +68,7 @@ class BootScreen extends StatelessWidget {
                 ),
                 verticalMargin16,
                 Text(
-                  status,
+                  widget.status,
                   style: theme.caption.copyWith(
                     color: theme.onSurfaceMedium,
                     fontFamily: 'JetBrainsMono',
@@ -48,14 +76,14 @@ class BootScreen extends StatelessWidget {
                 ),
                 verticalMargin8,
                 MyoLinearProgressIndicator(
-                  progress: progress,
+                  progress: widget.progress,
                 ),
                 verticalMargin16,
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${(progress * 100).toInt()}%',
+                      '${(widget.progress * 100).toInt()}%',
                       style: theme.bodySmall.copyWith(
                         color: theme.accentHot,
                         fontFamily: 'JetBrainsMono',
@@ -69,6 +97,56 @@ class BootScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+
+                // TACTICAL BOOT TERMINAL
+                verticalMargin24,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 160),
+                  child: Container(
+                    width: double.infinity,
+                    padding: allPadding8,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      border: Border.all(
+                        color: theme.outline,
+                        width: 0.5,
+                      ),
+                    ),
+                    child: BlocConsumer<AppInitCubit, AppInitState>(
+                      listenWhen: (prev, curr) => prev.logs.length != curr.logs.length,
+                      listener: (context, state) => _scrollToBottom(),
+                      builder: (context, state) {
+                        return NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            if (notification is UserScrollNotification) {
+                              // If user is at the bottom, allow auto-scroll again
+                              _userIsScrolling = _terminalScrollController.position.pixels <
+                                  _terminalScrollController.position.maxScrollExtent - 10;
+                            }
+                            return false;
+                          },
+                          child: ListView.builder(
+                            controller: _terminalScrollController,
+                            shrinkWrap: true,
+                            itemCount: state.logs.length,
+                            itemBuilder: (context, index) {
+                              final log = state.logs[index];
+                              final isAlert = log.contains('[ALERT]');
+                              return Text(
+                                log,
+                                style: theme.terminal.copyWith(
+                                  fontSize: 9,
+                                  color: isAlert ? theme.error : theme.onSurfaceMedium,
+                                  height: 1.4,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),

@@ -29,6 +29,7 @@ Future<void> main() async {
   // 1. Instantiate Core Services.
   final motusService = MotusService(logger: logger);
   final database = MyoTwinDatabase();
+  final semanticService = AnatomySemanticService(logger: logger);
 
   // 1.1 Initialize 3D engine resources.
   final sceneInit = logger.progress('INITIALIZING_SCENE_RESOURCES');
@@ -42,11 +43,13 @@ Future<void> main() async {
         Provider<LoggerService>.value(value: logger),
         RepositoryProvider<MyoTwinDatabase>.value(value: database),
         ChangeNotifierProvider<MotusService>.value(value: motusService),
+        ChangeNotifierProvider<AnatomySemanticService>.value(value: semanticService),
         Provider<MotusAgent>.value(value: motusService),
       ],
       child: BlocProvider(
         create: (context) => AppInitCubit(
           motusService: motusService,
+          semanticService: semanticService,
           logger: logger,
         )..initialize().ignore(),
         child: const MyotwinApp(),

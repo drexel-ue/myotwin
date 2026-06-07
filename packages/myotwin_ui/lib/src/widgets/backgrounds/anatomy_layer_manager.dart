@@ -5,27 +5,6 @@ import 'package:flutter_scene/scene.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:vector_math/vector_math.dart';
 
-/// The distinct anatomical systems available in the MyoTwin 3D model.
-enum AnatomyLayer {
-  /// All major bones.
-  skeletal,
-
-  /// Major muscle groups.
-  muscular,
-
-  /// Brain, spinal cord, and major nerves.
-  nervous,
-
-  /// Heart and major blood vessels.
-  cardiovascular,
-
-  /// Joint capsules and ligaments.
-  joints,
-
-  /// Points where muscles connect to bones.
-  insertions,
-}
-
 /// Orchestrates the loading, visual state, and animations of the 3D anatomy model.
 ///
 /// Uses a declarative reconciliation pattern to ensure consistent visual state
