@@ -79,6 +79,13 @@ class _MyotwinAppState extends State<MyotwinApp> {
   }
 }
 
+/// Identifiers for the different HUD overlay windows.
+enum _OverlayWindow {
+  goalExplorer,
+  anatomyTargeter,
+  themeSettings,
+}
+
 /// Orchestrates the visual transition between the boot sequence and the HUD.
 class _MyoStartupOrchestrator extends StatefulWidget {
   const _MyoStartupOrchestrator({
@@ -95,9 +102,9 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
     with TickerProviderStateMixin, HoloGlitchTickerMixin<_MyoStartupOrchestrator> {
   late final AnimationController _perceivedController;
   bool _readyToTransition = false;
-  bool _showGoalExplorer = false;
-  bool _showAnatomyTargeter = false;
-  bool _showThemeSettings = false;
+
+  /// Ordered list of active windows. The last item is at the front of the stack.
+  final List<_OverlayWindow> _activeWindows = [];
 
   final _anatomyResetTrigger = ValueNotifier<int>(0);
   final List<String> _manualActiveNodes = [];
@@ -139,6 +146,20 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
         triggerGlitch();
       });
     }
+  }
+
+  void _bringToFront(_OverlayWindow window) {
+    setState(() {
+      _activeWindows
+        ..remove(window)
+        ..add(window);
+    });
+  }
+
+  void _closeWindow(_OverlayWindow window) {
+    setState(() {
+      _activeWindows.remove(window);
+    });
   }
 
   @override
@@ -212,11 +233,11 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                         onCommandSelected: (command) {
                           switch (command) {
                             case domain.QuickCommand.goalExplorer:
-                              setState(() => _showGoalExplorer = true);
+                              _bringToFront(_OverlayWindow.goalExplorer);
                             case domain.QuickCommand.anatomyTargeter:
-                              setState(() => _showAnatomyTargeter = true);
+                              _bringToFront(_OverlayWindow.anatomyTargeter);
                             case domain.QuickCommand.themeSettings:
-                              setState(() => _showThemeSettings = true);
+                              _bringToFront(_OverlayWindow.themeSettings);
                             case QuickCommand.logSymptom:
                             case QuickCommand.revertLadder:
                             case QuickCommand.xrayOverlay:
@@ -231,86 +252,101 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                 },
               ),
 
-              // OVERLAYS
-              if (_showGoalExplorer)
-                Positioned.fill(
-                  child: Padding(
-                    padding: allPadding32,
-                    child: Align(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 600,
-                          maxHeight: 800,
-                        ),
-                        child: FutureBuilder<List<domain.Goal>>(
-                          future: context.read<ChatCubit>().fetchGoals(),
-                          builder: (context, snapshot) {
-                            return GoalExplorerSurface(
-                              goals: snapshot.data ?? [],
-                              onGoalSelected: (goal) async {
-                                await context.read<ChatCubit>().switchGoal(goal.id);
-                                setState(() => _showGoalExplorer = false);
-                              },
-                              onClose: () => setState(() => _showGoalExplorer = false),
-                            );
-                          },
+              // DYNAMIC OVERLAYS
+              ..._activeWindows.map((window) {
+                switch (window) {
+                  case _OverlayWindow.goalExplorer:
+                    return Positioned.fill(
+                      key: const ValueKey('goal_explorer'),
+                      child: Listener(
+                        onPointerDown: (_) => _bringToFront(_OverlayWindow.goalExplorer),
+                        child: Padding(
+                          padding: allPadding32,
+                          child: Align(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxWidth: 600,
+                                maxHeight: 800,
+                              ),
+                              child: FutureBuilder<List<domain.Goal>>(
+                                future: context.read<ChatCubit>().fetchGoals(),
+                                builder: (context, snapshot) {
+                                  return GoalExplorerSurface(
+                                    goals: snapshot.data ?? [],
+                                    onGoalSelected: (goal) async {
+                                      await context.read<ChatCubit>().switchGoal(goal.id);
+                                      _closeWindow(_OverlayWindow.goalExplorer);
+                                    },
+                                    onClose: () => _closeWindow(_OverlayWindow.goalExplorer),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              if (_showAnatomyTargeter)
-                Positioned(
-                  right: 32,
-                  top: 32,
-                  bottom: 32,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 340),
-                    child: AnatomyTargetingSurface(
-                      nodesByLayer: _availableNodes,
-                      activeLayer: _activeLayer,
-                      selectedNodes: _manualActiveNodes,
-                      onLayerChanged: (layer) {
-                        setState(() => _activeLayer = layer);
-                      },
-                      onNodeSelected: (node) {
-                        setState(() {
-                          if (_manualActiveNodes.contains(node)) {
-                            _manualActiveNodes.remove(node);
-                          } else {
-                            _manualActiveNodes.add(node);
-                          }
-                        });
-                      },
-                      onClearSelections: () {
-                        setState(_manualActiveNodes.clear);
-                      },
-                      onClose: () => setState(() => _showAnatomyTargeter = false),
-                    ),
-                  ),
-                ),
-              if (_showThemeSettings)
-                Positioned(
-                  right: 32,
-                  top: 32,
-                  bottom: 32,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 340),
-                    child: BlocBuilder<ThemeCubit, ThemeState>(
-                      builder: (context, state) {
-                        return ThemeSettingsSurface(
-                          accentColor: state.settings.accentColor,
-                          highlightColor: state.settings.highlightColor,
-                          roughness: state.settings.modelRoughness,
-                          onAccentChanged: (color) => context.read<ThemeCubit>().updateAccentColor(color),
-                          onHighlightChanged: (color) => context.read<ThemeCubit>().updateHighlightColor(color),
-                          onRoughnessChanged: (val) => context.read<ThemeCubit>().updateRoughness(val),
-                          onClose: () => setState(() => _showThemeSettings = false),
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                    );
+                  case _OverlayWindow.anatomyTargeter:
+                    return Positioned(
+                      key: const ValueKey('anatomy_targeter'),
+                      right: 32,
+                      top: 32,
+                      bottom: 32,
+                      child: Listener(
+                        onPointerDown: (_) => _bringToFront(_OverlayWindow.anatomyTargeter),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 340),
+                          child: AnatomyTargetingSurface(
+                            nodesByLayer: _availableNodes,
+                            activeLayer: _activeLayer,
+                            selectedNodes: _manualActiveNodes,
+                            onLayerChanged: (layer) {
+                              setState(() => _activeLayer = layer);
+                            },
+                            onNodeSelected: (node) {
+                              setState(() {
+                                if (_manualActiveNodes.contains(node)) {
+                                  _manualActiveNodes.remove(node);
+                                } else {
+                                  _manualActiveNodes.add(node);
+                                }
+                              });
+                            },
+                            onClearSelections: () {
+                              setState(_manualActiveNodes.clear);
+                            },
+                            onClose: () => _closeWindow(_OverlayWindow.anatomyTargeter),
+                          ),
+                        ),
+                      ),
+                    );
+                  case _OverlayWindow.themeSettings:
+                    return Positioned(
+                      key: const ValueKey('theme_settings'),
+                      right: 32,
+                      top: 32,
+                      child: Listener(
+                        onPointerDown: (_) => _bringToFront(_OverlayWindow.themeSettings),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 340),
+                          child: BlocBuilder<ThemeCubit, ThemeState>(
+                            builder: (context, state) {
+                              return ThemeSettingsSurface(
+                                accentColor: state.settings.accentColor,
+                                highlightColor: state.settings.highlightColor,
+                                roughness: state.settings.modelRoughness,
+                                onAccentChanged: (color) => context.read<ThemeCubit>().updateAccentColor(color),
+                                onHighlightChanged: (color) => context.read<ThemeCubit>().updateHighlightColor(color),
+                                onRoughnessChanged: (val) => context.read<ThemeCubit>().updateRoughness(val),
+                                onClose: () => _closeWindow(_OverlayWindow.themeSettings),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                }
+              }),
 
               // THE BOOT SCREEN
               if (!_readyToTransition)
