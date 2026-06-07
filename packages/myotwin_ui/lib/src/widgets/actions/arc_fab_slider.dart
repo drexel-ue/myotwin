@@ -74,7 +74,7 @@ class ArcFABSlider extends StatefulWidget {
   final ValueChanged<ArcSliderMode> onModeChanged;
 
   /// Callback invoked when a command is selected from the radial menu.
-  final ValueChanged<int>? onCommandSelected;
+  final ValueChanged<QuickCommand>? onCommandSelected;
 
   /// Optional notifier for the current slide progress (-1.0 to 1.0).
   /// If provided, the slider uses this for state synchronization.
@@ -196,17 +196,19 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                   child: Transform.scale(
                     scale: scale,
                     child: QuickCommandMenu(
-                      itemCount: 10,
+                      itemCount: QuickCommand.values.length - 1, // Exclude unknown
                       radius: 120.0,
                       itemSize: spacing64,
                       onItemSelected: (index) {
-                        widget.onCommandSelected?.call(index);
+                        final command = QuickCommand.values[index];
+                        widget.onCommandSelected?.call(command);
                       },
                       itemBuilder: (context, index, {required isHovered}) {
-                        final iconIntent = switch (index) {
-                          4 => 'target',
-                          3 => 'crosshair',
-                          9 => 'gear',
+                        final command = QuickCommand.values[index];
+                        final iconIntent = switch (command) {
+                          QuickCommand.anatomyTargeter => 'target',
+                          QuickCommand.goalExplorer => 'crosshair',
+                          QuickCommand.themeSettings => 'gear',
                           _ => 'task',
                         };
                         return MyoIconButton(
@@ -218,19 +220,10 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                         );
                       },
                       tooltipBuilder: (index) {
-                        const tooltips = [
-                          'LOG SYMPTOM',
-                          'REVERT LADDER',
-                          'X-RAY OVERLAY',
-                          'ANATOMY TARGETER',
-                          'GOAL_EXPLORER',
-                          'LOG SYMPTOM',
-                          'REVERT LADDER',
-                          'X-RAY OVERLAY',
-                          'BODY HEATMAP',
-                          'THEME_SETTINGS',
-                        ];
-                        return tooltips[index];
+                        final command = QuickCommand.values[index];
+                        return command.name
+                            .replaceAllMapped(RegExp('([A-Z])'), (match) => '_${match.group(1)}')
+                            .toUpperCase();
                       },
                       child: AnimatedHoloFAB(
                         state: widget.fabState,

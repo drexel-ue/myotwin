@@ -22,7 +22,7 @@ class MyoCanvas extends StatefulWidget {
     this.audioController,
     this.onMessageSubmitted,
     this.fabState,
-    this.onCommandNodeSelected,
+    this.onCommandSelected,
   });
 
   /// {@macro myo_canvas.background_child}
@@ -48,8 +48,8 @@ class MyoCanvas extends StatefulWidget {
   /// If null, the canvas manages the state internally (idle/listening).
   final ValueNotifier<HoloState>? fabState;
 
-  /// Called when a node is selected from the quick command menu.
-  final ValueChanged<String>? onCommandNodeSelected;
+  /// Called when a command is selected from the quick command menu.
+  final ValueChanged<QuickCommand>? onCommandSelected;
 
   @override
   State<MyoCanvas> createState() => _MyoCanvasState();
@@ -179,7 +179,7 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
                   // 2. Wait for the peak of the glitch to mask the jump
                   Timer(const Duration(milliseconds: 150), () {
                     if (mounted) {
-                      widget.onCommandNodeSelected?.call('RESET');
+                      widget.onCommandSelected?.call(QuickCommand.revertLadder);
                     }
                   });
                 },
@@ -312,8 +312,8 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
                       fabState: state,
                       slideProgress: _slideProgress,
                       onFabPressed: _onFabPressed,
-                      onCommandSelected: (index) {
-                        widget.onCommandNodeSelected?.call(index.toString());
+                      onCommandSelected: (command) {
+                        widget.onCommandSelected?.call(command);
                       },
                       onModeChanged: (value) {
                         _sliderMode.value = value;

@@ -49,19 +49,24 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
     final theme = context.myoTheme;
     final semanticService = context.watch<AnatomySemanticService>();
 
-    // 1. Create a set of all valid technical IDs currently in the 3D scene
-    final availableIds = widget.nodesByLayer.values.expand((e) => e).toSet();
+    // 1. Create a set of valid technical IDs based on the active layer or full scene
+    final Set<String> physicalLayerIds;
+    if (widget.activeLayer != null) {
+      physicalLayerIds = widget.nodesByLayer[widget.activeLayer]?.toSet() ?? {};
+    } else {
+      physicalLayerIds = widget.nodesByLayer.values.expand((e) => e).toSet();
+    }
 
-    // 2. Perform semantic search and filter by physical availability
-    final filteredNodes =
-        semanticService
-            .search(
-              _searchQuery,
-              layer: widget.activeLayer,
-            )
-            .where((node) => availableIds.contains(node.id))
-            .toList()
-          ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
+    // 2. Perform semantic search and intersect with physical availability
+    final filteredNodes = semanticService
+        .search(
+          _searchQuery,
+          // We no longer pass the layer to the semantic service (JSON-based)
+          // to prevent miscategorization leakage.
+        )
+        .where((node) => physicalLayerIds.contains(node.id))
+        .toList()
+      ..sort((a, b) => a.laymanName.compareTo(b.laymanName));
 
     return FrostedHUD(
       impactPoint: Offset.zero,

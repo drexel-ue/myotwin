@@ -209,13 +209,20 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                         onShowChatChanged: (visible) {
                           widget.fabState.value = visible ? HoloState.listening : HoloState.idle;
                         },
-                        onCommandNodeSelected: (node) {
-                          if (node == '4') {
-                            setState(() => _showGoalExplorer = true);
-                          } else if (node == '3') {
-                            setState(() => _showAnatomyTargeter = true);
-                          } else if (node == '9') {
-                            setState(() => _showThemeSettings = true);
+                        onCommandSelected: (command) {
+                          switch (command) {
+                            case domain.QuickCommand.goalExplorer:
+                              setState(() => _showGoalExplorer = true);
+                            case domain.QuickCommand.anatomyTargeter:
+                              setState(() => _showAnatomyTargeter = true);
+                            case domain.QuickCommand.themeSettings:
+                              setState(() => _showThemeSettings = true);
+                            case QuickCommand.logSymptom:
+                            case QuickCommand.revertLadder:
+                            case QuickCommand.xrayOverlay:
+                            case QuickCommand.bodyHeatmap:
+                            case QuickCommand.calibrate:
+                            case QuickCommand.unknown:
                           }
                         },
                       );

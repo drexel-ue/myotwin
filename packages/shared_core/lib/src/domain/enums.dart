@@ -51,3 +51,33 @@ enum AnatomyLayer {
   /// Points where muscles connect to bones.
   insertions,
 }
+
+/// Categorizes the different high-level commands available in the radial menu.
+enum QuickCommand {
+  /// Log a physical symptom or flare-up.
+  logSymptom,
+
+  /// Revert the last 3D scene state or camera transformation.
+  revertLadder,
+
+  /// Toggle the translucent X-Ray material overlay.
+  xrayOverlay,
+
+  /// Open the semantic search sidebar for anatomical targeting.
+  anatomyTargeter,
+
+  /// Open the biological objectives and research explorer.
+  goalExplorer,
+
+  /// Toggle the heatmap visualization layer.
+  bodyHeatmap,
+
+  /// Calibrate sensors or the 3D model orientation.
+  calibrate,
+
+  /// Open the HUD theme and PBR calibration window.
+  themeSettings,
+
+  /// Fallback for unrecognized interactions.
+  unknown,
+}
