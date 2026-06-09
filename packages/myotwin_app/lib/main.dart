@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_scene/scene.dart';
-import 'package:mason_logger/mason_logger.dart' show Level;
 import 'package:myotwin_app/src/app/myotwin_app.dart';
 import 'package:myotwin_app/src/application/common/app_init_cubit.dart';
 import 'package:myotwin_app/src/application/common/myo_bloc_observer.dart';
@@ -20,7 +19,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 0. Initialize Foundation Services.
-  final logger = LoggerService(level: kDebugMode ? Level.verbose : Level.info);
+  final logger = LoggerService(level: kDebugMode ? LogLevel.verbose : LogLevel.info);
   Bloc.observer = MyoBlocObserver(logger: logger);
 
   logger.info('MYOTWIN_BOOT_SEQUENCE_START');
