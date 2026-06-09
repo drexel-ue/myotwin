@@ -13,8 +13,8 @@ class ThemeSettings implements Loggable {
   /// Default tactical settings (Cyan accents, high-polished carbon).
   factory ThemeSettings.defaultTactical() {
     return const ThemeSettings(
-      accentColor: Color(0xFF00FFFF), // Cyan
-      highlightColor: Color(0xFF00FFFF),
+      accentColor: Colors.white,
+      highlightColor: Colors.white,
       modelRoughness: 0.25,
     );
   }
