@@ -18,6 +18,7 @@ class MyoAnatomyCanvas extends StatefulWidget {
     this.resetTrigger,
     this.activeLayer,
     this.onNodesLoaded,
+    this.isRenderingEnabled = true,
     required this.accentColor,
     required this.highlightColor,
     required this.roughness,
@@ -34,6 +35,10 @@ class MyoAnatomyCanvas extends StatefulWidget {
 
   /// Called when the 3D models are fully loaded and node names are available.
   final ValueChanged<Map<AnatomyLayer, List<String>>>? onNodesLoaded;
+
+  /// Controls whether the 3D scene is actually painted to the canvas.
+  /// Set to false during heavy boot sequences to prevent Impeller HostBuffer crashes on iOS.
+  final bool isRenderingEnabled;
 
   /// The primary accent color for lighting.
   final Color accentColor;
@@ -245,17 +250,18 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _ScenePainter(
-                      scene: _scene,
-                      camera: camera,
-                      viewportSize: constraints.biggest,
-                      tightness: currentTightness,
-                      height: currentHeight,
+                if (widget.isRenderingEnabled)
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _ScenePainter(
+                        scene: _scene,
+                        camera: camera,
+                        viewportSize: constraints.biggest,
+                        tightness: currentTightness,
+                        height: currentHeight,
+                      ),
                     ),
                   ),
-                ),
 
                 // Render 3D-Anchored Tooltips
                 ...projectedTooltips.entries.map((entry) {
