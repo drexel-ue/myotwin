@@ -19,6 +19,10 @@ class MyoBlocObserver extends BlocObserver {
   void onChange(BlocBase<dynamic> bloc, Change<dynamic> change) {
     super.onChange(bloc, change);
 
+    // Suppress AppInitCubit transitions to avoid log spam during model downloads.
+    // AppInitCubit internally logs important milestones directly.
+    if (bloc.runtimeType.toString() == 'AppInitCubit') return;
+
     final current = change.currentState;
     final next = change.nextState;
 

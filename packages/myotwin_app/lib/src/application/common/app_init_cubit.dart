@@ -13,8 +13,7 @@ class AppInitState implements Loggable {
   const AppInitState({
     this.progress = 0.0,
     this.status = 'INITIALIZING_SYSTEM...',
-    this.isReady = false,
-    this.isModelLoaded = false,
+    this.pendingTasks = const {'anatomy', 'motus_model'},
     this.logs = const [],
     this.error,
   });
@@ -25,11 +24,14 @@ class AppInitState implements Loggable {
   /// A human-readable status message describing the current boot phase.
   final String status;
 
+  /// A set of tasks that must complete before the system is ready.
+  final Set<String> pendingTasks;
+
   /// Whether the system has completed all initialization and is ready for the HUD.
-  final bool isReady;
+  bool get isReady => pendingTasks.isEmpty && error == null;
 
   /// Whether the LLM model has finished loading into memory.
-  final bool isModelLoaded;
+  bool get isModelLoaded => !pendingTasks.contains('motus_model');
 
   /// A rolling buffer of system logs for terminal display.
   final List<String> logs;
@@ -41,16 +43,14 @@ class AppInitState implements Loggable {
   AppInitState copyWith({
     double? progress,
     String? status,
-    bool? isReady,
-    bool? isModelLoaded,
+    Set<String>? pendingTasks,
     List<String>? logs,
     String? error,
   }) {
     return AppInitState(
       progress: progress ?? this.progress,
       status: status ?? this.status,
-      isReady: isReady ?? this.isReady,
-      isModelLoaded: isModelLoaded ?? this.isModelLoaded,
+      pendingTasks: pendingTasks ?? this.pendingTasks,
       logs: logs ?? this.logs,
       error: error ?? this.error,
     );
@@ -58,7 +58,7 @@ class AppInitState implements Loggable {
 
   @override
   String toDiagnosticString() =>
-      'AppInitState(ready: $isReady, model: $isModelLoaded, logs: ${logs.length}, progress: ${progress.toStringAsFixed(2)}, status: $status)';
+      'AppInitState(ready: $isReady, model: $isModelLoaded, tasks: ${pendingTasks.join(", ")}, logs: ${logs.length}, progress: ${progress.toStringAsFixed(2)}, status: $status)';
 
   @override
   String toSummaryString() => 'SYSTEM_INIT: ${isReady ? "READY" : status}';
@@ -96,6 +96,28 @@ class AppInitCubit extends Cubit<AppInitState> {
     emit(state.copyWith(logs: updatedLogs));
   }
 
+  /// Marks a specific initialization task as complete.
+  void markTaskComplete(String taskName) {
+    if (state.error != null) return;
+
+    final updatedTasks = Set<String>.from(state.pendingTasks)..remove(taskName);
+
+    if (updatedTasks.isEmpty) {
+      emit(
+        state.copyWith(
+          pendingTasks: updatedTasks,
+          progress: 1.0,
+          status: 'SYSTEM_ONLINE',
+        ),
+      );
+      _logger.success('APP_INIT: BOOT_SEQUENCE_COMPLETE');
+      addLog('SYNCHRONIZATION_SUCCESSFUL');
+      addLog('SYSTEM_READY_FOR_DEPLOYMENT');
+    } else {
+      emit(state.copyWith(pendingTasks: updatedTasks));
+    }
+  }
+
   /// Starts the critical initialization process (Model + Semantic Map).
   Future<void> initialize() async {
     _logger.info('APP_INIT: STARTING_BOOT_SEQUENCE');
@@ -105,8 +127,8 @@ class AppInitCubit extends Cubit<AppInitState> {
 
     final isMobile = !kIsWeb && (Platform.isIOS || Platform.isAndroid);
     final modelUri = isMobile
-        ? 'hf://mradermacher/Llama-3.2-1B-FitnessAssistant-GGUF/Llama-3.2-1B-FitnessAssistant.Q4_K_M.gguf'
-        : 'hf://ggml-org/gemma-4-E2B-it-GGUF/gemma-4-E2B-it-Q8_0.gguf';
+        ? 'hf://unsloth/gemma-4-E2B-it-qat-mobile-GGUF/gemma-4-E2B-it-qat-UD-Q2_K_XL.gguf'
+        : 'hf://unsloth/gemma-4-E2B-it-qat-GGUF/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf';
 
     try {
       // 1. Load Semantic Map (Instant)
@@ -137,6 +159,7 @@ class AppInitCubit extends Cubit<AppInitState> {
 
       _logger.success('APP_INIT: MODEL_READY');
       addLog('MOTUS_CORE_INITIALIZED');
+      markTaskComplete('motus_model');
     } catch (e, stack) {
       _logger.error('APP_INIT: FATAL_ERROR', error: e, stackTrace: stack);
       addLog('CRITICAL_SYSTEM_FAILURE');
@@ -148,35 +171,27 @@ class AppInitCubit extends Cubit<AppInitState> {
   ///
   /// (Deprecated: Semantic map is now pre-compiled, but kept for future dynamic GLBs)
   Future<void> indexAnatomy(Map<AnatomyLayer, List<String>> nodesByLayer) async {
-    if (state.isReady) return;
-
-    // MODEL LOADED: All critical data is enriched and ready.
-    emit(
-      state.copyWith(
-        isModelLoaded: true,
-        progress: 1.0,
-        status: 'SYSTEM_ONLINE',
-        isReady: true,
-      ),
-    );
-
-    _logger.success('APP_INIT: BOOT_SEQUENCE_COMPLETE');
-    addLog('SYNCHRONIZATION_SUCCESSFUL');
-    addLog('SYSTEM_READY_FOR_DEPLOYMENT');
+    markTaskComplete('anatomy');
   }
 
   void _onMotusProgress() {
     final progress = _motusService.loadingProgress.value;
     if (!state.isReady) {
-      emit(
-        state.copyWith(
-          progress: progress,
-          status: progress < 1.0
-              ? 'DOWNLOADING_MODEL_RESOURCES... (${(progress * 100).toInt()}%)'
-              : 'SYNCHRONIZING_CORE...',
-        ),
-      );
-      if (progress >= 1.0) addLog('MODEL_RESOURCES_UNPACKED');
+      // Throttle state emissions to 1% increments to prevent excessive UI rebuilds
+      final currentPercent = (progress * 100).toInt();
+      final lastPercent = (state.progress * 100).toInt();
+
+      if (currentPercent != lastPercent || (progress >= 1.0 && state.progress < 1.0)) {
+        emit(
+          state.copyWith(
+            progress: progress,
+            status: progress < 1.0
+                ? 'DOWNLOADING_MODEL_RESOURCES... ($currentPercent%)'
+                : 'SYNCHRONIZING_CORE...',
+          ),
+        );
+        if (progress >= 1.0) addLog('MODEL_RESOURCES_UNPACKED');
+      }
     }
   }
 
