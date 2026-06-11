@@ -53,7 +53,8 @@ class MyoAnatomyCanvas extends StatefulWidget {
   State<MyoAnatomyCanvas> createState() => _MyoAnatomyCanvasState();
 }
 
-class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProviderStateMixin {
+class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas>
+    with TickerProviderStateMixin, HoloGlitchTickerMixin {
   final Scene _scene = Scene();
   late final AnatomyLayerManager _manager;
 
@@ -99,6 +100,7 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
     if (_manager.isInitialized) {
       if (widget.activeLayer != oldWidget.activeLayer) {
         _manager.isolateLayer(widget.activeLayer);
+        triggerGlitch();
       }
       if (widget.activeNodes != oldWidget.activeNodes || widget.highlightColor != oldWidget.highlightColor) {
         _manager.setHighlights(widget.activeNodes, widget.highlightColor);
@@ -247,34 +249,41 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas> with TickerProvider
             behavior: HitTestBehavior.deferToChild,
             onScaleStart: _handleScaleStart,
             onScaleUpdate: _handleScaleUpdate,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                if (widget.isRenderingEnabled)
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _ScenePainter(
-                        scene: _scene,
-                        camera: camera,
-                        viewportSize: constraints.biggest,
-                        tightness: currentTightness,
-                        height: currentHeight,
+            child: HoloGlitch(
+              phase: glitchPhase,
+              intensity: glitchIntensity,
+              severity: 0.5,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  if (widget.isRenderingEnabled)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _ScenePainter(
+                          scene: _scene,
+                          camera: camera,
+                          viewportSize: constraints.biggest,
+                          tightness: currentTightness,
+                          height: currentHeight,
+                          isInitialized: _manager.isInitialized,
+                        stateVersion: _manager.stateVersion,
                       ),
                     ),
                   ),
 
-                // Render 3D-Anchored Tooltips
-                ...projectedTooltips.entries.map((entry) {
-                  return Positioned(
-                    left: entry.value.dx,
-                    top: entry.value.dy,
-                    child: FractionalTranslation(
-                      translation: const Offset(-0.5, -1.2),
-                      child: _AnatomyTooltip(label: entry.key),
-                    ),
-                  );
-                }),
-              ],
+                  // Render 3D-Anchored Tooltips
+                  ...projectedTooltips.entries.map((entry) {
+                    return Positioned(
+                      left: entry.value.dx,
+                      top: entry.value.dy,
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, -1.2),
+                        child: _AnatomyTooltip(label: entry.key),
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         );
@@ -315,6 +324,8 @@ class _ScenePainter extends CustomPainter {
     required this.viewportSize,
     required this.tightness,
     required this.height,
+    required this.isInitialized,
+    required this.stateVersion,
   });
 
   final Scene scene;
@@ -322,10 +333,12 @@ class _ScenePainter extends CustomPainter {
   final Size viewportSize;
   final double tightness;
   final double height;
+  final bool isInitialized;
+  final int stateVersion;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.width <= 0 || size.height <= 0) return;
+    if (!isInitialized || size.width <= 0 || size.height <= 0) return;
     scene.render(camera, canvas, viewport: Offset.zero & size);
   }
 
@@ -388,6 +401,10 @@ class _ScenePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ScenePainter oldDelegate) {
-    return oldDelegate.tightness != tightness || oldDelegate.height != height;
+    return oldDelegate.tightness != tightness ||
+           oldDelegate.height != height ||
+           oldDelegate.viewportSize != viewportSize ||
+           oldDelegate.stateVersion != stateVersion ||
+           oldDelegate.isInitialized != isInitialized;
   }
 }

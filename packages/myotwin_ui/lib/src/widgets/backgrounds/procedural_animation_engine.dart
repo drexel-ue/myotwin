@@ -1,7 +1,7 @@
 import 'dart:math' as math;
-import 'package:flutter_scene/scene.dart';
+
+import 'package:myotwin_ui/src/models/anatomy_schema.dart';
 import 'package:vector_math/vector_math.dart';
-import '../../models/anatomy_schema.dart';
 
 /// Drives the procedural animations (blood flow, nerve signals) for the anatomy model.
 class ProceduralAnimationEngine {
