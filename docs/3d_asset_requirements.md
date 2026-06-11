@@ -32,40 +32,26 @@ This checklist ensures any GLB model source (Z-Anatomy, Sketchfab, TurboSquid, C
 - [ ] **File Format**: `.glb` (binary glTF) — single-file format.
 - [ ] **Export Settings**: glTF 2.0, "Include Custom Attributes" checked, "Compress Mesh Data" enabled.
 
-## 5. Blender Cleanup Steps (Required)
+## 5. Automated Pipeline: Z-Anatomy Exporter
 
-Regardless of source, model must pass through Blender before import:
+The manual cleanup and export process has been completely automated. We now use the unified `auto_process_and_export.py` script located in `myotwin/tool/auto_process_and_export.py`.
 
-1. **Mesh Names Cleanup**: Rename all meshes per naming convention above.
-2. **Layer Separation**: Ensure muscle groups, bones, and vessels are separate top-level objects.
-3. **Origin to Geometry**: Set each mesh origin to its geometry center.
-4. **Apply Transforms**: Apply scale and rotation to all meshes.
-5. **Remove Doubles**: Merge vertices within 0.001m threshold to remove Z-fighting.
-6. **Remove Non-Manifold Geometry**: Remove degenerate faces.
-7. **Export as .glb**: glTF 2.0, compress mesh data, include custom attributes.
+### How to use:
+1. Open your Z-Anatomy `.blend` file in Blender.
+2. Ensure collections are named correctly (e.g., `1: Skeletal system`, `4: Muscular system`).
+3. Switch to the **Scripting** workspace in Blender.
+4. Open the `myotwin/tool/auto_process_and_export.py` script.
+5. Run the script.
 
-## 6. Mesh-to-Node Mapper JSON
+### What the script does:
+- **Idempotency**: Hashes the source collections and skips unaltered layers.
+- **Curve-to-Mesh**: Automatically converts necessary curves into valid geometry.
+- **Decimation**: Reduces mesh density based on anatomical type (e.g., bones 20%, cardiovascular 50%) for mobile performance.
+- **Procedural Baking**: Encodes flow direction, blood pressure, and neural hierarchies into vertex colors (`MyoData`) for the procedural animation engine.
+- **Simultaneous Export**: Automatically outputs the optimized `.glb` files and builds the required `anatomy_encoding_schema.json` directly into the Flutter app's assets folder (`assets/models/`).
 
-After export, a mapping JSON must be generated (via Blender Python script or manually):
+There is no longer a need to manually create the Mesh-to-Node JSON schema or manually export GLTF files.
 
-```json
-{
-  "Glenohumeral_Joint_L": {
-    "mesh_name": "Shoulder_Joint_GL",
-    "vertex_count": 1240,
-    "bounding_center": [0.15, 0.62, 0.0],
-    "anatomical_region": "shoulder",
-    "layer": "skeletal"
-  },
-  "Trapezius_L": {
-    "mesh_name": "Upper_Trapezius_L",
-    "vertex_count": 3800,
-    "bounding_center": [-0.12, 0.35, 0.0],
-    "anatomical_region": "shoulder",
-    "layer": "muscular"
-  }
-}
-```
 
 ## 7. Recommended Sources
 

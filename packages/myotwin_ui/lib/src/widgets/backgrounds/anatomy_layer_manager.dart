@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart' as flutter;
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:vector_math/vector_math.dart';
+
+import '../../models/anatomy_schema.dart';
+import 'procedural_animation_engine.dart';
 
 /// Orchestrates the loading, visual state, and animations of the 3D anatomy model.
 ///
@@ -23,6 +29,12 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
     );
     unawaited(_pulseController.repeat(reverse: true));
 
+    _bloodFlowController = flutter.AnimationController(
+      vsync: vsync,
+      duration: const Duration(milliseconds: 3000),
+    );
+    unawaited(_bloodFlowController.repeat());
+
     _initMaterials();
   }
 
@@ -34,6 +46,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   // Animation Control
   late final flutter.AnimationController _fadeController;
   late final flutter.AnimationController _pulseController;
+  late final flutter.AnimationController _bloodFlowController;
 
   // State
   AnatomyLayer? _isolatedLayer;
@@ -41,6 +54,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   flutter.Color _highlightColor = flutter.Colors.cyan;
   double _roughness = 0.25;
   bool _isInitialized = false;
+  bool _bloodFlowEnabled = true;
 
   // The Registry: Map<NodeName, List<Nodes>> for O(1) highlight lookups.
   final Map<String, List<Node>> _nodeRegistry = {};
@@ -48,9 +62,17 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   // Material Pool: One unique material per layer to allow independent fading.
   final Map<AnatomyLayer, PhysicallyBasedMaterial> _layerMaterials = {};
   final PhysicallyBasedMaterial _highlightMaterial = PhysicallyBasedMaterial();
+  
+  // Distance-band materials for blood flow (32 bands)
+  final List<PhysicallyBasedMaterial> _cardioMaterials = [];
+  static const int _numCardioBands = 32;
 
   // Root nodes for each layer
   final Map<AnatomyLayer, Node> _layerRoots = {};
+  
+  // Procedural Data
+  AnatomySchema? _schema;
+  ProceduralAnimationEngine? _animationEngine;
 
   /// Whether the manager has finished loading all initial assets.
   bool get isInitialized => _isInitialized;
@@ -58,12 +80,30 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   /// Returns the current isolated layer, if any.
   AnatomyLayer? get isolatedLayer => _isolatedLayer;
 
+  /// Whether blood flow animation is currently active.
+  bool get bloodFlowEnabled => _bloodFlowEnabled;
+
+  /// Sets whether the blood flow animation should be enabled.
+  set bloodFlowEnabled(bool value) {
+    if (_bloodFlowEnabled == value) return;
+    _bloodFlowEnabled = value;
+    notifyListeners();
+  }
+
   void _initMaterials() {
     for (final layer in AnatomyLayer.values) {
       _layerMaterials[layer] = PhysicallyBasedMaterial()
         ..baseColorFactor = Vector4(0.1, 0.1, 0.1, 1.0)
         ..metallicFactor = 0.9
         ..roughnessFactor = _roughness;
+    }
+
+    // Initialize cardiovascular distance-band materials
+    for (var i = 0; i < _numCardioBands; i++) {
+      _cardioMaterials.add(PhysicallyBasedMaterial()
+        ..baseColorFactor = Vector4(0.1, 0.1, 0.1, 0.0)
+        ..metallicFactor = 0.9
+        ..roughnessFactor = _roughness);
     }
 
     _highlightMaterial
@@ -84,6 +124,15 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   /// Initializes the materials and loads all 3D assets into the scene.
   Future<void> initialize() async {
     final initProgress = logger?.progress('INITIALIZING_ANATOMY_ENGINE');
+
+    // 1. Load Schema
+    try {
+      final schemaJson = await rootBundle.loadString('assets/models/anatomy_encoding_schema.json');
+      _schema = AnatomySchema.fromJson(jsonDecode(schemaJson) as Map<String, dynamic>);
+      _animationEngine = ProceduralAnimationEngine(_schema!)..initialize();
+    } catch (e) {
+      logger?.warn('Failed to load anatomy schema, procedural animations disabled: $e');
+    }
 
     // 2. Load all layers asynchronously
     try {
@@ -122,8 +171,22 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
     if (node.mesh != null && node.name.isNotEmpty) {
       _nodeRegistry.putIfAbsent(node.name, () => []).add(node);
 
-      // Apply the layer-specific material instance initially
-      _applyMaterialToNode(node, _layerMaterials[layer]!);
+      // Special material assignment for cardiovascular layer
+      if (layer == AnatomyLayer.cardiovascular && _schema != null) {
+        final meshSchema = _schema!.layers['cardiovascular']?.meshes[node.name];
+        if (meshSchema != null) {
+          final dist = meshSchema.boundingCenter.distanceTo(_schema!.heartCenter);
+          // Simple heuristic: body height is approx 2.0
+          final normalizedDist = (dist / 2.0).clamp(0.0, 0.99);
+          final bandIndex = (normalizedDist * _numCardioBands).floor();
+          _applyMaterialToNode(node, _cardioMaterials[bandIndex]);
+        } else {
+          _applyMaterialToNode(node, _layerMaterials[layer]!);
+        }
+      } else {
+        // Apply the layer-specific material instance initially
+        _applyMaterialToNode(node, _layerMaterials[layer]!);
+      }
     }
     for (final child in node.children) {
       _indexNode(child, layer);
@@ -141,6 +204,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   void _onTick() {
     final t = flutter.Curves.easeOut.transform(_fadeController.value);
     final pulse = _pulseController.value;
+    final bloodFlowPhase = _bloodFlowController.value;
 
     // 1. Update Layer Material Alphas
     for (final entry in _layerMaterials.entries) {
@@ -159,7 +223,41 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       _layerRoots[layer]?.visible = newAlpha > 0.01;
     }
 
-    // 2. Update Highlight Material Pulse
+    // 2. Update Cardiovascular Distance-Band Materials
+    if (_bloodFlowEnabled && _animationEngine != null) {
+      final cardioAlpha = _calculateTargetAlpha(AnatomyLayer.cardiovascular);
+      
+      // We iterate through bands and use a representative node name/distance
+      // to calculate the emissive boost for that whole band.
+      for (var i = 0; i < _numCardioBands; i++) {
+        final material = _cardioMaterials[i];
+        
+        // Target alpha transition
+        final currentAlpha = material.baseColorFactor.w;
+        final newAlpha = currentAlpha + (cardioAlpha - currentAlpha) * t;
+        material..baseColorFactor = Vector4(0.1, 0.1, 0.1, newAlpha)
+                ..alphaMode = newAlpha < 0.99 ? AlphaMode.blend : AlphaMode.opaque;
+
+        // Calculate procedural emissive boost for this distance band
+        // We use a normalized distance for the band
+        final bandNormDist = (i / _numCardioBands) + (0.5 / _numCardioBands);
+        
+        // Artery pulse (outwards)
+        final arteryIntensity = _calculateWaveIntensity(bandNormDist, bloodFlowPhase, true);
+        // Vein pulse (inwards)
+        final veinIntensity = _calculateWaveIntensity(bandNormDist, bloodFlowPhase, false);
+
+        // Mix red and blue based on intensities
+        material.emissiveFactor = Vector4(
+          1.0 * arteryIntensity,
+          0.1 * arteryIntensity + 0.4 * veinIntensity,
+          0.1 * arteryIntensity + 1.0 * veinIntensity,
+          1.0,
+        );
+      }
+    }
+
+    // 3. Update Highlight Material Pulse
     final colorVec = Vector4(
       _highlightColor.r,
       _highlightColor.g,
@@ -173,6 +271,19 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
 
     notifyListeners();
   }
+
+  double _calculateWaveIntensity(double normDist, double phase, bool isArtery) {
+    final waveWidth = 0.2;
+    final wavePos = isArtery ? normDist : (1.0 - normDist);
+    final shiftedPhase = (phase * 2.0) % 1.0;
+    
+    final distFromPeak = (wavePos - shiftedPhase).abs();
+    if (distFromPeak > waveWidth) return 0.0;
+    
+    final intensity = 1.0 - (distFromPeak / waveWidth);
+    return math.pow(intensity, 3).toDouble();
+  }
+
 
   double _calculateTargetAlpha(AnatomyLayer layer) {
     if (_isolatedLayer == null) {
@@ -233,11 +344,11 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
 
   /// Re-traverses the registry once to assign either Layer-Material or Highlight-Material.
   void _refreshMaterialAssignments() {
-    // 1. Reset all nodes to their layer materials
+    // 1. Reset all nodes to their default materials (layer or cardio-band)
     for (final entry in _layerRoots.entries) {
       final layer = entry.key;
       final root = entry.value;
-      _applyMaterialRecursive(root, _layerMaterials[layer]!);
+      _resetMaterialsRecursive(root, layer);
     }
 
     // 2. Override highlighted nodes with the pulsing highlight material
@@ -249,6 +360,30 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
         }
       }
     }
+  }
+
+  void _resetMaterialsRecursive(Node node, AnatomyLayer layer) {
+    if (node.mesh != null) {
+      final material = _getDefaultMaterialForNode(node, layer);
+      _applyMaterialToNode(node, material);
+    }
+    for (final child in node.children) {
+      _resetMaterialsRecursive(child, layer);
+    }
+  }
+
+  Material _getDefaultMaterialForNode(Node node, AnatomyLayer layer) {
+    if (layer == AnatomyLayer.cardiovascular && _schema != null) {
+      final meshSchema = _schema!.layers['cardiovascular']?.meshes[node.name];
+      if (meshSchema != null) {
+        final dist = meshSchema.boundingCenter.distanceTo(_schema!.heartCenter);
+        // Simple heuristic: body height is approx 2.0
+        final normalizedDist = (dist / 2.0).clamp(0.0, 0.99);
+        final bandIndex = (normalizedDist * _numCardioBands).floor();
+        return _cardioMaterials[bandIndex];
+      }
+    }
+    return _layerMaterials[layer]!;
   }
 
   void _applyMaterialRecursive(Node root, Material material) {
@@ -321,6 +456,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   void dispose() {
     _fadeController.dispose();
     _pulseController.dispose();
+    _bloodFlowController.dispose();
     super.dispose();
   }
 }
