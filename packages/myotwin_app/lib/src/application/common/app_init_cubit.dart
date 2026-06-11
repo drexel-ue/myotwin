@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:llamadart/llamadart.dart' show ModelSource;
 import 'package:myotwin_app/src/infrastructure/ai/services/motus_service.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_core/shared_core.dart';
 
 /// The state for the application's initialization sequence.
@@ -126,9 +129,11 @@ class AppInitCubit extends Cubit<AppInitState> {
     _motusService.loadingProgress.addListener(_onMotusProgress);
 
     final isMobile = !kIsWeb && (Platform.isIOS || Platform.isAndroid);
-    final modelUri = isMobile
-        ? 'hf://unsloth/gemma-4-E2B-it-qat-mobile-GGUF/gemma-4-E2B-it-qat-UD-Q2_K_XL.gguf'
-        : 'hf://unsloth/gemma-4-E2B-it-qat-GGUF/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf';
+
+    // User-provided direct download links (converted from /blob/ to /resolve/)
+    final modelUrl = isMobile
+        ? 'https://huggingface.co/unsloth/gemma-4-E2B-it-qat-mobile-GGUF/resolve/main/gemma-4-E2B-it-qat-UD-Q2_K_XL.gguf'
+        : 'https://huggingface.co/unsloth/gemma-4-E4B-it-qat-GGUF/resolve/main/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf';
 
     try {
       // 1. Load Semantic Map (Instant)
@@ -140,11 +145,16 @@ class AppInitCubit extends Cubit<AppInitState> {
 
       addLog('SEMANTIC_INDEX_READY: ${_semanticService.getAll().length}_NODES');
 
-      // 2. Load Model (Slow)
-      emit(state.copyWith(status: 'CONNECTING_TO_MOTUS_MODEL...'));
-      addLog('INITIALIZING_NEURAL_CORE...');
+      // 2. Resolve or Download Model (Slow)
+      emit(state.copyWith(status: 'RESOLVING_MOTUS_CORE...'));
+      addLog('CHECKING_LOCAL_CACHE...');
 
-      await _motusService.initialize(ModelSource.parse(modelUri));
+      final modelPath = await _ensureModelDownloaded(modelUrl);
+
+      emit(state.copyWith(status: 'INITIALIZING_NEURAL_CORE...'));
+      addLog('SYNCHRONIZING_CORE...');
+
+      await _motusService.initialize(ModelSource.path(modelPath));
 
       if (_motusService.initializationError != null) {
         emit(
@@ -164,6 +174,87 @@ class AppInitCubit extends Cubit<AppInitState> {
       _logger.error('APP_INIT: FATAL_ERROR', error: e, stackTrace: stack);
       addLog('CRITICAL_SYSTEM_FAILURE');
       emit(state.copyWith(error: e.toString(), status: 'CRITICAL_FAILURE'));
+    }
+  }
+
+  /// Ensures the model described by the [downloadUrl] is present in the persistent
+  /// documents directory. If not found, it downloads it manually to ensure
+  /// it is cached across app restarts.
+  Future<String> _ensureModelDownloaded(String downloadUrl) async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    final modelsDir = Directory(p.join(docsDir.path, 'motus_models'));
+    if (!modelsDir.existsSync()) {
+      await modelsDir.create(recursive: true);
+    }
+
+    final filename = downloadUrl.split('/').last;
+    final localPath = p.join(modelsDir.path, filename);
+    final file = File(localPath);
+
+    if (file.existsSync()) {
+      _logger.info('APP_INIT: CACHED_MODEL_FOUND: $filename');
+      addLog('LOCAL_CACHE_HIT');
+      return localPath;
+    }
+
+    _logger.info('APP_INIT: DOWNLOADING_MODEL: $downloadUrl');
+    addLog('CACHE_MISS: DOWNLOADING_CORE...');
+
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse(downloadUrl));
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to download model (HTTP ${response.statusCode})');
+      }
+
+      final contentLength = response.contentLength;
+      var bytesReceived = 0;
+      final sink = file.openWrite();
+
+      await response.forEach((chunk) {
+        bytesReceived += chunk.length;
+        sink.add(chunk);
+
+        if (contentLength > 0) {
+          final progress = bytesReceived / contentLength;
+          final currentPercent = (progress * 100).toInt();
+          final lastPercent = (state.progress * 100).toInt();
+
+          // Update UI only when percentage changes to avoid stutter
+          if (currentPercent != lastPercent || bytesReceived == contentLength) {
+            emit(
+              state.copyWith(
+                progress: progress,
+                status: 'DOWNLOADING_MODEL... ($currentPercent%)',
+              ),
+            );
+          }
+        } else {
+          // Fallback if contentLength is unknown: update every ~5MB
+          if (bytesReceived % (5 * 1024 * 1024) < chunk.length) {
+            emit(
+              state.copyWith(
+                status: 'DOWNLOADING_MODEL... (${(bytesReceived / 1024 / 1024).toInt()}MB)',
+              ),
+            );
+          }
+        }
+      });
+
+      await sink.close();
+      _logger.success('APP_INIT: DOWNLOAD_COMPLETE');
+      addLog('RESOURCES_SYNCHRONIZED_SUCCESSFULLY');
+      return localPath;
+    } catch (e) {
+      // Cleanup partially downloaded file
+      if (await file.exists()) {
+        await file.delete();
+      }
+      rethrow;
+    } finally {
+      client.close();
     }
   }
 
