@@ -84,8 +84,21 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
   /// Whether blood flow animation is currently active.
   bool get bloodFlowEnabled => _bloodFlowEnabled;
 
-  /// Returns the current state version, incremented on every visual change.
+  /// returns the current state version, incremented on every visual change.
   int get stateVersion => _stateVersion;
+
+  /// Pauses all background animations to save resources.
+  void pause() {
+    _pulseController.stop();
+    _bloodFlowController.stop();
+  }
+
+  /// Resumes all background animations.
+  void resume() {
+    if (!_isInitialized) return;
+    unawaited(_pulseController.repeat(reverse: true));
+    unawaited(_bloodFlowController.repeat());
+  }
 
   /// Sets whether the blood flow animation should be enabled.
   set bloodFlowEnabled(bool value) {

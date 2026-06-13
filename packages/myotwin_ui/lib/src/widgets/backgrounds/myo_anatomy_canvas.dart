@@ -19,6 +19,7 @@ class MyoAnatomyCanvas extends StatefulWidget {
     this.activeLayer,
     this.onNodesLoaded,
     this.isRenderingEnabled = true,
+    this.isPaused = false,
     required this.accentColor,
     required this.highlightColor,
     required this.roughness,
@@ -39,6 +40,9 @@ class MyoAnatomyCanvas extends StatefulWidget {
   /// Controls whether the 3D scene is actually painted to the canvas.
   /// Set to false during heavy boot sequences to prevent Impeller HostBuffer crashes on iOS.
   final bool isRenderingEnabled;
+
+  /// Whether background animations (pulse, blood flow) should be paused.
+  final bool isPaused;
 
   /// The primary accent color for lighting.
   final Color accentColor;
@@ -79,6 +83,10 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas>
 
     _manager.addListener(_handleManagerUpdate);
 
+    if (!widget.isRenderingEnabled || widget.isPaused) {
+      _manager.pause();
+    }
+
     unawaited(
       _manager.initialize().then((_) {
         if (mounted) {
@@ -98,6 +106,16 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas>
   void didUpdateWidget(covariant MyoAnatomyCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_manager.isInitialized) {
+      final shouldBePaused = !widget.isRenderingEnabled || widget.isPaused;
+      final wasPaused = !oldWidget.isRenderingEnabled || oldWidget.isPaused;
+
+      if (shouldBePaused != wasPaused) {
+        if (shouldBePaused) {
+          _manager.pause();
+        } else {
+          _manager.resume();
+        }
+      }
       if (widget.activeLayer != oldWidget.activeLayer) {
         _manager.isolateLayer(widget.activeLayer);
         triggerGlitch();

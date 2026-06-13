@@ -245,6 +245,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                               },
                               child: MyoAnatomyCanvas(
                                 isRenderingEnabled: context.select<AppInitCubit, bool>((c) => c.state.isReady),
+                                isPaused: _showChat,
                                 accentColor: themeState.settings.accentColor,
                                 highlightColor: themeState.settings.highlightColor,
                                 roughness: themeState.settings.modelRoughness,
