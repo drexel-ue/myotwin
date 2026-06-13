@@ -15,6 +15,7 @@ class ChatState implements Loggable {
     this.isResponding = false,
     this.isTransitioning = false,
     this.activeGoal,
+    this.pendingToolCall,
   });
 
   /// Full conversation history from the database.
@@ -35,6 +36,9 @@ class ChatState implements Loggable {
   /// The current active goal context.
   final Goal? activeGoal;
 
+  /// A pending tool call that should be executed by the UI layer.
+  final ChatToolCallEvent? pendingToolCall;
+
   /// Shortcut for the active goal ID.
   String? get activeGoalId => activeGoal?.id;
 
@@ -46,6 +50,8 @@ class ChatState implements Loggable {
     bool? isResponding,
     bool? isTransitioning,
     Goal? activeGoal,
+    ChatToolCallEvent? pendingToolCall,
+    bool clearPendingToolCall = false,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -54,12 +60,13 @@ class ChatState implements Loggable {
       isResponding: isResponding ?? this.isResponding,
       isTransitioning: isTransitioning ?? this.isTransitioning,
       activeGoal: activeGoal ?? this.activeGoal,
+      pendingToolCall: clearPendingToolCall ? null : (pendingToolCall ?? this.pendingToolCall),
     );
   }
 
   @override
   String toDiagnosticString() =>
-      'ChatState(msgs: ${messages.length}, thinking: $isThinking, responding: $isResponding, goal: ${activeGoal?.label})';
+      'ChatState(msgs: ${messages.length}, thinking: $isThinking, responding: $isResponding, goal: ${activeGoal?.label}, tool: ${pendingToolCall?.toolName})';
 
   @override
   String toSummaryString() => 'CHAT: ${messages.length} msgs | GOAL: ${activeGoal?.label}';
@@ -98,6 +105,8 @@ class ChatCubit extends Cubit<ChatState> {
     final goalId = state.activeGoalId;
     if (goalId == null || text.trim().isEmpty) return false;
 
+    ChatToolCallEvent? toolCall;
+
     try {
       // 1. Persist the user's message
       final userIntent = IntentRecord(
@@ -123,6 +132,7 @@ class ChatCubit extends Cubit<ChatState> {
           isProcessing: true,
           isThinking: true,
           isResponding: false,
+          clearPendingToolCall: true,
         ),
       );
 
@@ -133,37 +143,66 @@ class ChatCubit extends Cubit<ChatState> {
 
       var hasReceivedTokens = false;
 
-      await stream.forEach((token) {
-        if (!hasReceivedTokens) {
-          hasReceivedTokens = true;
-          // First token received: Move from Thinking to Responding
-          emit(
-            state.copyWith(
-              isThinking: false,
-              isResponding: true,
-            ),
-          );
+      await for (final event in stream) {
+        if (event is ChatTextEvent) {
+          if (!hasReceivedTokens) {
+            hasReceivedTokens = true;
+            // First token received: Move from Thinking to Responding
+            emit(
+              state.copyWith(
+                isThinking: false,
+                isResponding: true,
+              ),
+            );
+          }
+          buffer.write(event.text);
+        } else if (event is ChatToolCallEvent) {
+          toolCall = event;
         }
-        buffer.write(token);
+      }
+
+      // 3. Synthesize payload and persist Motus response
+      final payloadItems = <Map<String, dynamic>>[];
+      var finalText = buffer.toString().trim();
+
+      if (toolCall != null && toolCall.toolName == 'set_anatomy_layer') {
+        final layerStr = toolCall.arguments['layer'] as String? ?? 'anatomy';
+        if (layerStr == 'default') {
+          finalText = 'Restoring Default View.';
+        } else {
+          final capitalizedLayer = layerStr.isNotEmpty
+              ? '${layerStr[0].toUpperCase()}${layerStr.substring(1)}'
+              : layerStr;
+          finalText = 'Isolating $capitalizedLayer System.';
+        }
+
+        // Preserve raw data for tracing
+        payloadItems.add({
+          'type': 'system_tool_call',
+          'data': {
+            'toolName': toolCall.toolName,
+            'arguments': toolCall.arguments,
+            'raw_output': buffer.toString(),
+          },
+        });
+      }
+
+      // Add user-facing text
+      payloadItems.add({
+        'type': 'terminal_text',
+        'data': {'text': finalText},
       });
 
-      // 3. Persist finalized Motus response
       final agentIntent = IntentRecord(
         id: responseId,
         goalId: goalId,
         type: IntentType.chat,
         scheduledTime: DateTime.now(),
         reason: 'MOTUS_RESPONSE',
-        payload: IntentPayload({
-          'items': [
-            {
-              'type': 'terminal_text',
-              'data': {'text': buffer.toString()},
-            },
-          ],
-        }),
+        payload: IntentPayload({'items': payloadItems}),
       );
       await _repository.saveIntent(agentIntent);
+
       return true;
     } catch (e) {
       developer.log('ChatCubit Error', error: e);
@@ -174,9 +213,15 @@ class ChatCubit extends Cubit<ChatState> {
           isProcessing: false,
           isThinking: false,
           isResponding: false,
+          pendingToolCall: toolCall,
         ),
       );
     }
+  }
+
+  /// Clears the pending tool call after it has been handled by the UI.
+  void clearToolCall() {
+    emit(state.copyWith(clearPendingToolCall: true));
   }
 
   /// Switches the active goal context with a cinematic visual transition.

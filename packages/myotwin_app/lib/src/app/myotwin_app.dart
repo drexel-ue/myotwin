@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myotwin_app/src/app/boot_screen.dart';
+import 'package:myotwin_app/src/application/anatomy/anatomy_cubit.dart';
 import 'package:myotwin_app/src/application/chat/chat_cubit.dart';
 import 'package:myotwin_app/src/application/common/app_init_cubit.dart';
 import 'package:myotwin_app/src/application/theme/theme_cubit.dart';
@@ -63,9 +64,9 @@ class _MyotwinAppState extends State<MyotwinApp> {
                     _fabStateNotifier.value = HoloState.thinking;
                   } else if (state.isResponding) {
                     _fabStateNotifier.value = HoloState.active;
-                  } else {
-                    _fabStateNotifier.value = HoloState.idle;
                   }
+                  // We don't reset to idle here because the chat panel (MyoCanvas)
+                  // manages the idle vs listening state transition based on visibility.
                 },
                 child: _MyoStartupOrchestrator(
                   fabState: _fabStateNotifier,
@@ -84,6 +85,7 @@ enum _OverlayWindow {
   goalExplorer,
   anatomyTargeter,
   themeSettings,
+  settingsHud,
 }
 
 /// Orchestrates the visual transition between the boot sequence and the HUD.
@@ -107,9 +109,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
   final List<_OverlayWindow> _activeWindows = [];
 
   final _anatomyResetTrigger = ValueNotifier<int>(0);
-  final List<String> _manualActiveNodes = [];
-  AnatomyLayer? _activeLayer;
-  Map<AnatomyLayer, List<String>> _availableNodes = {};
+  bool _showChat = false;
 
   @override
   void initState() {
@@ -162,6 +162,38 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
     });
   }
 
+  Future<void> _handleToolCall(ChatToolCallEvent tool) async {
+    if (tool.toolName == 'set_anatomy_layer') {
+      final layerName = tool.arguments['layer'] as String?;
+      if (layerName != null) {
+        context.read<domain.LoggerService>().info('HUD_ORCHESTRATOR: EXECUTING_ANATOMY_CHANGE: $layerName');
+        final layer = layerName == 'default'
+            ? null
+            : domain.AnatomyLayer.values.firstWhere(
+                (e) => e.name == layerName,
+                orElse: () => domain.AnatomyLayer.muscular,
+              );
+
+        // 1. Clear the tool call immediately so we don't trigger again
+        if (mounted) {
+          context.read<ChatCubit>().clearToolCall();
+        }
+
+        // 2. Hide chat first for a clean visual handoff
+        if (_showChat) {
+          setState(() => _showChat = false);
+          // Wait for the animation to complete (matching MyoCanvas 400ms duration)
+          await Future<void>.delayed(const Duration(milliseconds: 450));
+        }
+
+        // 3. Update AnatomyCubit
+        if (mounted) {
+          context.read<AnatomyCubit>().setLayer(layer);
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AppInitCubit, AppInitState>(
@@ -170,10 +202,15 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
         if (state.isReady) _checkHandoff();
       },
       child: BlocListener<ChatCubit, ChatState>(
-        listenWhen: (prev, curr) => prev.isTransitioning != curr.isTransitioning,
         listener: (context, state) {
           if (state.isTransitioning) {
             triggerGlitch();
+          }
+
+          final tool = state.pendingToolCall;
+          if (tool != null) {
+            context.read<domain.LoggerService>().detail('HUD_ORCHESTRATOR: PENDING_TOOL_CALL: ${tool.toolName}');
+            unawaited(_handleToolCall(tool));
           }
         },
         child: HoloGlitch(
@@ -183,69 +220,76 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
           child: Stack(
             children: [
               // THE MAIN HUD
-              BlocBuilder<ChatCubit, ChatState>(
-                builder: (context, chatState) {
-                  return BlocBuilder<ThemeCubit, ThemeState>(
-                    builder: (context, themeState) {
-                      return MyoCanvas(
-                        key: const ValueKey('myo_canvas'),
-                        fabState: widget.fabState,
-                        backgroundChild: InteractiveGrid(
-                          onLongPress: () {
-                            triggerGlitch();
-                            unawaited(HapticFeedback.heavyImpact());
+              BlocBuilder<AnatomyCubit, AnatomyState>(
+                builder: (context, anatomyState) {
+                  return BlocBuilder<ChatCubit, ChatState>(
+                    builder: (context, chatState) {
+                      return BlocBuilder<ThemeCubit, ThemeState>(
+                        builder: (context, themeState) {
+                          return MyoCanvas(
+                            key: const ValueKey('myo_canvas'),
+                            fabState: widget.fabState,
+                            showChat: _showChat,
+                            backgroundChild: InteractiveGrid(
+                              onLongPress: () {
+                                triggerGlitch();
+                                unawaited(HapticFeedback.heavyImpact());
 
-                            Timer(const Duration(milliseconds: 150), () {
-                              if (mounted) {
-                                setState(() {
-                                  _manualActiveNodes.clear();
-                                  _activeLayer = null;
-                                  _anatomyResetTrigger.value++;
+                                Timer(const Duration(milliseconds: 150), () {
+                                  if (mounted) {
+                                    context.read<AnatomyCubit>().setLayer(null);
+                                    context.read<AnatomyCubit>().clearHighlights();
+                                    _anatomyResetTrigger.value++;
+                                  }
                                 });
-                              }
-                            });
-                          },
-                          child: MyoAnatomyCanvas(
-                            isRenderingEnabled: context.select<AppInitCubit, bool>((c) => c.state.isReady),
-                            accentColor: themeState.settings.accentColor,
-                            highlightColor: themeState.settings.highlightColor,
-                            roughness: themeState.settings.modelRoughness,
-                            activeNodes: [
-                              ...chatState.activeGoal?.metadata.targetAnatomyNodes ?? [],
-                              ..._manualActiveNodes,
-                            ],
-                            activeLayer: _activeLayer,
-                            resetTrigger: _anatomyResetTrigger,
-                            onNodesLoaded: (nodes) {
-                              if (_availableNodes.isEmpty) {
-                                setState(() => _availableNodes = nodes);
-                                context.read<AppInitCubit>().indexAnatomy(nodes).ignore();
+                              },
+                              child: MyoAnatomyCanvas(
+                                isRenderingEnabled: context.select<AppInitCubit, bool>((c) => c.state.isReady),
+                                accentColor: themeState.settings.accentColor,
+                                highlightColor: themeState.settings.highlightColor,
+                                roughness: themeState.settings.modelRoughness,
+                                activeNodes: [
+                                  ...chatState.activeGoal?.metadata.targetAnatomyNodes ?? [],
+                                  ...anatomyState.activeNodes,
+                                ],
+                                activeLayer: anatomyState.activeLayer,
+                                resetTrigger: _anatomyResetTrigger,
+                                onNodesLoaded: (nodes) {
+                                  if (anatomyState.availableNodes.isEmpty) {
+                                    context.read<AnatomyCubit>().setAvailableNodes(nodes);
+                                    context.read<AppInitCubit>().indexAnatomy(nodes).ignore();
+                                  }
+                                },
+                              ),
+                            ),
+                            chatChild: MyoChatList(messages: chatState.messages),
+                            onMessageSubmitted: (value) async {
+                              return context.read<ChatCubit>().submit(value);
+                            },
+                            onShowChatChanged: (visible) {
+                              setState(() => _showChat = visible);
+                              widget.fabState.value = visible ? HoloState.listening : HoloState.idle;
+                            },
+
+                            onCommandSelected: (command) {
+                              switch (command) {
+                                case domain.QuickCommand.goalExplorer:
+                                  _bringToFront(_OverlayWindow.goalExplorer);
+                                case domain.QuickCommand.anatomyTargeter:
+                                  _bringToFront(_OverlayWindow.anatomyTargeter);
+                                case domain.QuickCommand.themeSettings:
+                                  _bringToFront(_OverlayWindow.themeSettings);
+                                case domain.QuickCommand.settingsHud:
+                                  _bringToFront(_OverlayWindow.settingsHud);
+                                case QuickCommand.logSymptom:
+                                case QuickCommand.revertLadder:
+                                case QuickCommand.xrayOverlay:
+                                case QuickCommand.bodyHeatmap:
+                                case QuickCommand.calibrate:
+                                case QuickCommand.unknown:
                               }
                             },
-                          ),
-                        ),
-                        chatChild: MyoChatList(messages: chatState.messages),
-                        onMessageSubmitted: (value) async {
-                          return context.read<ChatCubit>().submit(value);
-                        },
-                        onShowChatChanged: (visible) {
-                          widget.fabState.value = visible ? HoloState.listening : HoloState.idle;
-                        },
-                        onCommandSelected: (command) {
-                          switch (command) {
-                            case domain.QuickCommand.goalExplorer:
-                              _bringToFront(_OverlayWindow.goalExplorer);
-                            case domain.QuickCommand.anatomyTargeter:
-                              _bringToFront(_OverlayWindow.anatomyTargeter);
-                            case domain.QuickCommand.themeSettings:
-                              _bringToFront(_OverlayWindow.themeSettings);
-                            case QuickCommand.logSymptom:
-                            case QuickCommand.revertLadder:
-                            case QuickCommand.xrayOverlay:
-                            case QuickCommand.bodyHeatmap:
-                            case QuickCommand.calibrate:
-                            case QuickCommand.unknown:
-                          }
+                          );
                         },
                       );
                     },
@@ -254,100 +298,145 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
               ),
 
               // DYNAMIC OVERLAYS
-              ..._activeWindows.map((window) {
-                switch (window) {
-                  case _OverlayWindow.goalExplorer:
-                    return Positioned.fill(
-                      key: const ValueKey('goal_explorer'),
-                      child: Listener(
-                        onPointerDown: (_) => _bringToFront(_OverlayWindow.goalExplorer),
-                        child: Padding(
-                          padding: allPadding32,
-                          child: Align(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxWidth: 600,
-                                maxHeight: 800,
+              Positioned.fill(
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 120), // Avoid system tray / FAB area
+                    child: Stack(
+                      children: _activeWindows.map((window) {
+                        switch (window) {
+                          case _OverlayWindow.goalExplorer:
+                            return Positioned.fill(
+                              key: const ValueKey('goal_explorer'),
+                              child: Listener(
+                                behavior: HitTestBehavior.translucent,
+                                onPointerDown: (_) => _bringToFront(_OverlayWindow.goalExplorer),
+                                child: Padding(
+                                  padding: allPadding32,
+                                  child: Align(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 600,
+                                        maxHeight: 800,
+                                      ),
+                                      child: FutureBuilder<List<domain.Goal>>(
+                                        future: context.read<ChatCubit>().fetchGoals(),
+                                        builder: (context, snapshot) {
+                                          return GoalExplorerSurface(
+                                            goals: snapshot.data ?? [],
+                                            onGoalSelected: (goal) async {
+                                              await context.read<ChatCubit>().switchGoal(goal.id);
+                                              _closeWindow(_OverlayWindow.goalExplorer);
+                                            },
+                                            onClose: () => _closeWindow(_OverlayWindow.goalExplorer),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                              child: FutureBuilder<List<domain.Goal>>(
-                                future: context.read<ChatCubit>().fetchGoals(),
-                                builder: (context, snapshot) {
-                                  return GoalExplorerSurface(
-                                    goals: snapshot.data ?? [],
-                                    onGoalSelected: (goal) async {
-                                      await context.read<ChatCubit>().switchGoal(goal.id);
-                                      _closeWindow(_OverlayWindow.goalExplorer);
+                            );
+                          case _OverlayWindow.anatomyTargeter:
+                            return Positioned(
+                              key: const ValueKey('anatomy_targeter'),
+                              right: 32,
+                              top: 32,
+                              bottom: 32,
+                              child: Listener(
+                                behavior: HitTestBehavior.translucent,
+                                onPointerDown: (_) => _bringToFront(_OverlayWindow.anatomyTargeter),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 340),
+                                  child: BlocBuilder<AnatomyCubit, AnatomyState>(
+                                    builder: (context, state) {
+                                      return AnatomyTargetingSurface(
+                                        nodesByLayer: state.availableNodes,
+                                        activeLayer: state.activeLayer,
+                                        selectedNodes: state.activeNodes,
+                                        onLayerChanged: (layer) {
+                                          context.read<AnatomyCubit>().setLayer(layer);
+                                        },
+                                        onNodeSelected: (node) {
+                                          context.read<AnatomyCubit>().toggleNode(node);
+                                        },
+                                        onClearSelections: () {
+                                          context.read<AnatomyCubit>().clearHighlights();
+                                        },
+                                        onClose: () => _closeWindow(_OverlayWindow.anatomyTargeter),
+                                      );
                                     },
-                                    onClose: () => _closeWindow(_OverlayWindow.goalExplorer),
-                                  );
-                                },
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  case _OverlayWindow.anatomyTargeter:
-                    return Positioned(
-                      key: const ValueKey('anatomy_targeter'),
-                      right: 32,
-                      top: 32,
-                      bottom: 32,
-                      child: Listener(
-                        onPointerDown: (_) => _bringToFront(_OverlayWindow.anatomyTargeter),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 340),
-                          child: AnatomyTargetingSurface(
-                            nodesByLayer: _availableNodes,
-                            activeLayer: _activeLayer,
-                            selectedNodes: _manualActiveNodes,
-                            onLayerChanged: (layer) {
-                              setState(() => _activeLayer = layer);
-                            },
-                            onNodeSelected: (node) {
-                              setState(() {
-                                if (_manualActiveNodes.contains(node)) {
-                                  _manualActiveNodes.remove(node);
-                                } else {
-                                  _manualActiveNodes.add(node);
-                                }
-                              });
-                            },
-                            onClearSelections: () {
-                              setState(_manualActiveNodes.clear);
-                            },
-                            onClose: () => _closeWindow(_OverlayWindow.anatomyTargeter),
-                          ),
-                        ),
-                      ),
-                    );
-                  case _OverlayWindow.themeSettings:
-                    return Positioned(
-                      key: const ValueKey('theme_settings'),
-                      right: 32,
-                      top: 32,
-                      child: Listener(
-                        onPointerDown: (_) => _bringToFront(_OverlayWindow.themeSettings),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 340),
-                          child: BlocBuilder<ThemeCubit, ThemeState>(
-                            builder: (context, state) {
-                              return ThemeSettingsSurface(
-                                accentColor: state.settings.accentColor,
-                                highlightColor: state.settings.highlightColor,
-                                roughness: state.settings.modelRoughness,
-                                onAccentChanged: (color) => context.read<ThemeCubit>().updateAccentColor(color),
-                                onHighlightChanged: (color) => context.read<ThemeCubit>().updateHighlightColor(color),
-                                onRoughnessChanged: (val) => context.read<ThemeCubit>().updateRoughness(val),
-                                onClose: () => _closeWindow(_OverlayWindow.themeSettings),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    );
-                }
-              }),
+                            );
+                          case _OverlayWindow.themeSettings:
+                            return Positioned(
+                              key: const ValueKey('theme_settings'),
+                              right: 32,
+                              top: 32,
+                              child: Listener(
+                                behavior: HitTestBehavior.translucent,
+                                onPointerDown: (_) => _bringToFront(_OverlayWindow.themeSettings),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 340),
+                                  child: BlocBuilder<ThemeCubit, ThemeState>(
+                                    builder: (context, state) {
+                                      return ThemeSettingsSurface(
+                                        accentColor: state.settings.accentColor,
+                                        highlightColor: state.settings.highlightColor,
+                                        roughness: state.settings.modelRoughness,
+                                        onAccentChanged: (color) => context.read<ThemeCubit>().updateAccentColor(color),
+                                        onHighlightChanged: (color) =>
+                                            context.read<ThemeCubit>().updateHighlightColor(color),
+                                        onRoughnessChanged: (val) => context.read<ThemeCubit>().updateRoughness(val),
+                                        onClose: () => _closeWindow(_OverlayWindow.themeSettings),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          case _OverlayWindow.settingsHud:
+                            return Positioned.fill(
+                              key: const ValueKey('settings_hud'),
+                              child: Listener(
+                                behavior: HitTestBehavior.translucent,
+                                onPointerDown: (_) => _bringToFront(_OverlayWindow.settingsHud),
+                                child: Align(
+                                  child: SettingsHudSurface(
+                                    onCommandSelected: (command) {
+                                      _closeWindow(_OverlayWindow.settingsHud);
+                                      // Dispatch the selected command back into the app orchestrator
+                                      // Most commands just open other windows
+                                      switch (command) {
+                                        case QuickCommand.goalExplorer:
+                                          _bringToFront(_OverlayWindow.goalExplorer);
+                                        case QuickCommand.anatomyTargeter:
+                                          _bringToFront(_OverlayWindow.anatomyTargeter);
+                                        case QuickCommand.themeSettings:
+                                          _bringToFront(_OverlayWindow.themeSettings);
+                                        case QuickCommand.logSymptom:
+                                        case QuickCommand.revertLadder:
+                                        case QuickCommand.xrayOverlay:
+                                        case QuickCommand.bodyHeatmap:
+                                        case QuickCommand.calibrate:
+                                        case QuickCommand.settingsHud:
+                                        case QuickCommand.unknown:
+                                          break;
+                                      }
+                                    },
+                                    onClose: () => _closeWindow(_OverlayWindow.settingsHud),
+                                  ),
+                                ),
+                              ),
+                            );
+                        }
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
 
               // THE BOOT SCREEN
               if (!_readyToTransition)

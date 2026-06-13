@@ -78,6 +78,9 @@ enum QuickCommand {
   /// Open the HUD theme and PBR calibration window.
   themeSettings,
 
+  /// Open the unified searchable settings HUD.
+  settingsHud,
+
   /// Fallback for unrecognized interactions.
   unknown,
 }

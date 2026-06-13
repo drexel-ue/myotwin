@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:myotwin_app/src/app/myotwin_app.dart';
+import 'package:myotwin_app/src/application/anatomy/anatomy_cubit.dart';
 import 'package:myotwin_app/src/application/common/app_init_cubit.dart';
 import 'package:myotwin_app/src/application/common/myo_bloc_observer.dart';
 import 'package:myotwin_app/src/application/theme/theme_cubit.dart';
@@ -54,16 +55,23 @@ Future<void> main() async {
         ChangeNotifierProvider<AnatomySemanticService>.value(value: semanticService),
         Provider<MotusAgent>.value(value: motusService),
       ],
-      child: BlocProvider(
-        create: (context) => ThemeCubit(repository: themeRepository)..initialize().ignore(),
-        child: BlocProvider(
-          create: (context) => AppInitCubit(
-            motusService: motusService,
-            semanticService: semanticService,
-            logger: logger,
-          )..initialize().ignore(),
-          child: const MyotwinApp(),
-        ),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => ThemeCubit(repository: themeRepository)..initialize().ignore(),
+          ),
+          BlocProvider(
+            create: (context) => AnatomyCubit(),
+          ),
+          BlocProvider(
+            create: (context) => AppInitCubit(
+              motusService: motusService,
+              semanticService: semanticService,
+              logger: logger,
+            )..initialize().ignore(),
+          ),
+        ],
+        child: const MyotwinApp(),
       ),
     ),
   );

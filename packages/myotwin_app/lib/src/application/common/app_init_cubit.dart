@@ -249,8 +249,8 @@ class AppInitCubit extends Cubit<AppInitState> {
       return localPath;
     } catch (e) {
       // Cleanup partially downloaded file
-      if (await file.exists()) {
-        await file.delete();
+      if (file.existsSync()) {
+        file.deleteSync();
       }
       rethrow;
     } finally {

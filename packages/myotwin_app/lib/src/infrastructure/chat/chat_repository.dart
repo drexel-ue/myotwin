@@ -32,7 +32,7 @@ class ChatRepository {
   }
 
   /// Initiates an AI response stream with global biomechanical context.
-  Stream<String> getResponseStream(String message, {List<domain.IntentRecord>? context}) async* {
+  Stream<domain.ChatEvent> getResponseStream(String message, {List<domain.IntentRecord>? context}) async* {
     _logger.detail('CHAT_REPOSITORY: GET_RESPONSE_STREAM: $message');
     final report = await _generateSituationReport();
     final augmentedMessage =

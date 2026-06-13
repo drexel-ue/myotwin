@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myotwin_ui/myotwin_ui.dart';
@@ -195,35 +197,13 @@ class _ArcFABSliderState extends State<ArcFABSlider> with SingleTickerProviderSt
                   offset: Offset(xPos, yPos),
                   child: Transform.scale(
                     scale: scale,
-                    child: QuickCommandMenu(
-                      itemCount: QuickCommand.values.length - 1, // Exclude unknown
-                      radius: 120.0,
-                      itemSize: spacing64,
-                      onItemSelected: (index) {
-                        final command = QuickCommand.values[index];
-                        widget.onCommandSelected?.call(command);
+                    child: GestureDetector(
+                      onLongPress: () {
+                        unawaited(HapticFeedback.heavyImpact());
+                        widget.onCommandSelected?.call(QuickCommand.settingsHud);
                       },
-                      itemBuilder: (context, index, {required isHovered}) {
-                        final command = QuickCommand.values[index];
-                        final iconIntent = switch (command) {
-                          QuickCommand.anatomyTargeter => 'target',
-                          QuickCommand.goalExplorer => 'crosshair',
-                          QuickCommand.themeSettings => 'gear',
-                          _ => 'task',
-                        };
-                        return MyoIconButton(
-                          behavior: .translucent,
-                          intent: iconIntent,
-                          color: isHovered ? Colors.black : Colors.white,
-                          size: spacing72,
-                          onPressed: () {},
-                        );
-                      },
-                      tooltipBuilder: (index) {
-                        final command = QuickCommand.values[index];
-                        return command.name
-                            .replaceAllMapped(RegExp('([A-Z])'), (match) => '_${match.group(1)}')
-                            .toUpperCase();
+                      onSecondaryTapDown: (_) {
+                        widget.onCommandSelected?.call(QuickCommand.settingsHud);
                       },
                       child: AnimatedHoloFAB(
                         state: widget.fabState,

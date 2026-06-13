@@ -19,6 +19,7 @@ class MyoCanvas extends StatefulWidget {
     required this.backgroundChild,
     required this.chatChild,
     required this.onShowChatChanged,
+    this.showChat,
     this.audioController,
     this.onMessageSubmitted,
     this.fabState,
@@ -35,6 +36,9 @@ class MyoCanvas extends StatefulWidget {
 
   /// {@macro myo_canvas.chat_child}
   final ValueChanged<bool> onShowChatChanged;
+
+  /// An optional boolean to drive the chat's visibility externally.
+  final bool? showChat;
 
   /// An optional controller to drive the voice visualizer.
   /// If null, the canvas manages one internally.
@@ -74,12 +78,35 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
   @override
   void initState() {
     super.initState();
-    _chatOffsetController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _showChat = widget.showChat ?? false;
+    _chatOffsetController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+      value: _showChat ? 1.0 : 0.0,
+    );
     _audioController = widget.audioController ?? AudioVisualizerController();
     _fabState = widget.fabState ?? ValueNotifier<HoloState>(HoloState.idle);
 
     // Listen for mode changes to manage the stub timer
     _sliderMode.addListener(_handleModeChange);
+
+    // Auto-open chat when typing starts
+    _textController.addListener(_handleTextChange);
+  }
+
+  void _handleTextChange() {
+    if (_textController.text.isNotEmpty && !_showChat) {
+      unawaited(_toggleChat(true));
+      widget.onShowChatChanged(true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MyoCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showChat != null && widget.showChat != _showChat) {
+      unawaited(_toggleChat(widget.showChat));
+    }
   }
 
   Future<void> _handleModeChange() async {
@@ -93,7 +120,8 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
 
     // Auto-open chat when sliding to either side
     if (mode != ArcSliderMode.centered && !_showChat) {
-      await _toggleChat();
+      unawaited(_toggleChat(true));
+      await Future<void>.delayed(Duration.zero);
       widget.onShowChatChanged(_showChat);
     }
 
@@ -104,34 +132,48 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
     }
   }
 
-  Future<void> _toggleChat() async {
-    _showChat = !_showChat;
+  Future<void> _toggleChat([bool? visible]) async {
+    final target = visible ?? !_showChat;
+    if (target == _showChat && visible != null) return;
+
+    final oldShowChat = _showChat;
+    _showChat = target;
+    context.myoLogger.detail('MYO_CANVAS: TOGGLE_CHAT: $oldShowChat -> $_showChat (visible param: $visible)');
     if (_showChat) {
-      await _chatOffsetController.forward();
+      unawaited(_chatOffsetController.forward());
       _fabState.value = HoloState.listening;
     } else {
-      await _chatOffsetController.reverse();
+      unawaited(_chatOffsetController.reverse());
       _fabState.value = HoloState.idle;
     }
   }
 
   Future<void> _onFabPressed(ArcSliderMode mode) async {
-    await _toggleChat();
+    context.myoLogger.detail('MYO_CANVAS: FAB_PRESSED: mode=$mode');
+    unawaited(_toggleChat());
+    // Give the local state a microtask to update before notifying parent
+    await Future<void>.delayed(Duration.zero);
     widget.onShowChatChanged(_showChat);
   }
 
   Future<void> _handleSubmit(String text) async {
     if (text.trim().isEmpty) return;
 
-    // 1. Capture and clear immediately for visual responsiveness
+    // 1. Ensure chat is visible if it was dismissed
+    if (!_showChat) {
+      unawaited(_toggleChat(true));
+      widget.onShowChatChanged(true);
+    }
+
+    // 2. Capture and clear immediately for visual responsiveness
     final capturedText = text;
     _textController.clear();
 
-    // 2. Dispatch to agent
+    // 3. Dispatch to agent
     if (widget.onMessageSubmitted != null) {
       final success = await widget.onMessageSubmitted!(capturedText);
 
-      // 3. Auto-recovery logic: if processing failed, restore the text
+      // 4. Auto-recovery logic: if processing failed, restore the text
       if (!success && mounted) {
         _textController.text = capturedText;
         // Trigger a "Transmission Error" glitch spike on the input field
@@ -143,6 +185,7 @@ class _MyoCanvasState extends State<MyoCanvas> with TickerProviderStateMixin, Ho
   @override
   void dispose() {
     _sliderMode.removeListener(_handleModeChange);
+    _textController.removeListener(_handleTextChange);
     _chatOffsetController.dispose();
     if (widget.fabState == null) {
       _fabState.dispose();

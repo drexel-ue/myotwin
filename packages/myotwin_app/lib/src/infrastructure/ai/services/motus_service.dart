@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:llamadart/llamadart.dart'
-    show ChatSession, LlamaBackend, LlamaEngine, LlamaTextContent, ModelLoadOptions, ModelSource;
+import 'package:llamadart/llamadart.dart';
 import 'package:shared_core/shared_core.dart';
 
 /// A single-concern service for high-performance local LLM inference.
@@ -20,6 +19,24 @@ class MotusService extends ChangeNotifier implements MotusAgent {
   ChatSession? _session;
   bool _isInitialized = false;
   String? _initializationError;
+
+  /// Available tools for Motus to call.
+  late final List<ToolDefinition> _tools = [
+    ToolDefinition(
+      name: 'set_anatomy_layer',
+      description: 'Isolate a specific anatomical layer on the 3D model. Use this whenever the user asks to "show", "isolate", "view", or "switch to" a specific system (skeletal, muscular, nervous, cardiovascular, joints). Use "default" to reset to the standard view. Always call this tool immediately if the user mentions an anatomical system.',
+      parameters: [
+        ToolParam.enumType(
+          'layer',
+          values: [...AnatomyLayer.values.map((e) => e.name), 'default'],
+          description: 'The anatomical layer to isolate, or "default" to reset.',
+          required: true,
+        ),
+      ],
+      handler: (params) async => null, // UI handles execution
+    ),
+  ];
+
 
   /// Notifies about model loading or downloading progress (0.0 to 1.0).
   final ValueNotifier<double> loadingProgress = ValueNotifier(0.0);
@@ -69,7 +86,7 @@ class MotusService extends ChangeNotifier implements MotusAgent {
   }
 
   @override
-  Stream<String> streamChatResponse(
+  Stream<ChatEvent> streamChatResponse(
     String message, {
     List<IntentRecord>? context,
   }) async* {
@@ -82,12 +99,31 @@ class MotusService extends ChangeNotifier implements MotusAgent {
 
     try {
       final contents = [LlamaTextContent(message)];
-      await for (final chunk in _session!.create(contents)) {
-        final delta = chunk.choices.first.delta.content;
-        if (delta != null) {
-          yield delta;
+      await for (final chunk in _session!.create(contents, tools: _tools)) {
+        if (chunk.choices.isEmpty) continue;
+        final delta = chunk.choices.first.delta;
+
+        final text = delta.content;
+        if (text != null) {
+          yield ChatTextEvent(text);
         }
       }
+
+      // After the stream completes, check the session history for any tool calls
+      // that were accumulated by the ChatSession.
+      final lastMessage = _session!.history.last;
+      if (lastMessage.role == LlamaChatRole.assistant) {
+        for (final part in lastMessage.parts) {
+          if (part is LlamaToolCallContent) {
+            _logger.info('MOTUS_SERVICE: TOOL_CALL_DETECTED: ${part.name} ${part.arguments}');
+            yield ChatToolCallEvent(
+              toolName: part.name,
+              arguments: part.arguments,
+            );
+          }
+        }
+      }
+
       _logger.detail('MOTUS_SERVICE: INFERENCE_COMPLETE');
     } catch (e, stack) {
       _logger.error('MOTUS_SERVICE: INFERENCE_ERROR', error: e, stackTrace: stack);
