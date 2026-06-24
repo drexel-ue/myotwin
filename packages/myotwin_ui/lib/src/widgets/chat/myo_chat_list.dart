@@ -10,10 +10,14 @@ class MyoChatList extends StatefulWidget {
   const MyoChatList({
     super.key,
     required this.messages,
+    this.statusUpdate,
   });
 
   /// The list of [IntentRecord]s to display.
   final List<IntentRecord> messages;
+
+  /// A transient status update from the AI (e.g. "Searching index...").
+  final String? statusUpdate;
 
   @override
   State<MyoChatList> createState() => _MyoChatListState();
@@ -95,15 +99,25 @@ class _MyoChatListState extends State<MyoChatList> {
                   left: spacing16,
                   right: spacing16,
                 ),
-                itemCount: widget.messages.length,
+                itemCount: widget.messages.length + (widget.statusUpdate != null ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final message = widget.messages[index];
+                  // statusUpdate is shown at the visual "bottom" of the stream.
+                  // Since we are reversed, index 0 is the newest item.
+                  if (widget.statusUpdate != null && index == 0) {
+                    return Padding(
+                      padding: topPadding16,
+                      child: _StatusUpdate(status: widget.statusUpdate!),
+                    );
+                  }
+
+                  final messageIndex = widget.statusUpdate != null ? index - 1 : index;
+                  final message = widget.messages[messageIndex];
                   return Padding(
                     padding: topPadding16,
                     child: _ChatEntry(
-                      index: index,
+                      index: messageIndex,
                       intent: message,
-                      isLatest: index == 0,
+                      isLatest: messageIndex == 0,
                       // Pass the velocity tracker down so the bubble can stretch itself
                       velocityTracker: scrollVelocity,
                     ),
@@ -113,6 +127,51 @@ class _MyoChatListState extends State<MyoChatList> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _StatusUpdate extends StatelessWidget {
+  const _StatusUpdate({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.myoTheme;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.accent.withValues(alpha: 0.05),
+          border: Border.all(color: theme.accent.withValues(alpha: 0.1)),
+          borderRadius: theme.radiusSm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                valueColor: AlwaysStoppedAnimation(theme.accent),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              status.toUpperCase(),
+              style: theme.caption.copyWith(
+                color: theme.accent,
+                letterSpacing: 1.0,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

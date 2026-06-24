@@ -20,6 +20,7 @@ class MyoAnatomyCanvas extends StatefulWidget {
     this.onNodesLoaded,
     this.isRenderingEnabled = true,
     this.isPaused = false,
+    this.persistentHighlights = const {},
     required this.accentColor,
     required this.highlightColor,
     required this.roughness,
@@ -43,6 +44,9 @@ class MyoAnatomyCanvas extends StatefulWidget {
 
   /// Whether background animations (pulse, blood flow) should be paused.
   final bool isPaused;
+
+  /// A mapping of anatomical nodes to specific colors for persistent highlighting.
+  final Map<String, Color> persistentHighlights;
 
   /// The primary accent color for lighting.
   final Color accentColor;
@@ -92,8 +96,8 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas>
         if (mounted) {
           _manager
             ..updateRoughness(widget.roughness)
-            ..isolateLayer(widget.activeLayer)
-            ..setHighlights(widget.activeNodes, widget.highlightColor);
+            ..isolateLayer(widget.activeLayer);
+          _reconcileHighlights();
           widget.onNodesLoaded?.call(_manager.getAvailableNodesByLayer());
         }
       }),
@@ -120,8 +124,10 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas>
         _manager.isolateLayer(widget.activeLayer);
         triggerGlitch();
       }
-      if (widget.activeNodes != oldWidget.activeNodes || widget.highlightColor != oldWidget.highlightColor) {
-        _manager.setHighlights(widget.activeNodes, widget.highlightColor);
+      if (widget.activeNodes != oldWidget.activeNodes ||
+          widget.persistentHighlights != oldWidget.persistentHighlights ||
+          widget.highlightColor != oldWidget.highlightColor) {
+        _reconcileHighlights();
       }
       if (widget.roughness != oldWidget.roughness) {
         _manager.updateRoughness(widget.roughness);
@@ -163,6 +169,15 @@ class _MyoAnatomyCanvasState extends State<MyoAnatomyCanvas>
       _radius = 2.4;
       _targetPos = vm.Vector3(0.0, 0.85, 0.0);
     });
+  }
+
+  void _reconcileHighlights() {
+    final combined = <String, Color>{};
+    for (final node in widget.activeNodes) {
+      combined[node] = widget.highlightColor;
+    }
+    combined.addAll(widget.persistentHighlights);
+    _manager.setHighlights(combined);
   }
 
   void _handleScaleStart(ScaleStartDetails details) {

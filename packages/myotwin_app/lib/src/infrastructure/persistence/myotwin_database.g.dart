@@ -26,14 +26,15 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
-  late final GeneratedColumnWithTypeConverter<GoalStatus, String> status = GeneratedColumn<String>(
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
     'status',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  ).withConverter<GoalStatus>($GoalsTable.$converterstatus);
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -57,13 +58,14 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     requiredDuringInsert: false,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<GoalMetadata, String> metadata = GeneratedColumn<String>(
-    'metadata',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  ).withConverter<GoalMetadata>($GoalsTable.$convertermetadata);
+  late final GeneratedColumnWithTypeConverter<GoalMetadata, String> metadata =
+      GeneratedColumn<String>(
+        'metadata',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<GoalMetadata>($GoalsTable.$convertermetadata);
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -98,6 +100,14 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     } else if (isInserting) {
       context.missing(_labelMeta);
     }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -129,12 +139,10 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.string,
         data['${effectivePrefix}label'],
       )!,
-      status: $GoalsTable.$converterstatus.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}status'],
-        )!,
-      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -157,18 +165,27 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     return $GoalsTable(attachedDatabase, alias);
   }
 
-  static JsonTypeConverter2<GoalStatus, String, String> $converterstatus = const EnumNameConverter(GoalStatus.values);
-  static TypeConverter<GoalMetadata, String> $convertermetadata = const GoalMetadataConverter();
+  static TypeConverter<GoalMetadata, String> $convertermetadata =
+      const GoalMetadataConverter();
 }
 
 class Goal extends DataClass implements Insertable<Goal> {
+  /// Unique identifier for this goal.
   final String id;
+
+  /// Human-readable label (e.g., "Left Shoulder Recovery").
   final String label;
-  final GoalStatus status;
+
+  /// Current lifecycle state.
+  final String status;
+
+  /// When the goal was first established.
   final DateTime createdAt;
+
+  /// When the goal was last updated.
   final DateTime? updatedAt;
 
-  /// JSONB metadata wrapped in GoalMetadata extension type.
+  /// JSONB metadata wrapped in [GoalMetadata] extension type.
   final GoalMetadata metadata;
   const Goal({
     required this.id,
@@ -183,11 +200,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['label'] = Variable<String>(label);
-    {
-      map['status'] = Variable<String>(
-        $GoalsTable.$converterstatus.toSql(status),
-      );
-    }
+    map['status'] = Variable<String>(status);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -206,7 +219,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       label: Value(label),
       status: Value(status),
       createdAt: Value(createdAt),
-      updatedAt: updatedAt == null && nullToAbsent ? const Value.absent() : Value(updatedAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
       metadata: Value(metadata),
     );
   }
@@ -219,9 +234,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     return Goal(
       id: serializer.fromJson<String>(json['id']),
       label: serializer.fromJson<String>(json['label']),
-      status: $GoalsTable.$converterstatus.fromJson(
-        serializer.fromJson<String>(json['status']),
-      ),
+      status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       metadata: serializer.fromJson<GoalMetadata>(json['metadata']),
@@ -233,9 +246,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'label': serializer.toJson<String>(label),
-      'status': serializer.toJson<String>(
-        $GoalsTable.$converterstatus.toJson(status),
-      ),
+      'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'metadata': serializer.toJson<GoalMetadata>(metadata),
@@ -245,7 +256,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   Goal copyWith({
     String? id,
     String? label,
-    GoalStatus? status,
+    String? status,
     DateTime? createdAt,
     Value<DateTime?> updatedAt = const Value.absent(),
     GoalMetadata? metadata,
@@ -282,7 +293,8 @@ class Goal extends DataClass implements Insertable<Goal> {
   }
 
   @override
-  int get hashCode => Object.hash(id, label, status, createdAt, updatedAt, metadata);
+  int get hashCode =>
+      Object.hash(id, label, status, createdAt, updatedAt, metadata);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -298,7 +310,7 @@ class Goal extends DataClass implements Insertable<Goal> {
 class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<String> id;
   final Value<String> label;
-  final Value<GoalStatus> status;
+  final Value<String> status;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<GoalMetadata> metadata;
@@ -315,7 +327,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   GoalsCompanion.insert({
     required String id,
     required String label,
-    required GoalStatus status,
+    required String status,
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
     required GoalMetadata metadata,
@@ -348,7 +360,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   GoalsCompanion copyWith({
     Value<String>? id,
     Value<String>? label,
-    Value<GoalStatus>? status,
+    Value<String>? status,
     Value<DateTime>? createdAt,
     Value<DateTime?>? updatedAt,
     Value<GoalMetadata>? metadata,
@@ -375,9 +387,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       map['label'] = Variable<String>(label.value);
     }
     if (status.present) {
-      map['status'] = Variable<String>(
-        $GoalsTable.$converterstatus.toSql(status.value),
-      );
+      map['status'] = Variable<String>(status.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -411,7 +421,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   }
 }
 
-class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTable, IntentRecord> {
+class $IntentRecordsTable extends IntentRecords
+    with TableInfo<$IntentRecordsTable, IntentRecord> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -437,14 +448,15 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
       'REFERENCES goals (id)',
     ),
   );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
   @override
-  late final GeneratedColumnWithTypeConverter<IntentType, String> type = GeneratedColumn<String>(
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
     'type',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  ).withConverter<IntentType>($IntentRecordsTable.$convertertype);
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -460,13 +472,14 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
     'scheduledTime',
   );
   @override
-  late final GeneratedColumn<DateTime> scheduledTime = GeneratedColumn<DateTime>(
-    'scheduled_time',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
+  late final GeneratedColumn<DateTime> scheduledTime =
+      GeneratedColumn<DateTime>(
+        'scheduled_time',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
   static const VerificationMeta _deliveredAtMeta = const VerificationMeta(
     'deliveredAt',
   );
@@ -478,15 +491,17 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _userEngagementScoreMeta = const VerificationMeta('userEngagementScore');
+  static const VerificationMeta _userEngagementScoreMeta =
+      const VerificationMeta('userEngagementScore');
   @override
-  late final GeneratedColumn<double> userEngagementScore = GeneratedColumn<double>(
-    'user_engagement_score',
-    aliasedName,
-    true,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-  );
+  late final GeneratedColumn<double> userEngagementScore =
+      GeneratedColumn<double>(
+        'user_engagement_score',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
   @override
   late final GeneratedColumn<String> reason = GeneratedColumn<String>(
@@ -497,13 +512,14 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
     requiredDuringInsert: true,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<IntentPayload, String> payload = GeneratedColumn<String>(
-    'payload',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  ).withConverter<IntentPayload>($IntentRecordsTable.$converterpayload);
+  late final GeneratedColumnWithTypeConverter<IntentPayload, String> payload =
+      GeneratedColumn<String>(
+        'payload',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<IntentPayload>($IntentRecordsTable.$converterpayload);
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -540,6 +556,14 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
       );
     } else if (isInserting) {
       context.missing(_goalIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -603,12 +627,10 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
         DriftSqlType.string,
         data['${effectivePrefix}goal_id'],
       )!,
-      type: $IntentRecordsTable.$convertertype.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}type'],
-        )!,
-      ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -643,21 +665,36 @@ class $IntentRecordsTable extends IntentRecords with TableInfo<$IntentRecordsTab
     return $IntentRecordsTable(attachedDatabase, alias);
   }
 
-  static JsonTypeConverter2<IntentType, String, String> $convertertype = const EnumNameConverter(IntentType.values);
-  static TypeConverter<IntentPayload, String> $converterpayload = const IntentPayloadConverter();
+  static TypeConverter<IntentPayload, String> $converterpayload =
+      const IntentPayloadConverter();
 }
 
 class IntentRecord extends DataClass implements Insertable<IntentRecord> {
+  /// Unique identifier for this intent.
   final String id;
+
+  /// The parent goal this intent serves.
   final String goalId;
-  final IntentType type;
+
+  /// The type of interaction (e.g., chat, notification).
+  final String type;
+
+  /// When the intent was recorded.
   final DateTime createdAt;
+
+  /// When the intent is eligible for delivery.
   final DateTime scheduledTime;
+
+  /// When the intent was presented to the user.
   final DateTime? deliveredAt;
+
+  /// Observed user engagement score (0.0 to 1.0).
   final double? userEngagementScore;
+
+  /// The internal reasoning or summary for this decision.
   final String reason;
 
-  /// JSONB GenUI payload wrapped in IntentPayload extension type.
+  /// JSONB GenUI payload wrapped in [IntentPayload] extension type.
   final IntentPayload payload;
   const IntentRecord({
     required this.id,
@@ -675,11 +712,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['goal_id'] = Variable<String>(goalId);
-    {
-      map['type'] = Variable<String>(
-        $IntentRecordsTable.$convertertype.toSql(type),
-      );
-    }
+    map['type'] = Variable<String>(type);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['scheduled_time'] = Variable<DateTime>(scheduledTime);
     if (!nullToAbsent || deliveredAt != null) {
@@ -704,7 +737,9 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
       type: Value(type),
       createdAt: Value(createdAt),
       scheduledTime: Value(scheduledTime),
-      deliveredAt: deliveredAt == null && nullToAbsent ? const Value.absent() : Value(deliveredAt),
+      deliveredAt: deliveredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deliveredAt),
       userEngagementScore: userEngagementScore == null && nullToAbsent
           ? const Value.absent()
           : Value(userEngagementScore),
@@ -721,9 +756,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
     return IntentRecord(
       id: serializer.fromJson<String>(json['id']),
       goalId: serializer.fromJson<String>(json['goalId']),
-      type: $IntentRecordsTable.$convertertype.fromJson(
-        serializer.fromJson<String>(json['type']),
-      ),
+      type: serializer.fromJson<String>(json['type']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       scheduledTime: serializer.fromJson<DateTime>(json['scheduledTime']),
       deliveredAt: serializer.fromJson<DateTime?>(json['deliveredAt']),
@@ -740,9 +773,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'goalId': serializer.toJson<String>(goalId),
-      'type': serializer.toJson<String>(
-        $IntentRecordsTable.$convertertype.toJson(type),
-      ),
+      'type': serializer.toJson<String>(type),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'scheduledTime': serializer.toJson<DateTime>(scheduledTime),
       'deliveredAt': serializer.toJson<DateTime?>(deliveredAt),
@@ -755,7 +786,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
   IntentRecord copyWith({
     String? id,
     String? goalId,
-    IntentType? type,
+    String? type,
     DateTime? createdAt,
     DateTime? scheduledTime,
     Value<DateTime?> deliveredAt = const Value.absent(),
@@ -769,7 +800,9 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
     createdAt: createdAt ?? this.createdAt,
     scheduledTime: scheduledTime ?? this.scheduledTime,
     deliveredAt: deliveredAt.present ? deliveredAt.value : this.deliveredAt,
-    userEngagementScore: userEngagementScore.present ? userEngagementScore.value : this.userEngagementScore,
+    userEngagementScore: userEngagementScore.present
+        ? userEngagementScore.value
+        : this.userEngagementScore,
     reason: reason ?? this.reason,
     payload: payload ?? this.payload,
   );
@@ -779,9 +812,15 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
       goalId: data.goalId.present ? data.goalId.value : this.goalId,
       type: data.type.present ? data.type.value : this.type,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      scheduledTime: data.scheduledTime.present ? data.scheduledTime.value : this.scheduledTime,
-      deliveredAt: data.deliveredAt.present ? data.deliveredAt.value : this.deliveredAt,
-      userEngagementScore: data.userEngagementScore.present ? data.userEngagementScore.value : this.userEngagementScore,
+      scheduledTime: data.scheduledTime.present
+          ? data.scheduledTime.value
+          : this.scheduledTime,
+      deliveredAt: data.deliveredAt.present
+          ? data.deliveredAt.value
+          : this.deliveredAt,
+      userEngagementScore: data.userEngagementScore.present
+          ? data.userEngagementScore.value
+          : this.userEngagementScore,
       reason: data.reason.present ? data.reason.value : this.reason,
       payload: data.payload.present ? data.payload.value : this.payload,
     );
@@ -833,7 +872,7 @@ class IntentRecord extends DataClass implements Insertable<IntentRecord> {
 class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
   final Value<String> id;
   final Value<String> goalId;
-  final Value<IntentType> type;
+  final Value<String> type;
   final Value<DateTime> createdAt;
   final Value<DateTime> scheduledTime;
   final Value<DateTime?> deliveredAt;
@@ -856,7 +895,7 @@ class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
   IntentRecordsCompanion.insert({
     required String id,
     required String goalId,
-    required IntentType type,
+    required String type,
     required DateTime createdAt,
     required DateTime scheduledTime,
     this.deliveredAt = const Value.absent(),
@@ -890,7 +929,8 @@ class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
       if (createdAt != null) 'created_at': createdAt,
       if (scheduledTime != null) 'scheduled_time': scheduledTime,
       if (deliveredAt != null) 'delivered_at': deliveredAt,
-      if (userEngagementScore != null) 'user_engagement_score': userEngagementScore,
+      if (userEngagementScore != null)
+        'user_engagement_score': userEngagementScore,
       if (reason != null) 'reason': reason,
       if (payload != null) 'payload': payload,
       if (rowid != null) 'rowid': rowid,
@@ -900,7 +940,7 @@ class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
   IntentRecordsCompanion copyWith({
     Value<String>? id,
     Value<String>? goalId,
-    Value<IntentType>? type,
+    Value<String>? type,
     Value<DateTime>? createdAt,
     Value<DateTime>? scheduledTime,
     Value<DateTime?>? deliveredAt,
@@ -933,9 +973,7 @@ class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
       map['goal_id'] = Variable<String>(goalId.value);
     }
     if (type.present) {
-      map['type'] = Variable<String>(
-        $IntentRecordsTable.$convertertype.toSql(type.value),
-      );
+      map['type'] = Variable<String>(type.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -983,22 +1021,461 @@ class IntentRecordsCompanion extends UpdateCompanion<IntentRecord> {
   }
 }
 
+class $InjuriesTable extends Injuries with TableInfo<$InjuriesTable, Injury> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InjuriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String> nodeIds =
+      GeneratedColumn<String>(
+        'node_ids',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<List<String>>($InjuriesTable.$converternodeIds);
+  static const VerificationMeta _severityMeta = const VerificationMeta(
+    'severity',
+  );
+  @override
+  late final GeneratedColumn<String> severity = GeneratedColumn<String>(
+    'severity',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resolvedAtMeta = const VerificationMeta(
+    'resolvedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> resolvedAt = GeneratedColumn<DateTime>(
+    'resolved_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nodeIds,
+    severity,
+    description,
+    createdAt,
+    resolvedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'injuries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Injury> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('severity')) {
+      context.handle(
+        _severityMeta,
+        severity.isAcceptableOrUnknown(data['severity']!, _severityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_severityMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('resolved_at')) {
+      context.handle(
+        _resolvedAtMeta,
+        resolvedAt.isAcceptableOrUnknown(data['resolved_at']!, _resolvedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Injury map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Injury(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      nodeIds: $InjuriesTable.$converternodeIds.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}node_ids'],
+        )!,
+      ),
+      severity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}severity'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      resolvedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}resolved_at'],
+      ),
+    );
+  }
+
+  @override
+  $InjuriesTable createAlias(String alias) {
+    return $InjuriesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<List<String>, String, List<dynamic>>
+  $converternodeIds = const StringListConverter();
+}
+
+class Injury extends DataClass implements Insertable<Injury> {
+  /// Unique identifier for this injury.
+  final String id;
+
+  /// The technical mesh IDs affected by this injury (comma-separated).
+  final List<String> nodeIds;
+
+  /// The intensity of the injury.
+  final String severity;
+
+  /// A user-friendly description.
+  final String description;
+
+  /// When the injury was first logged.
+  final DateTime createdAt;
+
+  /// When the injury was marked as resolved.
+  final DateTime? resolvedAt;
+  const Injury({
+    required this.id,
+    required this.nodeIds,
+    required this.severity,
+    required this.description,
+    required this.createdAt,
+    this.resolvedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    {
+      map['node_ids'] = Variable<String>(
+        $InjuriesTable.$converternodeIds.toSql(nodeIds),
+      );
+    }
+    map['severity'] = Variable<String>(severity);
+    map['description'] = Variable<String>(description);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || resolvedAt != null) {
+      map['resolved_at'] = Variable<DateTime>(resolvedAt);
+    }
+    return map;
+  }
+
+  InjuriesCompanion toCompanion(bool nullToAbsent) {
+    return InjuriesCompanion(
+      id: Value(id),
+      nodeIds: Value(nodeIds),
+      severity: Value(severity),
+      description: Value(description),
+      createdAt: Value(createdAt),
+      resolvedAt: resolvedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(resolvedAt),
+    );
+  }
+
+  factory Injury.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Injury(
+      id: serializer.fromJson<String>(json['id']),
+      nodeIds: $InjuriesTable.$converternodeIds.fromJson(
+        serializer.fromJson<List<dynamic>>(json['nodeIds']),
+      ),
+      severity: serializer.fromJson<String>(json['severity']),
+      description: serializer.fromJson<String>(json['description']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      resolvedAt: serializer.fromJson<DateTime?>(json['resolvedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'nodeIds': serializer.toJson<List<dynamic>>(
+        $InjuriesTable.$converternodeIds.toJson(nodeIds),
+      ),
+      'severity': serializer.toJson<String>(severity),
+      'description': serializer.toJson<String>(description),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'resolvedAt': serializer.toJson<DateTime?>(resolvedAt),
+    };
+  }
+
+  Injury copyWith({
+    String? id,
+    List<String>? nodeIds,
+    String? severity,
+    String? description,
+    DateTime? createdAt,
+    Value<DateTime?> resolvedAt = const Value.absent(),
+  }) => Injury(
+    id: id ?? this.id,
+    nodeIds: nodeIds ?? this.nodeIds,
+    severity: severity ?? this.severity,
+    description: description ?? this.description,
+    createdAt: createdAt ?? this.createdAt,
+    resolvedAt: resolvedAt.present ? resolvedAt.value : this.resolvedAt,
+  );
+  Injury copyWithCompanion(InjuriesCompanion data) {
+    return Injury(
+      id: data.id.present ? data.id.value : this.id,
+      nodeIds: data.nodeIds.present ? data.nodeIds.value : this.nodeIds,
+      severity: data.severity.present ? data.severity.value : this.severity,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      resolvedAt: data.resolvedAt.present
+          ? data.resolvedAt.value
+          : this.resolvedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Injury(')
+          ..write('id: $id, ')
+          ..write('nodeIds: $nodeIds, ')
+          ..write('severity: $severity, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('resolvedAt: $resolvedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, nodeIds, severity, description, createdAt, resolvedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Injury &&
+          other.id == this.id &&
+          other.nodeIds == this.nodeIds &&
+          other.severity == this.severity &&
+          other.description == this.description &&
+          other.createdAt == this.createdAt &&
+          other.resolvedAt == this.resolvedAt);
+}
+
+class InjuriesCompanion extends UpdateCompanion<Injury> {
+  final Value<String> id;
+  final Value<List<String>> nodeIds;
+  final Value<String> severity;
+  final Value<String> description;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> resolvedAt;
+  final Value<int> rowid;
+  const InjuriesCompanion({
+    this.id = const Value.absent(),
+    this.nodeIds = const Value.absent(),
+    this.severity = const Value.absent(),
+    this.description = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.resolvedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InjuriesCompanion.insert({
+    required String id,
+    required List<String> nodeIds,
+    required String severity,
+    required String description,
+    required DateTime createdAt,
+    this.resolvedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       nodeIds = Value(nodeIds),
+       severity = Value(severity),
+       description = Value(description),
+       createdAt = Value(createdAt);
+  static Insertable<Injury> custom({
+    Expression<String>? id,
+    Expression<String>? nodeIds,
+    Expression<String>? severity,
+    Expression<String>? description,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? resolvedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nodeIds != null) 'node_ids': nodeIds,
+      if (severity != null) 'severity': severity,
+      if (description != null) 'description': description,
+      if (createdAt != null) 'created_at': createdAt,
+      if (resolvedAt != null) 'resolved_at': resolvedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InjuriesCompanion copyWith({
+    Value<String>? id,
+    Value<List<String>>? nodeIds,
+    Value<String>? severity,
+    Value<String>? description,
+    Value<DateTime>? createdAt,
+    Value<DateTime?>? resolvedAt,
+    Value<int>? rowid,
+  }) {
+    return InjuriesCompanion(
+      id: id ?? this.id,
+      nodeIds: nodeIds ?? this.nodeIds,
+      severity: severity ?? this.severity,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (nodeIds.present) {
+      map['node_ids'] = Variable<String>(
+        $InjuriesTable.$converternodeIds.toSql(nodeIds.value),
+      );
+    }
+    if (severity.present) {
+      map['severity'] = Variable<String>(severity.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (resolvedAt.present) {
+      map['resolved_at'] = Variable<DateTime>(resolvedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InjuriesCompanion(')
+          ..write('id: $id, ')
+          ..write('nodeIds: $nodeIds, ')
+          ..write('severity: $severity, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('resolvedAt: $resolvedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$MyoTwinDatabase extends GeneratedDatabase {
   _$MyoTwinDatabase(QueryExecutor e) : super(e);
   $MyoTwinDatabaseManager get managers => $MyoTwinDatabaseManager(this);
   late final $GoalsTable goals = $GoalsTable(this);
   late final $IntentRecordsTable intentRecords = $IntentRecordsTable(this);
+  late final $InjuriesTable injuries = $InjuriesTable(this);
   @override
-  Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
+  Iterable<TableInfo<Table, Object?>> get allTables =>
+      allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [goals, intentRecords];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    goals,
+    intentRecords,
+    injuries,
+  ];
 }
 
 typedef $$GoalsTableCreateCompanionBuilder =
     GoalsCompanion Function({
       required String id,
       required String label,
-      required GoalStatus status,
+      required String status,
       required DateTime createdAt,
       Value<DateTime?> updatedAt,
       required GoalMetadata metadata,
@@ -1008,17 +1485,19 @@ typedef $$GoalsTableUpdateCompanionBuilder =
     GoalsCompanion Function({
       Value<String> id,
       Value<String> label,
-      Value<GoalStatus> status,
+      Value<String> status,
       Value<DateTime> createdAt,
       Value<DateTime?> updatedAt,
       Value<GoalMetadata> metadata,
       Value<int> rowid,
     });
 
-final class $$GoalsTableReferences extends BaseReferences<_$MyoTwinDatabase, $GoalsTable, Goal> {
+final class $$GoalsTableReferences
+    extends BaseReferences<_$MyoTwinDatabase, $GoalsTable, Goal> {
   $$GoalsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$IntentRecordsTable, List<IntentRecord>> _intentRecordsRefsTable(_$MyoTwinDatabase db) =>
+  static MultiTypedResultKey<$IntentRecordsTable, List<IntentRecord>>
+  _intentRecordsRefsTable(_$MyoTwinDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.intentRecords,
         aliasName: $_aliasNameGenerator(db.goals.id, db.intentRecords.goalId),
@@ -1037,7 +1516,8 @@ final class $$GoalsTableReferences extends BaseReferences<_$MyoTwinDatabase, $Go
   }
 }
 
-class $$GoalsTableFilterComposer extends Composer<_$MyoTwinDatabase, $GoalsTable> {
+class $$GoalsTableFilterComposer
+    extends Composer<_$MyoTwinDatabase, $GoalsTable> {
   $$GoalsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -1055,9 +1535,9 @@ class $$GoalsTableFilterComposer extends Composer<_$MyoTwinDatabase, $GoalsTable
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<GoalStatus, GoalStatus, String> get status => $composableBuilder(
+  ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
@@ -1070,7 +1550,8 @@ class $$GoalsTableFilterComposer extends Composer<_$MyoTwinDatabase, $GoalsTable
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<GoalMetadata, GoalMetadata, String> get metadata => $composableBuilder(
+  ColumnWithTypeConverterFilters<GoalMetadata, GoalMetadata, String>
+  get metadata => $composableBuilder(
     column: $table.metadata,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
@@ -1093,14 +1574,16 @@ class $$GoalsTableFilterComposer extends Composer<_$MyoTwinDatabase, $GoalsTable
             $table: $db.intentRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
     );
     return f(composer);
   }
 }
 
-class $$GoalsTableOrderingComposer extends Composer<_$MyoTwinDatabase, $GoalsTable> {
+class $$GoalsTableOrderingComposer
+    extends Composer<_$MyoTwinDatabase, $GoalsTable> {
   $$GoalsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -1139,7 +1622,8 @@ class $$GoalsTableOrderingComposer extends Composer<_$MyoTwinDatabase, $GoalsTab
   );
 }
 
-class $$GoalsTableAnnotationComposer extends Composer<_$MyoTwinDatabase, $GoalsTable> {
+class $$GoalsTableAnnotationComposer
+    extends Composer<_$MyoTwinDatabase, $GoalsTable> {
   $$GoalsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -1147,16 +1631,20 @@ class $$GoalsTableAnnotationComposer extends Composer<_$MyoTwinDatabase, $GoalsT
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get label => $composableBuilder(column: $table.label, builder: (column) => column);
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<GoalStatus, String> get status =>
+  GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<GoalMetadata, String> get metadata =>
       $composableBuilder(column: $table.metadata, builder: (column) => column);
@@ -1179,7 +1667,8 @@ class $$GoalsTableAnnotationComposer extends Composer<_$MyoTwinDatabase, $GoalsT
             $table: $db.intentRecords,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
     );
     return f(composer);
@@ -1206,14 +1695,17 @@ class $$GoalsTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () => $$GoalsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () => $$GoalsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () => $$GoalsTableAnnotationComposer($db: db, $table: table),
+          createFilteringComposer: () =>
+              $$GoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GoalsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> label = const Value.absent(),
-                Value<GoalStatus> status = const Value.absent(),
+                Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<GoalMetadata> metadata = const Value.absent(),
@@ -1231,7 +1723,7 @@ class $$GoalsTableTableManager
               ({
                 required String id,
                 required String label,
-                required GoalStatus status,
+                required String status,
                 required DateTime createdAt,
                 Value<DateTime?> updatedAt = const Value.absent(),
                 required GoalMetadata metadata,
@@ -1247,7 +1739,8 @@ class $$GoalsTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) => (e.readTable(table), $$GoalsTableReferences(db, table, e)),
+                (e) =>
+                    (e.readTable(table), $$GoalsTableReferences(db, table, e)),
               )
               .toList(),
           prefetchHooksCallback: ({intentRecordsRefs = false}) {
@@ -1262,7 +1755,8 @@ class $$GoalsTableTableManager
                   if (intentRecordsRefs)
                     await $_getPrefetchedData<Goal, $GoalsTable, IntentRecord>(
                       currentTable: table,
-                      referencedTable: $$GoalsTableReferences._intentRecordsRefsTable(db),
+                      referencedTable: $$GoalsTableReferences
+                          ._intentRecordsRefsTable(db),
                       managerFromTypedResult: (p0) => $$GoalsTableReferences(
                         db,
                         table,
@@ -1298,7 +1792,7 @@ typedef $$IntentRecordsTableCreateCompanionBuilder =
     IntentRecordsCompanion Function({
       required String id,
       required String goalId,
-      required IntentType type,
+      required String type,
       required DateTime createdAt,
       required DateTime scheduledTime,
       Value<DateTime?> deliveredAt,
@@ -1311,7 +1805,7 @@ typedef $$IntentRecordsTableUpdateCompanionBuilder =
     IntentRecordsCompanion Function({
       Value<String> id,
       Value<String> goalId,
-      Value<IntentType> type,
+      Value<String> type,
       Value<DateTime> createdAt,
       Value<DateTime> scheduledTime,
       Value<DateTime?> deliveredAt,
@@ -1322,7 +1816,8 @@ typedef $$IntentRecordsTableUpdateCompanionBuilder =
     });
 
 final class $$IntentRecordsTableReferences
-    extends BaseReferences<_$MyoTwinDatabase, $IntentRecordsTable, IntentRecord> {
+    extends
+        BaseReferences<_$MyoTwinDatabase, $IntentRecordsTable, IntentRecord> {
   $$IntentRecordsTableReferences(
     super.$_db,
     super.$_table,
@@ -1348,7 +1843,8 @@ final class $$IntentRecordsTableReferences
   }
 }
 
-class $$IntentRecordsTableFilterComposer extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
+class $$IntentRecordsTableFilterComposer
+    extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
   $$IntentRecordsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -1361,9 +1857,9 @@ class $$IntentRecordsTableFilterComposer extends Composer<_$MyoTwinDatabase, $In
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<IntentType, IntentType, String> get type => $composableBuilder(
+  ColumnFilters<String> get type => $composableBuilder(
     column: $table.type,
-    builder: (column) => ColumnWithTypeConverterFilters(column),
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
@@ -1391,7 +1887,8 @@ class $$IntentRecordsTableFilterComposer extends Composer<_$MyoTwinDatabase, $In
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnWithTypeConverterFilters<IntentPayload, IntentPayload, String> get payload => $composableBuilder(
+  ColumnWithTypeConverterFilters<IntentPayload, IntentPayload, String>
+  get payload => $composableBuilder(
     column: $table.payload,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
@@ -1412,14 +1909,16 @@ class $$IntentRecordsTableFilterComposer extends Composer<_$MyoTwinDatabase, $In
             $table: $db.goals,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
     );
     return composer;
   }
 }
 
-class $$IntentRecordsTableOrderingComposer extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
+class $$IntentRecordsTableOrderingComposer
+    extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
   $$IntentRecordsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -1483,14 +1982,16 @@ class $$IntentRecordsTableOrderingComposer extends Composer<_$MyoTwinDatabase, $
             $table: $db.goals,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
     );
     return composer;
   }
 }
 
-class $$IntentRecordsTableAnnotationComposer extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
+class $$IntentRecordsTableAnnotationComposer
+    extends Composer<_$MyoTwinDatabase, $IntentRecordsTable> {
   $$IntentRecordsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -1498,12 +1999,14 @@ class $$IntentRecordsTableAnnotationComposer extends Composer<_$MyoTwinDatabase,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<IntentType, String> get type =>
+  GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get scheduledTime => $composableBuilder(
     column: $table.scheduledTime,
@@ -1520,7 +2023,8 @@ class $$IntentRecordsTableAnnotationComposer extends Composer<_$MyoTwinDatabase,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get reason => $composableBuilder(column: $table.reason, builder: (column) => column);
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<IntentPayload, String> get payload =>
       $composableBuilder(column: $table.payload, builder: (column) => column);
@@ -1541,7 +2045,8 @@ class $$IntentRecordsTableAnnotationComposer extends Composer<_$MyoTwinDatabase,
             $table: $db.goals,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
     );
     return composer;
@@ -1570,14 +2075,17 @@ class $$IntentRecordsTableTableManager
         TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () => $$IntentRecordsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () => $$IntentRecordsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () => $$IntentRecordsTableAnnotationComposer($db: db, $table: table),
+          createFilteringComposer: () =>
+              $$IntentRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IntentRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IntentRecordsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> goalId = const Value.absent(),
-                Value<IntentType> type = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> scheduledTime = const Value.absent(),
                 Value<DateTime?> deliveredAt = const Value.absent(),
@@ -1601,7 +2109,7 @@ class $$IntentRecordsTableTableManager
               ({
                 required String id,
                 required String goalId,
-                required IntentType type,
+                required String type,
                 required DateTime createdAt,
                 required DateTime scheduledTime,
                 Value<DateTime?> deliveredAt = const Value.absent(),
@@ -1654,8 +2162,11 @@ class $$IntentRecordsTableTableManager
                           state.withJoin(
                                 currentTable: table,
                                 currentColumn: table.goalId,
-                                referencedTable: $$IntentRecordsTableReferences._goalIdTable(db),
-                                referencedColumn: $$IntentRecordsTableReferences._goalIdTable(db).id,
+                                referencedTable: $$IntentRecordsTableReferences
+                                    ._goalIdTable(db),
+                                referencedColumn: $$IntentRecordsTableReferences
+                                    ._goalIdTable(db)
+                                    .id,
                               )
                               as T;
                     }
@@ -1685,10 +2196,232 @@ typedef $$IntentRecordsTableProcessedTableManager =
       IntentRecord,
       PrefetchHooks Function({bool goalId})
     >;
+typedef $$InjuriesTableCreateCompanionBuilder =
+    InjuriesCompanion Function({
+      required String id,
+      required List<String> nodeIds,
+      required String severity,
+      required String description,
+      required DateTime createdAt,
+      Value<DateTime?> resolvedAt,
+      Value<int> rowid,
+    });
+typedef $$InjuriesTableUpdateCompanionBuilder =
+    InjuriesCompanion Function({
+      Value<String> id,
+      Value<List<String>> nodeIds,
+      Value<String> severity,
+      Value<String> description,
+      Value<DateTime> createdAt,
+      Value<DateTime?> resolvedAt,
+      Value<int> rowid,
+    });
+
+class $$InjuriesTableFilterComposer
+    extends Composer<_$MyoTwinDatabase, $InjuriesTable> {
+  $$InjuriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get nodeIds => $composableBuilder(
+    column: $table.nodeIds,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InjuriesTableOrderingComposer
+    extends Composer<_$MyoTwinDatabase, $InjuriesTable> {
+  $$InjuriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nodeIds => $composableBuilder(
+    column: $table.nodeIds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get severity => $composableBuilder(
+    column: $table.severity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InjuriesTableAnnotationComposer
+    extends Composer<_$MyoTwinDatabase, $InjuriesTable> {
+  $$InjuriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get nodeIds =>
+      $composableBuilder(column: $table.nodeIds, builder: (column) => column);
+
+  GeneratedColumn<String> get severity =>
+      $composableBuilder(column: $table.severity, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$InjuriesTableTableManager
+    extends
+        RootTableManager<
+          _$MyoTwinDatabase,
+          $InjuriesTable,
+          Injury,
+          $$InjuriesTableFilterComposer,
+          $$InjuriesTableOrderingComposer,
+          $$InjuriesTableAnnotationComposer,
+          $$InjuriesTableCreateCompanionBuilder,
+          $$InjuriesTableUpdateCompanionBuilder,
+          (Injury, BaseReferences<_$MyoTwinDatabase, $InjuriesTable, Injury>),
+          Injury,
+          PrefetchHooks Function()
+        > {
+  $$InjuriesTableTableManager(_$MyoTwinDatabase db, $InjuriesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InjuriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InjuriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InjuriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<List<String>> nodeIds = const Value.absent(),
+                Value<String> severity = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> resolvedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InjuriesCompanion(
+                id: id,
+                nodeIds: nodeIds,
+                severity: severity,
+                description: description,
+                createdAt: createdAt,
+                resolvedAt: resolvedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required List<String> nodeIds,
+                required String severity,
+                required String description,
+                required DateTime createdAt,
+                Value<DateTime?> resolvedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InjuriesCompanion.insert(
+                id: id,
+                nodeIds: nodeIds,
+                severity: severity,
+                description: description,
+                createdAt: createdAt,
+                resolvedAt: resolvedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InjuriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$MyoTwinDatabase,
+      $InjuriesTable,
+      Injury,
+      $$InjuriesTableFilterComposer,
+      $$InjuriesTableOrderingComposer,
+      $$InjuriesTableAnnotationComposer,
+      $$InjuriesTableCreateCompanionBuilder,
+      $$InjuriesTableUpdateCompanionBuilder,
+      (Injury, BaseReferences<_$MyoTwinDatabase, $InjuriesTable, Injury>),
+      Injury,
+      PrefetchHooks Function()
+    >;
 
 class $MyoTwinDatabaseManager {
   final _$MyoTwinDatabase _db;
   $MyoTwinDatabaseManager(this._db);
-  $$GoalsTableTableManager get goals => $$GoalsTableTableManager(_db, _db.goals);
-  $$IntentRecordsTableTableManager get intentRecords => $$IntentRecordsTableTableManager(_db, _db.intentRecords);
+  $$GoalsTableTableManager get goals =>
+      $$GoalsTableTableManager(_db, _db.goals);
+  $$IntentRecordsTableTableManager get intentRecords =>
+      $$IntentRecordsTableTableManager(_db, _db.intentRecords);
+  $$InjuriesTableTableManager get injuries =>
+      $$InjuriesTableTableManager(_db, _db.injuries);
 }

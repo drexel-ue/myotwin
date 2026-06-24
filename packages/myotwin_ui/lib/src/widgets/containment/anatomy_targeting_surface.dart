@@ -130,6 +130,14 @@ class _AnatomyTargetingSurfaceState extends State<AnatomyTargetingSurface> {
                     child: MyoIcon(intent: 'link', size: 18),
                   ),
                 ),
+                MyoSegment(
+                  value: AnatomyLayer.insertions,
+                  label: '',
+                  icon: Tooltip(
+                    message: 'INSERTIONS',
+                    child: MyoIcon(intent: 'anchor', size: 18),
+                  ),
+                ),
               ],
             ),
             verticalMargin16,

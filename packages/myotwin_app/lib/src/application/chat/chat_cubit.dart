@@ -15,7 +15,8 @@ class ChatState implements Loggable {
     this.isResponding = false,
     this.isTransitioning = false,
     this.activeGoal,
-    this.pendingToolCall,
+    this.pendingToolCalls = const [],
+    this.statusUpdate,
   });
 
   /// Full conversation history from the database.
@@ -36,8 +37,11 @@ class ChatState implements Loggable {
   /// The current active goal context.
   final Goal? activeGoal;
 
-  /// A pending tool call that should be executed by the UI layer.
-  final ChatToolCallEvent? pendingToolCall;
+  /// Pending tool calls that should be executed by the UI layer.
+  final List<ChatToolCallEvent> pendingToolCalls;
+
+  /// A transient status update from the AI (e.g. "Searching index...").
+  final String? statusUpdate;
 
   /// Shortcut for the active goal ID.
   String? get activeGoalId => activeGoal?.id;
@@ -50,8 +54,10 @@ class ChatState implements Loggable {
     bool? isResponding,
     bool? isTransitioning,
     Goal? activeGoal,
-    ChatToolCallEvent? pendingToolCall,
-    bool clearPendingToolCall = false,
+    List<ChatToolCallEvent>? pendingToolCalls,
+    bool clearPendingToolCalls = false,
+    String? statusUpdate,
+    bool clearStatusUpdate = false,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
@@ -60,13 +66,14 @@ class ChatState implements Loggable {
       isResponding: isResponding ?? this.isResponding,
       isTransitioning: isTransitioning ?? this.isTransitioning,
       activeGoal: activeGoal ?? this.activeGoal,
-      pendingToolCall: clearPendingToolCall ? null : (pendingToolCall ?? this.pendingToolCall),
+      pendingToolCalls: clearPendingToolCalls ? const [] : (pendingToolCalls ?? this.pendingToolCalls),
+      statusUpdate: clearStatusUpdate ? null : (statusUpdate ?? this.statusUpdate),
     );
   }
 
   @override
   String toDiagnosticString() =>
-      'ChatState(msgs: ${messages.length}, thinking: $isThinking, responding: $isResponding, goal: ${activeGoal?.label}, tool: ${pendingToolCall?.toolName})';
+      'ChatState(msgs: ${messages.length}, thinking: $isThinking, responding: $isResponding, goal: ${activeGoal?.label}, tools: ${pendingToolCalls.length}, status: $statusUpdate)';
 
   @override
   String toSummaryString() => 'CHAT: ${messages.length} msgs | GOAL: ${activeGoal?.label}';
@@ -105,7 +112,7 @@ class ChatCubit extends Cubit<ChatState> {
     final goalId = state.activeGoalId;
     if (goalId == null || text.trim().isEmpty) return false;
 
-    ChatToolCallEvent? toolCall;
+    final currentToolCalls = <ChatToolCallEvent>[];
 
     try {
       // 1. Persist the user's message
@@ -132,7 +139,7 @@ class ChatCubit extends Cubit<ChatState> {
           isProcessing: true,
           isThinking: true,
           isResponding: false,
-          clearPendingToolCall: true,
+          clearPendingToolCalls: true,
         ),
       );
 
@@ -155,9 +162,24 @@ class ChatCubit extends Cubit<ChatState> {
               ),
             );
           }
-          buffer.write(event.text);
+
+          // Strip tool call tags that leak into the text stream
+          // Handles <|tool_call|>, <|tool_call>, etc.
+          final cleanText = event.text.replaceAll(RegExp(r'<\|?tool_call\|?>.*', dotAll: true), '');
+          if (cleanText.isNotEmpty) {
+            buffer.write(cleanText);
+          }
+        } else if (event is ChatThoughtEvent) {
+          emit(state.copyWith(statusUpdate: event.status));
+        } else if (event is ChatThinkingEvent) {
+          // If we receive raw reasoning tokens, show a generic status
+          // to avoid cluttering the UI with too much raw logic,
+          // but enough to let the user know the "brain" is active.
+          if (state.statusUpdate == null) {
+            emit(state.copyWith(statusUpdate: 'Motus is analyzing biomechanics...'));
+          }
         } else if (event is ChatToolCallEvent) {
-          toolCall = event;
+          currentToolCalls.add(event);
         }
       }
 
@@ -165,26 +187,44 @@ class ChatCubit extends Cubit<ChatState> {
       final payloadItems = <Map<String, dynamic>>[];
       var finalText = buffer.toString().trim();
 
-      if (toolCall != null && toolCall.toolName == 'set_anatomy_layer') {
-        final layerStr = toolCall.arguments['layer'] as String? ?? 'anatomy';
-        if (layerStr == 'default') {
-          finalText = 'Restoring Default View.';
-        } else {
-          final capitalizedLayer = layerStr.isNotEmpty
-              ? '${layerStr[0].toUpperCase()}${layerStr.substring(1)}'
-              : layerStr;
-          finalText = 'Isolating $capitalizedLayer System.';
-        }
+      if (currentToolCalls.isNotEmpty) {
+        final toolTexts = <String>[];
+        for (final tc in currentToolCalls) {
+          if (tc.toolName == 'set_anatomy_layer') {
+            final layerStr = tc.arguments['layer'] as String? ?? 'anatomy';
+            if (layerStr == 'default') {
+              toolTexts.add('Restoring Default View.');
+            } else {
+              final capitalizedLayer =
+                  layerStr.isNotEmpty ? '${layerStr[0].toUpperCase()}${layerStr.substring(1)}' : layerStr;
+              toolTexts.add('Isolating $capitalizedLayer System.');
+            }
+          } else if (tc.toolName == 'highlight_anatomy_node') {
+            final target = tc.arguments['target'] as String? ?? 'area';
+            final severity = tc.arguments['severity'] as String? ?? 'medium';
+            toolTexts.add('Flagging $target with ${severity.toUpperCase()} priority.');
+          } else if (tc.toolName == 'clear_anatomy_highlights') {
+            toolTexts.add('Clearing all active anatomical markers.');
+          }
 
-        // Preserve raw data for tracing
-        payloadItems.add({
-          'type': 'system_tool_call',
-          'data': {
-            'toolName': toolCall.toolName,
-            'arguments': toolCall.arguments,
-            'raw_output': buffer.toString(),
-          },
-        });
+          // Preserve raw data for tracing (applies to ALL tool calls)
+          payloadItems.add({
+            'type': 'system_tool_call',
+            'data': {
+              'toolName': tc.toolName,
+              'arguments': tc.arguments,
+              'raw_output': buffer.toString(),
+            },
+          });
+        }
+        if (toolTexts.isNotEmpty) {
+          if (finalText.isNotEmpty) finalText += '\n\n';
+          finalText += toolTexts.join('\n');
+        }
+      }
+
+      if (finalText.isEmpty) {
+        finalText = "I couldn't identify a specific action or response based on that. Could you provide more details?";
       }
 
       // Add user-facing text
@@ -213,15 +253,16 @@ class ChatCubit extends Cubit<ChatState> {
           isProcessing: false,
           isThinking: false,
           isResponding: false,
-          pendingToolCall: toolCall,
+          pendingToolCalls: currentToolCalls,
+          clearStatusUpdate: true,
         ),
       );
     }
   }
 
-  /// Clears the pending tool call after it has been handled by the UI.
-  void clearToolCall() {
-    emit(state.copyWith(clearPendingToolCall: true));
+  /// Clears the pending tool calls after they have been handled by the UI.
+  void clearToolCalls() {
+    emit(state.copyWith(clearPendingToolCalls: true));
   }
 
   /// Switches the active goal context with a cinematic visual transition.

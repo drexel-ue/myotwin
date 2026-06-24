@@ -45,8 +45,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
 
   // State
   AnatomyLayer? _isolatedLayer;
-  final Set<String> _highlightedNodes = {};
-  flutter.Color _highlightColor = flutter.Colors.cyan;
+  final Map<String, flutter.Color> _highlightedNodes = {};
   double _roughness = 0.25;
   bool _isInitialized = false;
   bool _bloodFlowEnabled = true;
@@ -59,7 +58,7 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
 
   // Material Pool: One unique material per layer to allow independent fading.
   final Map<AnatomyLayer, PhysicallyBasedMaterial> _layerMaterials = {};
-  final PhysicallyBasedMaterial _highlightMaterial = PhysicallyBasedMaterial();
+  final Map<flutter.Color, PhysicallyBasedMaterial> _highlightMaterialPool = {};
   
   // Distance-band materials for blood flow (32 bands)
   final List<PhysicallyBasedMaterial> _cardioMaterials = [];
@@ -107,6 +106,15 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
     notifyListeners();
   }
 
+  PhysicallyBasedMaterial _getHighlightMaterial(flutter.Color color) {
+    return _highlightMaterialPool.putIfAbsent(color, () {
+      return PhysicallyBasedMaterial()
+        ..baseColorFactor = Vector4(color.r, color.g, color.b, 1.0)
+        ..emissiveFactor = Vector4(color.r, color.g, color.b, 1.0)
+        ..roughnessFactor = _roughness;
+    });
+  }
+
   void _initMaterials() {
     for (final layer in AnatomyLayer.values) {
       _layerMaterials[layer] = PhysicallyBasedMaterial()
@@ -122,20 +130,6 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
         ..metallicFactor = 0.9
         ..roughnessFactor = _roughness);
     }
-
-    _highlightMaterial
-      ..baseColorFactor = Vector4(
-        _highlightColor.r,
-        _highlightColor.g,
-        _highlightColor.b,
-        1.0,
-      )
-      ..emissiveFactor = Vector4(
-        _highlightColor.r,
-        _highlightColor.g,
-        _highlightColor.b,
-        1.0,
-      );
   }
 
   /// Initializes the materials and loads all 3D assets into the scene.
@@ -262,17 +256,17 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
       }
     }
 
-    // 3. Update Highlight Material Pulse
-    final colorVec = Vector4(
-      _highlightColor.r,
-      _highlightColor.g,
-      _highlightColor.b,
-      1.0,
-    );
-    _highlightMaterial
-      ..baseColorFactor = colorVec
-      ..emissiveFactor = colorVec * (0.5 + pulse * 1.5)
-      ..alphaMode = AlphaMode.opaque;
+    // 3. Update Highlight Material Pulses
+    for (final entry in _highlightMaterialPool.entries) {
+      final color = entry.key;
+      final material = entry.value;
+      final colorVec = Vector4(color.r, color.g, color.b, 1.0);
+
+      material
+        ..baseColorFactor = colorVec
+        ..emissiveFactor = colorVec * (0.5 + pulse * 1.5)
+        ..alphaMode = AlphaMode.opaque;
+    }
 
     notifyListeners();
   }
@@ -327,13 +321,15 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
     for (final material in _layerMaterials.values) {
       material.roughnessFactor = _roughness;
     }
-    _highlightMaterial.roughnessFactor = _roughness;
+    for (final material in _highlightMaterialPool.values) {
+      material.roughnessFactor = _roughness;
+    }
     notifyListeners();
   }
 
-  /// Updates the highlight color.
+  /// Updates the highlight color for manual targeting.
+  /// (Deprecated: Use setHighlights with explicit colors)
   void updateHighlightColor(flutter.Color color) {
-    _highlightColor = color;
     reconcile();
   }
 
@@ -344,10 +340,10 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
     reconcile();
   }
 
-  /// Highlights specific nodes by name.
-  void setHighlights(List<String> nodes, flutter.Color color) {
+  /// Highlights specific nodes by name with specific colors.
+  void setHighlights(Map<String, flutter.Color> highlights) {
     // 1. Reset previously highlighted nodes to their default materials
-    for (final nodeName in _highlightedNodes) {
+    for (final nodeName in _highlightedNodes.keys) {
       final nodesList = _nodeRegistry[nodeName];
       if (nodesList != null) {
         for (final node in nodesList) {
@@ -362,15 +358,17 @@ class AnatomyLayerManager extends flutter.ChangeNotifier {
     // 2. Update State
     _highlightedNodes
       ..clear()
-      ..addAll(nodes);
-    _highlightColor = color;
+      ..addAll(highlights);
 
-    // 3. Apply highlight material to new highlighted nodes
-    for (final nodeName in _highlightedNodes) {
+    // 3. Apply highlight materials to new highlighted nodes
+    for (final entry in _highlightedNodes.entries) {
+      final nodeName = entry.key;
+      final color = entry.value;
       final nodesList = _nodeRegistry[nodeName];
       if (nodesList != null) {
+        final material = _getHighlightMaterial(color);
         for (final node in nodesList) {
-          _applyMaterialToNode(node, _highlightMaterial);
+          _applyMaterialToNode(node, material);
         }
       }
     }

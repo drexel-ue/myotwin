@@ -73,7 +73,7 @@ USER_INPUT: $message
           IntentRecordsCompanion.insert(
             id: intent.id,
             goalId: intent.goalId,
-            type: intent.type,
+            type: intent.type.name,
             createdAt: intent.scheduledTime,
             scheduledTime: intent.scheduledTime,
             reason: intent.reason,
@@ -103,7 +103,7 @@ USER_INPUT: $message
           GoalsCompanion.insert(
             id: id,
             label: 'ACTIVE_HUD_SESSION',
-            status: domain.GoalStatus.active,
+            status: domain.GoalStatus.active.name,
             createdAt: DateTime.now(),
             metadata: const domain.GoalMetadata({}),
           ),
@@ -127,7 +127,7 @@ USER_INPUT: $message
     return domain.Goal(
       id: row.id,
       label: row.label,
-      status: row.status,
+      status: domain.GoalStatus.values.byName(row.status),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       metadata: row.metadata,
@@ -138,7 +138,7 @@ USER_INPUT: $message
     return domain.IntentRecord(
       id: row.id,
       goalId: row.goalId,
-      type: row.type,
+      type: domain.IntentType.values.byName(row.type),
       payload: row.payload,
       scheduledTime: row.scheduledTime,
       deliveredAt: row.deliveredAt,

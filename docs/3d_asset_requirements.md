@@ -52,6 +52,25 @@ The manual cleanup and export process has been completely automated. We now use 
 
 There is no longer a need to manually create the Mesh-to-Node JSON schema or manually export GLTF files.
 
+## 6. Semantic Enrichment Pipeline
+
+To ensure the Motus AI can reliably map user layman terms to physical 3D meshes, we use a two-step semantic enrichment pipeline. This reconciles the physical reality of the GLB files with a human-readable search index (`semantic_anatomy.json`).
+
+### Step 1: Physical Extraction
+The `myotwin/tool/extract_mesh_names.py` script parses the production GLB assets and extracts the definitive list of every mesh-bearing node. This creates a "Ground Truth" of what is physically renderable.
+
+- **Source**: `packages/myotwin_app/assets/models/*.glb`
+- **Output**: `physical_node_dump.json` (Internal use)
+
+### Step 2: Semantic Generation
+The `myotwin/tool/generate_semantics_from_dump.py` script takes the physical dump and applies a regex-based semantic matrix to generate layman names and region tags.
+
+- **Source**: `physical_node_dump.json`
+- **Output**: `packages/myotwin_app/assets/models/semantic_anatomy.json`
+- **Logic**: Automatically handles side suffixes (`_L`, `_R`), sanitizes technical IDs, and tags nodes with regions (e.g., "core", "lower back") based on anatomical keywords.
+
+### When to run:
+Run this pipeline whenever the 3D models are updated or new layers are added to ensure the AI's search index stays 100% synchronized with the visual model.
 
 ## 7. Recommended Sources
 
@@ -75,5 +94,5 @@ There is no longer a need to manually create the Mesh-to-Node JSON schema or man
 
 ---
 
-**Document version**: 1.0
-**Last updated**: 2026-05-11
+**Document version**: 1.1
+**Last updated**: 2026-06-12

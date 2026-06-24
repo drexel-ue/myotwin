@@ -14,6 +14,24 @@ class ChatTextEvent extends ChatEvent {
   final String text;
 }
 
+/// A chunk of raw reasoning/thinking from the agent.
+class ChatThinkingEvent extends ChatEvent {
+  /// Creates a [ChatThinkingEvent].
+  const ChatThinkingEvent(this.thinking);
+
+  /// The raw thinking content.
+  final String thinking;
+}
+
+/// A synthesized status update about the agent's internal process.
+class ChatThoughtEvent extends ChatEvent {
+  /// Creates a [ChatThoughtEvent].
+  const ChatThoughtEvent(this.status);
+
+  /// The human-readable status message.
+  final String status;
+}
+
 /// A request from the agent to execute a specific tool.
 class ChatToolCallEvent extends ChatEvent {
   /// Creates a [ChatToolCallEvent].

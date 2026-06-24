@@ -7,6 +7,7 @@ import 'package:myotwin_app/src/app/boot_screen.dart';
 import 'package:myotwin_app/src/application/anatomy/anatomy_cubit.dart';
 import 'package:myotwin_app/src/application/chat/chat_cubit.dart';
 import 'package:myotwin_app/src/application/common/app_init_cubit.dart';
+import 'package:myotwin_app/src/application/injury/injury_cubit.dart';
 import 'package:myotwin_app/src/application/theme/theme_cubit.dart';
 import 'package:myotwin_app/src/infrastructure/chat/chat_repository.dart';
 import 'package:myotwin_app/src/infrastructure/persistence/myotwin_database.dart';
@@ -54,20 +55,42 @@ class _MyotwinAppState extends State<MyotwinApp> {
                 unawaited(cubit.initialize());
                 return cubit;
               },
-              child: BlocListener<ChatCubit, ChatState>(
-                listenWhen: (prev, curr) =>
-                    prev.isThinking != curr.isThinking ||
-                    prev.isResponding != curr.isResponding ||
-                    prev.isTransitioning != curr.isTransitioning,
-                listener: (context, state) {
-                  if (state.isThinking) {
-                    _fabStateNotifier.value = HoloState.thinking;
-                  } else if (state.isResponding) {
-                    _fabStateNotifier.value = HoloState.active;
-                  }
-                  // We don't reset to idle here because the chat panel (MyoCanvas)
-                  // manages the idle vs listening state transition based on visibility.
-                },
+              child: MultiBlocListener(
+                listeners: [
+                  BlocListener<ChatCubit, ChatState>(
+                    listenWhen: (prev, curr) =>
+                        prev.isThinking != curr.isThinking ||
+                        prev.isResponding != curr.isResponding ||
+                        prev.isTransitioning != curr.isTransitioning,
+                    listener: (context, state) {
+                      if (state.isThinking) {
+                        _fabStateNotifier.value = HoloState.thinking;
+                      } else if (state.isResponding) {
+                        _fabStateNotifier.value = HoloState.active;
+                      }
+                      // We don't reset to idle here because the chat panel (MyoCanvas)
+                      // manages the idle vs listening state transition based on visibility.
+                    },
+                  ),
+                  BlocListener<InjuryCubit, InjuryState>(
+                    listener: (context, state) {
+                      final theme = context.myoTheme;
+                      final highlights = <String, Color>{};
+
+                      for (final injury in state.injuries) {
+                        final color = switch (injury.severity) {
+                          domain.InjurySeverity.low => theme.heatMed,
+                          domain.InjurySeverity.medium => theme.heatHigh,
+                          domain.InjurySeverity.critical => theme.heatCritical,
+                        };
+                        for (final nodeId in injury.nodeIds) {
+                          highlights[nodeId] = color;
+                        }
+                      }
+                      context.read<AnatomyCubit>().setPersistentHighlights(highlights);
+                    },
+                  ),
+                ],
                 child: _MyoStartupOrchestrator(
                   fabState: _fabStateNotifier,
                 ),
@@ -86,6 +109,7 @@ enum _OverlayWindow {
   anatomyTargeter,
   themeSettings,
   settingsHud,
+  injuryVault,
 }
 
 /// Orchestrates the visual transition between the boot sequence and the HUD.
@@ -174,13 +198,11 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                 orElse: () => domain.AnatomyLayer.muscular,
               );
 
-        // 1. Clear the tool call immediately so we don't trigger again
-        if (mounted) {
-          context.read<ChatCubit>().clearToolCall();
-        }
+        // 1. Give the user a moment to read the confirmation message in chat
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
 
-        // 2. Hide chat first for a clean visual handoff
-        if (_showChat) {
+        // 2. Hide chat for a clean visual handoff
+        if (_showChat && mounted) {
           setState(() => _showChat = false);
           // Wait for the animation to complete (matching MyoCanvas 400ms duration)
           await Future<void>.delayed(const Duration(milliseconds: 450));
@@ -190,6 +212,44 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
         if (mounted) {
           context.read<AnatomyCubit>().setLayer(layer);
         }
+      }
+    } else if (tool.toolName == 'highlight_anatomy_node') {
+      final target = tool.arguments['target'] as String?;
+      final severityStr = tool.arguments['severity'] as String? ?? 'medium';
+      final description = tool.arguments['description'] as String? ?? 'Physical Constraint Logged';
+
+      if (target != null && mounted) {
+        final severity = domain.InjurySeverity.values.firstWhere(
+          (e) => e.name == severityStr,
+          orElse: () => domain.InjurySeverity.medium,
+        );
+
+        // Resolve target using semantic service
+        final semanticService = context.read<AnatomySemanticService>();
+        final nodes = semanticService.search(target);
+        final ids = nodes.map((e) => e.id).toList();
+
+        if (ids.isNotEmpty) {
+          // Log injury (this will trigger persistent highlight via listener)
+          unawaited(
+            context.read<InjuryCubit>().logInjury(
+              nodeIds: ids,
+              severity: severity,
+              description: description,
+            ),
+          );
+        }
+      }
+    } else if (tool.toolName == 'clear_anatomy_highlights') {
+      if (mounted) {
+        // For now, clear means resolve all active injuries?
+        // Or just clear the manual target-lock highlights?
+        // Let's assume Motus wants to clear everything to reset the model.
+        final injuries = context.read<InjuryCubit>().state.injuries;
+        for (final injury in injuries) {
+          unawaited(context.read<InjuryCubit>().resolveInjury(injury.id));
+        }
+        context.read<AnatomyCubit>().clearHighlights();
       }
     }
   }
@@ -207,10 +267,13 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
             triggerGlitch();
           }
 
-          final tool = state.pendingToolCall;
-          if (tool != null) {
-            context.read<domain.LoggerService>().detail('HUD_ORCHESTRATOR: PENDING_TOOL_CALL: ${tool.toolName}');
-            unawaited(_handleToolCall(tool));
+          final tools = state.pendingToolCalls;
+          if (tools.isNotEmpty) {
+            for (final tool in tools) {
+              context.read<domain.LoggerService>().detail('HUD_ORCHESTRATOR: PENDING_TOOL_CALL: ${tool.toolName}');
+              unawaited(_handleToolCall(tool));
+            }
+            context.read<ChatCubit>().clearToolCalls();
           }
         },
         child: HoloGlitch(
@@ -253,6 +316,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                   ...chatState.activeGoal?.metadata.targetAnatomyNodes ?? [],
                                   ...anatomyState.activeNodes,
                                 ],
+                                persistentHighlights: anatomyState.persistentHighlights,
                                 activeLayer: anatomyState.activeLayer,
                                 resetTrigger: _anatomyResetTrigger,
                                 onNodesLoaded: (nodes) {
@@ -263,7 +327,10 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                 },
                               ),
                             ),
-                            chatChild: MyoChatList(messages: chatState.messages),
+                            chatChild: MyoChatList(
+                              messages: chatState.messages,
+                              statusUpdate: chatState.statusUpdate,
+                            ),
                             onMessageSubmitted: (value) async {
                               return context.read<ChatCubit>().submit(value);
                             },
@@ -283,6 +350,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                 case domain.QuickCommand.settingsHud:
                                   _bringToFront(_OverlayWindow.settingsHud);
                                 case QuickCommand.logSymptom:
+                                  _bringToFront(_OverlayWindow.injuryVault);
                                 case QuickCommand.revertLadder:
                                 case QuickCommand.xrayOverlay:
                                 case QuickCommand.bodyHeatmap:
@@ -418,6 +486,7 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                         case QuickCommand.themeSettings:
                                           _bringToFront(_OverlayWindow.themeSettings);
                                         case QuickCommand.logSymptom:
+                                          _bringToFront(_OverlayWindow.injuryVault);
                                         case QuickCommand.revertLadder:
                                         case QuickCommand.xrayOverlay:
                                         case QuickCommand.bodyHeatmap:
@@ -428,6 +497,25 @@ class _MyoStartupOrchestratorState extends State<_MyoStartupOrchestrator>
                                       }
                                     },
                                     onClose: () => _closeWindow(_OverlayWindow.settingsHud),
+                                  ),
+                                ),
+                              ),
+                            );
+                          case _OverlayWindow.injuryVault:
+                            return Positioned.fill(
+                              key: const ValueKey('injury_vault'),
+                              child: Listener(
+                                behavior: HitTestBehavior.translucent,
+                                onPointerDown: (_) => _bringToFront(_OverlayWindow.injuryVault),
+                                child: Align(
+                                  child: BlocBuilder<InjuryCubit, InjuryState>(
+                                    builder: (context, state) {
+                                      return PainHudSurface(
+                                        injuries: state.injuries,
+                                        onResolveInjury: (id) => context.read<InjuryCubit>().resolveInjury(id),
+                                        onClose: () => _closeWindow(_OverlayWindow.injuryVault),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),

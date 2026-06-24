@@ -8,8 +8,10 @@ import 'package:myotwin_app/src/app/myotwin_app.dart';
 import 'package:myotwin_app/src/application/anatomy/anatomy_cubit.dart';
 import 'package:myotwin_app/src/application/common/app_init_cubit.dart';
 import 'package:myotwin_app/src/application/common/myo_bloc_observer.dart';
+import 'package:myotwin_app/src/application/injury/injury_cubit.dart';
 import 'package:myotwin_app/src/application/theme/theme_cubit.dart';
 import 'package:myotwin_app/src/infrastructure/ai/services/motus_service.dart';
+import 'package:myotwin_app/src/infrastructure/injury/injury_repository.dart';
 import 'package:myotwin_app/src/infrastructure/persistence/myotwin_database.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_core/shared_core.dart';
@@ -29,9 +31,10 @@ Future<void> main() async {
   Provider.debugCheckInvalidValueType = null;
 
   // 1. Instantiate Core Services.
-  final motusService = MotusService(logger: logger);
   final database = MyoTwinDatabase();
   final semanticService = AnatomySemanticService(logger: logger);
+  final motusService = MotusService(logger: logger, semanticService: semanticService);
+  final injuryRepository = InjuryRepository(database: database, logger: logger);
 
   // 1.1 Persistent Storage & Theme
   final prefs = await SharedPreferences.getInstance();
@@ -54,6 +57,7 @@ Future<void> main() async {
         ChangeNotifierProvider<MotusService>.value(value: motusService),
         ChangeNotifierProvider<AnatomySemanticService>.value(value: semanticService),
         Provider<MotusAgent>.value(value: motusService),
+        RepositoryProvider<InjuryRepository>.value(value: injuryRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -62,6 +66,9 @@ Future<void> main() async {
           ),
           BlocProvider(
             create: (context) => AnatomyCubit(),
+          ),
+          BlocProvider(
+            create: (context) => InjuryCubit(repository: injuryRepository)..initialize().ignore(),
           ),
           BlocProvider(
             create: (context) => AppInitCubit(

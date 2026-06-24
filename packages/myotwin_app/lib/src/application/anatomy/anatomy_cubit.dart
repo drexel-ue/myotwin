@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_core/shared_core.dart';
 
@@ -7,14 +8,18 @@ class AnatomyState {
   const AnatomyState({
     this.activeLayer,
     this.activeNodes = const [],
+    this.persistentHighlights = const {},
     this.availableNodes = const {},
   });
 
   /// The currently isolated anatomical layer.
   final AnatomyLayer? activeLayer;
 
-  /// The list of anatomical nodes currently highlighted.
+  /// The list of anatomical nodes currently highlighted by the user (manual targeting).
   final List<String> activeNodes;
+
+  /// A mapping of anatomical nodes to specific colors for persistent highlighting (e.g. injuries).
+  final Map<String, Color> persistentHighlights;
 
   /// A mapping of available node names by layer, loaded from the 3D model.
   final Map<AnatomyLayer, List<String>> availableNodes;
@@ -24,11 +29,13 @@ class AnatomyState {
     AnatomyLayer? activeLayer,
     bool clearActiveLayer = false,
     List<String>? activeNodes,
+    Map<String, Color>? persistentHighlights,
     Map<AnatomyLayer, List<String>>? availableNodes,
   }) {
     return AnatomyState(
       activeLayer: clearActiveLayer ? null : (activeLayer ?? this.activeLayer),
       activeNodes: activeNodes ?? this.activeNodes,
+      persistentHighlights: persistentHighlights ?? this.persistentHighlights,
       availableNodes: availableNodes ?? this.availableNodes,
     );
   }
@@ -65,6 +72,11 @@ class AnatomyCubit extends Cubit<AnatomyState> {
   /// Clears all node highlights.
   void clearHighlights() {
     emit(state.copyWith(activeNodes: []));
+  }
+
+  /// Updates persistent highlights (e.g. from the InjuryCubit).
+  void setPersistentHighlights(Map<String, Color> highlights) {
+    emit(state.copyWith(persistentHighlights: highlights));
   }
 
   /// Updates the mapping of available nodes loaded from the model.
