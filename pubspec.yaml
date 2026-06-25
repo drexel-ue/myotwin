@@ -9,9 +9,12 @@ workspace:
   - packages/myotwin_catalog
   - packages/myotwin_ui
   - packages/shared_core
+  - packages/motus_cli
 dev_dependencies:
   melos: ^7.0.0
   very_good_analysis: ^10.0.0
+dependency_overrides:
+  intl: ^0.20.2
 melos:
   scripts:
     lint:
