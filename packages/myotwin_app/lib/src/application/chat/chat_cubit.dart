@@ -270,6 +270,8 @@ class ChatCubit extends Cubit<ChatState> {
             toolTexts.add('Flagging $target with ${severity.toUpperCase()} priority.');
           } else if (tc.toolName == 'clear_anatomy_highlights') {
             toolTexts.add('Clearing all active anatomical markers.');
+          } else if (tc.toolName == 'generate_workout_protocol') {
+            toolTexts.add('Generating custom clinical rehab protocol...');
           }
 
           // Preserve raw data for tracing (applies to ALL tool calls)

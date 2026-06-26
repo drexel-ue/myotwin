@@ -58,6 +58,11 @@ class MotusService extends ChangeNotifier implements MotusAgent {
       systemPrompt: 'You are Motus, an expert biomechanical AI. You MUST ALWAYS provide a written text response to the user explaining your findings or actions. If you search for anatomy and cannot find a specific target, explain this to the user instead of staying silent. Use your tools to highlight anatomy related to pain or injury.',
       availableToolNames: ['query_anatomy', 'highlight_anatomy_node', 'set_anatomy_layer', 'clear_anatomy_highlights'],
     ),
+    MotusExpert.rehab: LoRAAdapterConfig(
+      path: 'packages/motus_server/assets/models/rehab_expert_lora-unsloth.Q4_K_M.gguf',
+      systemPrompt: 'You are Motus, a world-class AI physical therapist and rehabilitation expert. Your goal is to help users address their aches and pains by generating highly specific rehab and workout protocols based on clinical knowledge.',
+      availableToolNames: ['generate_workout_protocol'],
+    ),
     // Additional experts will be added here
   };
 
@@ -124,6 +129,31 @@ class MotusService extends ChangeNotifier implements MotusAgent {
         // Return max 15 results to avoid overwhelming context
         return results.take(15).map((e) => {'id': e.id, 'name': e.laymanName}).toList();
       },
+    ),
+    ToolDefinition(
+      name: 'generate_workout_protocol',
+      description: 'Generates a structured physical therapy or workout protocol based on the users described symptoms and clinical goals.',
+      parameters: [
+        ToolParam.string(
+          'target_area',
+          description: 'The body part or area the protocol targets.',
+        ),
+        ToolParam.array(
+          'focus_areas',
+          itemType: ToolParam.string('focus', description: 'A focus area (e.g. strength, mobility)'),
+          description: 'Key areas to focus on for this protocol.',
+        ),
+        ToolParam.array(
+          'exercises',
+          itemType: ToolParam.string('exercise', description: 'Name of the exercise'),
+          description: 'A list of specific exercises to include in the protocol.',
+        ),
+        ToolParam.string(
+          'intensity',
+          description: 'The recommended intensity level (e.g. low, moderate, progressive).',
+        ),
+      ],
+      handler: (params) async => null, // UI handles execution
     ),
   ];
 
@@ -295,6 +325,8 @@ class MotusService extends ChangeNotifier implements MotusAgent {
               yield ChatThoughtEvent('Resolving technical mesh targets for "$target"...');
             } else if (toolCall.name == 'set_anatomy_layer') {
               yield const ChatThoughtEvent('Adjusting anatomical layers...');
+            } else if (toolCall.name == 'generate_workout_protocol') {
+              yield const ChatThoughtEvent('Structuring clinical rehab protocol...');
             }
 
             _logger.info('MOTUS_SERVICE: YIELDING_EXTERNAL_TOOL: ${toolCall.name}');
