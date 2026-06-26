@@ -16,7 +16,10 @@ Future<void> main([List<String> args = const []]) async {
   final port = int.tryParse(args.firstOrNull ?? '8080') ?? 8080;
 
   // The path to the local models directory
-  final modelsDir = Directory('packages/motus_server/assets/models');
+  var modelsDir = Directory('assets/models');
+  if (!modelsDir.existsSync()) {
+    modelsDir = Directory('packages/motus_server/assets/models');
+  }
   if (!modelsDir.existsSync()) {
     modelsDir.createSync(recursive: true);
   }

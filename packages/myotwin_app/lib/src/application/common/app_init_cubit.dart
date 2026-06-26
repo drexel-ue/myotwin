@@ -128,12 +128,11 @@ class AppInitCubit extends Cubit<AppInitState> {
 
     _motusService.loadingProgress.addListener(_onMotusProgress);
 
-    final isMobile = !kIsWeb && (Platform.isIOS || Platform.isAndroid);
-
-    // User-provided direct download links (converted from /blob/ to /resolve/)
-    final modelUrl = isMobile
-        ? 'https://huggingface.co/unsloth/gemma-4-E2B-it-qat-mobile-GGUF/resolve/main/gemma-4-E2B-it-qat-UD-Q2_K_XL.gguf'
-        : 'https://huggingface.co/unsloth/gemma-4-E4B-it-qat-GGUF/resolve/main/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf';
+    final isAndroid = !kIsWeb && Platform.isAndroid;
+    final serverHost = isAndroid ? '10.0.2.2' : 'localhost';
+    
+    // Download the base model directly from our local Motus Hub server
+    final modelUrl = 'http://$serverHost:8080/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf';
 
     try {
       // 1. Load Semantic Map (Instant)
