@@ -1,10 +1,16 @@
 import sys
 import json
 import argparse
+
+# Isolate stdout so PyMuPDF warnings don't corrupt the JSON response
+original_stdout = sys.stdout
+sys.stdout = sys.stderr
+
 try:
     import fitz  # PyMuPDF
+    fitz.TOOLS.mupdf_display_errors(False)
 except ImportError:
-    print(json.dumps({"error": "PyMuPDF not installed. Run: pip install PyMuPDF"}))
+    original_stdout.write(json.dumps({"error": "PyMuPDF not installed. Run: pip install PyMuPDF"}))
     sys.exit(1)
 
 def chunk_pdf(pdf_path, words_per_chunk=500):
@@ -15,7 +21,7 @@ def chunk_pdf(pdf_path, words_per_chunk=500):
     try:
         doc = fitz.open(pdf_path)
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        original_stdout.write(json.dumps({"error": str(e)}))
         sys.exit(1)
 
     full_text = ""
@@ -48,4 +54,4 @@ if __name__ == "__main__":
         "chunks": chunks
     }
     
-    print(json.dumps(output))
+    original_stdout.write(json.dumps(output))

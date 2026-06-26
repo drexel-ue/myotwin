@@ -106,6 +106,21 @@ class ChatCubit extends Cubit<ChatState> {
     });
   }
 
+  /// Dispatches a predefined prompt and explicitly sets the expert context, bypassing the router.
+  Future<bool> quickAction(String text, MotusExpert expert) async {
+    final currentGoal = state.activeGoal;
+    if (currentGoal != null) {
+       final newMetadataData = Map<String, dynamic>.from(currentGoal.metadata.data);
+       newMetadataData['expert'] = expert.name;
+       final newGoal = currentGoal.copyWith(metadata: GoalMetadata(newMetadataData));
+       
+       await _repository.updateGoal(newGoal);
+       emit(state.copyWith(activeGoal: newGoal));
+    }
+    
+    return submit(text);
+  }
+
   /// Submits a user message and triggers the AI response stream.
   /// Returns true if the interaction was successful.
   Future<bool> submit(String text) async {
@@ -145,6 +160,56 @@ class ChatCubit extends Cubit<ChatState> {
 
       final responseId = const Uuid().v4();
       final buffer = StringBuffer();
+
+      // Determine the active expert
+      final expertStr = state.activeGoal?.metadata.data['expert'] as String?;
+      var targetExpert = MotusExpert.router;
+      
+      if (expertStr != null) {
+        targetExpert = MotusExpert.values.firstWhere(
+          (e) => e.name == expertStr,
+          orElse: () => MotusExpert.router,
+        );
+      }
+
+      if (targetExpert == MotusExpert.router) {
+         emit(state.copyWith(statusUpdate: 'Analyzing intent...'));
+         await _repository.setExpert(MotusExpert.router);
+         
+         final routerStream = _repository.getResponseStream(text, context: state.messages);
+         final routerBuffer = StringBuffer();
+         await for (final event in routerStream) {
+           if (event is ChatTextEvent) {
+             routerBuffer.write(event.text);
+           }
+         }
+         
+         final routerResult = routerBuffer.toString().toUpperCase();
+         if (routerResult.contains('[ANATOMY]')) {
+           targetExpert = MotusExpert.anatomy;
+         } else if (routerResult.contains('[REHAB]')) {
+           targetExpert = MotusExpert.rehab;
+         } else if (routerResult.contains('[SCHEDULER]')) {
+           targetExpert = MotusExpert.scheduler;
+         } else {
+           // Default fallback
+           targetExpert = MotusExpert.anatomy;
+         }
+         
+         // Persist this expert for the rest of the conversation
+         final currentGoal = state.activeGoal;
+         if (currentGoal != null) {
+           final newMetadataData = Map<String, dynamic>.from(currentGoal.metadata.data);
+           newMetadataData['expert'] = targetExpert.name;
+           final newGoal = currentGoal.copyWith(metadata: GoalMetadata(newMetadataData));
+           
+           await _repository.updateGoal(newGoal);
+           emit(state.copyWith(activeGoal: newGoal));
+         }
+      }
+
+      emit(state.copyWith(statusUpdate: 'Consulting Expert...'));
+      await _repository.setExpert(targetExpert);
 
       final stream = _repository.getResponseStream(text, context: state.messages);
 

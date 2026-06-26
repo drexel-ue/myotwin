@@ -31,6 +31,9 @@ class ChatRepository {
         .map((rows) => rows.map(_mapToDomain).toList());
   }
 
+  /// Sets the active expert domain on the Motus agent.
+  Future<void> setExpert(domain.MotusExpert expert) => _agent.setExpert(expert);
+
   /// Initiates an AI response stream with global biomechanical context.
   Stream<domain.ChatEvent> getResponseStream(String message, {List<domain.IntentRecord>? context}) async* {
     _logger.detail('CHAT_REPOSITORY: GET_RESPONSE_STREAM: $message');
@@ -115,6 +118,20 @@ USER_INPUT: $message
   Future<List<domain.Goal>> fetchGoals() async {
     final rows = await _db.select(_db.goals).get();
     return rows.map(_mapGoalToDomain).toList();
+  }
+
+  /// Updates an existing goal in the database.
+  Future<void> updateGoal(domain.Goal goal) async {
+    await _db.update(_db.goals).replace(
+      GoalsCompanion(
+        id: Value(goal.id),
+        label: Value(goal.label),
+        status: Value(goal.status.name),
+        createdAt: Value(goal.createdAt),
+        updatedAt: Value(goal.updatedAt ?? DateTime.now()),
+        metadata: Value(goal.metadata),
+      ),
+    );
   }
 
   /// Fetches a specific goal by its ID.

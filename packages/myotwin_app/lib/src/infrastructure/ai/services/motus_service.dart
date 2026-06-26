@@ -6,6 +6,25 @@ import 'package:flutter/material.dart';
 import 'package:llamadart/llamadart.dart';
 import 'package:shared_core/shared_core.dart';
 
+/// Configuration for a specific expert domain's LoRA adapter.
+class LoRAAdapterConfig {
+  /// Creates a [LoRAAdapterConfig].
+  const LoRAAdapterConfig({
+    this.path,
+    required this.systemPrompt,
+    required this.availableToolNames,
+  });
+
+  /// The path to the .gguf LoRA file. If null, the base model is used.
+  final String? path;
+
+  /// The persona instructions to feed to the LLM.
+  final String systemPrompt;
+
+  /// The list of tools this expert is allowed to use.
+  final List<String> availableToolNames;
+}
+
 /// A single-concern service for high-performance local LLM inference.
 ///
 /// Wraps the `llamadart` engine and manages the model lifecycle and chat sessions.
@@ -25,6 +44,22 @@ class MotusService extends ChangeNotifier implements MotusAgent {
   ChatSession? _session;
   bool _isInitialized = false;
   String? _initializationError;
+  
+  MotusExpert _currentExpert = MotusExpert.router;
+
+  static const Map<MotusExpert, LoRAAdapterConfig> _expertConfigs = {
+    MotusExpert.router: LoRAAdapterConfig(
+      systemPrompt: "You are Motus, a smart routing assistant. Classify the user's intent into one of the following domains: [ANATOMY], [REHAB], [SCHEDULER], or [GENERAL]. Reply ONLY with the domain tag.",
+      availableToolNames: [],
+    ),
+    MotusExpert.anatomy: LoRAAdapterConfig(
+      // We assume the adapter is served or downloaded to assets/models
+      path: 'packages/motus_server/assets/models/anatomy_expert_lora-unsloth.Q4_K_M.gguf',
+      systemPrompt: 'You are Motus, an expert biomechanical AI. You MUST ALWAYS provide a written text response to the user explaining your findings or actions. If you search for anatomy and cannot find a specific target, explain this to the user instead of staying silent. Use your tools to highlight anatomy related to pain or injury.',
+      availableToolNames: ['query_anatomy', 'highlight_anatomy_node', 'set_anatomy_layer', 'clear_anatomy_highlights'],
+    ),
+    // Additional experts will be added here
+  };
 
   /// Available tools for Motus to call.
   late final List<ToolDefinition> _tools = [
@@ -105,7 +140,6 @@ class MotusService extends ChangeNotifier implements MotusAgent {
   Future<void> initialize(
     ModelSource source, {
     ModelLoadOptions? options,
-    String systemPrompt = 'You are Motus, an advanced biomechanical coaching intelligence. You MUST ALWAYS provide a written text response to the user explaining your findings or actions. If you search for anatomy and cannot find a specific target, explain this to the user instead of staying silent.',
   }) async {
     _logger.info('MOTUS_SERVICE: INITIALIZING_MODEL_SOURCE');
     _initializationError = null;
@@ -125,7 +159,10 @@ class MotusService extends ChangeNotifier implements MotusAgent {
           }
         },
       );
-      _session = ChatSession(_engine, systemPrompt: systemPrompt);
+      
+      // Initialize with Router as default
+      await setExpert(MotusExpert.router);
+      
       _isInitialized = true;
       loadingProgress.value = 1.0;
       progress.complete('MOTUS_MODEL_READY');
@@ -136,6 +173,38 @@ class MotusService extends ChangeNotifier implements MotusAgent {
       _logger.error('MOTUS_SERVICE: INITIALIZATION_ERROR', error: e, stackTrace: stack);
     } finally {
       notifyListeners();
+    }
+  }
+
+  @override
+  Future<void> setExpert(MotusExpert expert) async {
+    _logger.info('MOTUS_SERVICE: SETTING_EXPERT: ${expert.name}');
+    final config = _expertConfigs[expert]!;
+    
+    // Clear any existing LoRA adapters
+    await _engine.clearLoras();
+    
+    // Load new adapter if one is configured for this domain
+    if (config.path != null) {
+      _logger.info('MOTUS_SERVICE: LOADING_LORA: ${config.path}');
+      try {
+        await _engine.setLora(config.path!);
+      } catch (e, stack) {
+         _logger.error('MOTUS_SERVICE: FAILED_TO_LOAD_LORA: ${config.path}', error: e, stackTrace: stack);
+         // Gracefully fallback to base model if adapter file is missing
+      }
+    }
+
+    _currentExpert = expert;
+    
+    // Preserve history when recreating session
+    final history = _session?.history.toList() ?? [];
+    _session = ChatSession(_engine, systemPrompt: config.systemPrompt);
+    for (final message in history) {
+      // Don't carry over system prompts from previous sessions, just chat messages
+      if (message.role != LlamaChatRole.system) {
+        _session!.addMessage(message);
+      }
     }
   }
 
@@ -153,9 +222,12 @@ class MotusService extends ChangeNotifier implements MotusAgent {
 
     try {
       var contents = <LlamaContentPart>[LlamaTextContent(message)];
+      
+      final activeConfig = _expertConfigs[_currentExpert]!;
+      final activeTools = _tools.where((t) => activeConfig.availableToolNames.contains(t.name)).toList();
 
       while (true) {
-        await for (final chunk in _session!.create(contents, tools: _tools)) {
+        await for (final chunk in _session!.create(contents, tools: activeTools)) {
           if (chunk.choices.isEmpty) continue;
           final delta = chunk.choices.first.delta;
 

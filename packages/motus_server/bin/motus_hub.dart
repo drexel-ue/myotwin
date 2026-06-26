@@ -1,8 +1,8 @@
 
-import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -24,8 +24,6 @@ Future<void> main([List<String> args = const []]) async {
   // Create a static handler to serve raw model files (e.g., .gguf)
   final staticModelsHandler = createStaticHandler(
     modelsDir.path,
-    listDirectories: false,
-    defaultDocument: null,
   );
 
   final router = Router()

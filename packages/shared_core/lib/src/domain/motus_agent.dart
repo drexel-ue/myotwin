@@ -47,6 +47,21 @@ class ChatToolCallEvent extends ChatEvent {
   final Map<String, dynamic> arguments;
 }
 
+/// Represents a known expert domain for Motus.
+enum MotusExpert {
+  /// Base model zero-shot router.
+  router,
+
+  /// Expert on human anatomy and pain mapping.
+  anatomy,
+
+  /// Expert on rehabilitation protocols.
+  rehab,
+
+  /// Expert on scheduling and routines.
+  scheduler,
+}
+
 /// The core interface for interacting with the Motus biomechanical intelligence.
 ///
 /// Implementations handle local or remote LLM orchestration, symptom tagging,
@@ -60,6 +75,9 @@ abstract interface class MotusAgent {
     String message, {
     List<IntentRecord>? context,
   });
+
+  /// Sets the active expert domain (e.g. by loading a LoRA adapter).
+  Future<void> setExpert(MotusExpert expert);
 
   /// Analyzes a recently completed session to formulate new intents.
   ///
