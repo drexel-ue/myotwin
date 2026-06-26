@@ -1,9 +1,12 @@
 
+import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
+import 'package:shelf_static/shelf_static.dart';
 
 /// Main entrypoint for the Motus Hub server.
 ///
@@ -12,10 +15,35 @@ import 'package:shelf_router/shelf_router.dart';
 Future<void> main([List<String> args = const []]) async {
   final port = int.tryParse(args.firstOrNull ?? '8080') ?? 8080;
 
+  // The path to the local models directory
+  final modelsDir = Directory('packages/motus_server/assets/models');
+  if (!modelsDir.existsSync()) {
+    modelsDir.createSync(recursive: true);
+  }
+
+  // Create a static handler to serve raw model files (e.g., .gguf)
+  final staticModelsHandler = createStaticHandler(
+    modelsDir.path,
+    listDirectories: false,
+    defaultDocument: null,
+  );
+
   final router = Router()
     // Health check endpoint
     ..get('/health', (_, _) async {
       return shelf.Response.ok('Motus Hub is running');
+    })
+    // Catalog endpoint to list available models
+    ..get('/models/catalog', (_, _) async {
+      final files = modelsDir.listSync().whereType<File>();
+      final catalog = files
+          .map((f) => f.uri.pathSegments.last)
+          .where((name) => name.endsWith('.gguf'))
+          .toList();
+      return shelf.Response.ok(
+        jsonEncode({'models': catalog}),
+        headers: {'Content-Type': 'application/json'},
+      );
     })
     // Tool calling endpoints
     ..post('/tools/calculate_torque_load', (_, _) async {
@@ -53,7 +81,19 @@ Future<void> main([List<String> args = const []]) async {
       return shelf.Response.ok('{"injury_vault": {}, "equipment_registry": {}}');
     });
 
-  final handler = const shelf.Pipeline().addMiddleware(shelf.logRequests()).addHandler(router.call);
+  // Cascade to serve static files if the router doesn't match
+  final cascade = shelf.Cascade()
+      .add(router.call)
+      .add((request) {
+        // Intercept requests to /models/* and route to static handler
+        if (request.url.path.startsWith('models/')) {
+          final newRequest = request.change(path: 'models');
+          return staticModelsHandler(newRequest);
+        }
+        return shelf.Response.notFound('Not found');
+      });
+
+  final handler = const shelf.Pipeline().addMiddleware(shelf.logRequests()).addHandler(cascade.handler);
 
   final server = await shelf_io.serve(handler, 'localhost', port);
   developer.log('Motus Hub listening on http://${server.address}:${server.port}');
