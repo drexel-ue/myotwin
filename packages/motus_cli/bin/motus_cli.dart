@@ -230,6 +230,14 @@ Future<void> _handleDatasetGeneration() async {
       await sink.close();
       print('🎉 Done! Generated $totalExamples examples.');
       print('💾 Saved to: ${outputFile.path}');
+      
+      // Copy to library
+      final datasetsDir = Directory('packages/motus_cli/data/datasets');
+      if (!datasetsDir.existsSync()) {
+        datasetsDir.createSync(recursive: true);
+      }
+      final copiedFile = outputFile.copySync('${datasetsDir.path}/${outputFile.uri.pathSegments.last}');
+      print('📚 Added to dataset library: ${copiedFile.path}');
 
   } catch (e) {
       print('❌ Failed to parse python output: $e');
@@ -239,11 +247,44 @@ Future<void> _handleDatasetGeneration() async {
 Future<void> _handleLoraTraining() async {
   print('\n--- Create LoRA Adapter ---');
   
-  stdout.write('? Enter the absolute path to the .jsonl dataset: ');
-  var datasetPath = stdin.readLineSync();
-  if (datasetPath == null || datasetPath.trim().isEmpty) return;
+  final datasetsDir = Directory('packages/motus_cli/data/datasets');
+  if (!datasetsDir.existsSync()) {
+    datasetsDir.createSync(recursive: true);
+  }
   
-  datasetPath = datasetPath.trim();
+  final datasetFiles = datasetsDir.listSync()
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.jsonl'))
+      .toList();
+      
+  String datasetPath = '';
+  
+  if (datasetFiles.isEmpty) {
+    stdout.write('? Enter the absolute path to the .jsonl dataset: ');
+    final input = stdin.readLineSync();
+    if (input == null || input.trim().isEmpty) return;
+    datasetPath = input.trim();
+  } else {
+    final datasetOptions = [
+      ...datasetFiles.map((f) => f.uri.pathSegments.last),
+      'Paste Absolute Path...'
+    ];
+    
+    final dsSelection = Select(
+      prompt: 'How would you like to provide the dataset?',
+      options: datasetOptions,
+    ).interact();
+    
+    if (dsSelection == datasetOptions.length - 1) {
+      stdout.write('? Enter the absolute path to the .jsonl dataset: ');
+      final input = stdin.readLineSync();
+      if (input == null || input.trim().isEmpty) return;
+      datasetPath = input.trim();
+    } else {
+      datasetPath = datasetFiles[dsSelection].path;
+    }
+  }
+  
   if (datasetPath.startsWith("'") && datasetPath.endsWith("'")) {
     datasetPath = datasetPath.substring(1, datasetPath.length - 1);
   } else if (datasetPath.startsWith("'") && !datasetPath.endsWith("'")) {
@@ -255,10 +296,61 @@ Future<void> _handleLoraTraining() async {
     print('❌ Error: Valid .jsonl file not found at $datasetPath');
     return;
   }
+  
+  if (!datasetPath.contains('packages/motus_cli/data/datasets')) {
+    try {
+      file.copySync('${datasetsDir.path}/${file.uri.pathSegments.last}');
+      print('📚 Added to dataset library for future use.');
+    } catch (_) {}
+  }
 
-  final loraName = Input(
-    prompt: 'Enter a name for this LoRA (e.g., anatomy_expert):',
-  ).interact();
+  final historyFile = File('packages/motus_cli/data/history.json');
+  List<String> historyNames = [];
+  if (historyFile.existsSync()) {
+    try {
+      final json = jsonDecode(historyFile.readAsStringSync());
+      if (json is List) {
+        historyNames = List<String>.from(json);
+      }
+    } catch (_) {}
+  }
+  
+  String loraName = '';
+  if (historyNames.isEmpty) {
+    loraName = Input(
+      prompt: 'Enter a name for this LoRA (e.g., anatomy_expert):',
+    ).interact();
+  } else {
+    final nameOptions = [
+      ...historyNames,
+      'Create New Name...'
+    ];
+    
+    final nameSelection = Select(
+      prompt: 'Select a LoRA name:',
+      options: nameOptions,
+    ).interact();
+    
+    if (nameSelection == nameOptions.length - 1) {
+      loraName = Input(
+        prompt: 'Enter a new name for this LoRA (e.g., anatomy_expert):',
+      ).interact();
+    } else {
+      loraName = historyNames[nameSelection];
+    }
+  }
+  
+  loraName = loraName.trim();
+  if (loraName.isEmpty) return;
+  
+  // Save to history
+  if (!historyNames.contains(loraName)) {
+    if (!historyFile.parent.existsSync()) {
+      historyFile.parent.createSync(recursive: true);
+    }
+    historyNames.add(loraName);
+    historyFile.writeAsStringSync(jsonEncode(historyNames));
+  }
 
   print('🚀 Triggering Modal Cloud Training...');
   print('This will spin up an A10G GPU, train the model, and export the GGUF.');
