@@ -345,6 +345,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.7"
+  dartatui:
+    dependency: transitive
+    description:
+      name: dartatui
+      sha256: "762442816614e33dd49b9aa116dbd473174753e2070b96abda1c06b80856577d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
   decimal:
     dependency: transitive
     description:
