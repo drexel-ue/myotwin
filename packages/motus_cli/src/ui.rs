@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Gauge},
     Frame,
 };
 
@@ -63,7 +63,19 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         CurrentScreen::AnnasArchiveSearching => {
             let p = Paragraph::new(format!("Searching Anna's Archive for '{}'...\nThis may take a moment...", app.search_input))
                 .block(Block::default().title("Searching").borders(Borders::ALL));
-            f.render_widget(p, chunks[1]);
+                
+            let search_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(4), Constraint::Length(3), Constraint::Min(1)])
+                .split(chunks[1]);
+                
+            f.render_widget(p, search_chunks[0]);
+            
+            let gauge = Gauge::default()
+                .block(Block::default().title("Downloading Search Results").borders(Borders::ALL))
+                .gauge_style(Style::default().fg(Color::Cyan).bg(Color::Black).add_modifier(Modifier::ITALIC))
+                .ratio(app.search_progress.clamp(0.0, 1.0));
+            f.render_widget(gauge, search_chunks[1]);
         }
         CurrentScreen::AnnasArchiveResults => {
             let result_chunks = Layout::default()
@@ -111,19 +123,34 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         CurrentScreen::AnnasArchiveDownloading => {
             let title = app.selected_book.as_ref().map(|b| b.title.as_str()).unwrap_or("Book");
             let text = format!("Downloading '{}'...\nThis may take a moment...", title);
+            
+            let download_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(4), Constraint::Length(3), Constraint::Min(1)])
+                .split(chunks[1]);
+                
             let p = Paragraph::new(text).block(Block::default().title("Downloading").borders(Borders::ALL));
-            f.render_widget(p, chunks[1]);
+            f.render_widget(p, download_chunks[0]);
+            
+            let gauge = Gauge::default()
+                .block(Block::default().title("Progress").borders(Borders::ALL))
+                .gauge_style(Style::default().fg(Color::Green).bg(Color::Black).add_modifier(Modifier::ITALIC))
+                .ratio(app.download_progress.clamp(0.0, 1.0));
+            f.render_widget(gauge, download_chunks[1]);
         }
         CurrentScreen::AnnasArchiveDone => {
             let path = app.download_path.as_ref().map(|s| s.as_str()).unwrap_or("Unknown");
             let text = format!("Download complete!\nSaved to: {}\n\nPress Enter to return", path);
-            let p = Paragraph::new(text).block(Block::default().title("Done").borders(Borders::ALL));
+            let p = Paragraph::new(text)
+                .block(Block::default().title("Done").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
             f.render_widget(p, chunks[1]);
         }
         CurrentScreen::AnnasArchiveError => {
             let err = app.error_message.as_ref().map(|s| s.as_str()).unwrap_or("Unknown Error");
-            let text = format!("Error: {}\n\nPress Enter to return", err);
-            let p = Paragraph::new(text).block(Block::default().title("Error").borders(Borders::ALL).style(Style::default().fg(Color::Red)));
+            let p = Paragraph::new(format!("Error:\n{}\n\nPress Esc or Enter to return", err))
+                .block(Block::default().title("Error").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
             f.render_widget(p, chunks[1]);
         }
         CurrentScreen::DatasetGen => {

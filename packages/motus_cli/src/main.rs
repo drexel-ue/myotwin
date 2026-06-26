@@ -48,7 +48,9 @@ use tokio_stream::StreamExt;
 use tokio::sync::mpsc;
 
 enum AppAction {
+    SearchProgress(f64),
     SearchDone(Result<Vec<crate::annas_archive::Book>, String>),
+    DownloadProgress(f64),
     DownloadDone(Result<String, String>),
 }
 
@@ -63,8 +65,17 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             app.pending_search = false;
             let tx = tx.clone();
             let query = app.search_input.clone();
+            
+            let (prog_tx, mut prog_rx) = tokio::sync::mpsc::channel(32);
+            let tx2 = tx.clone();
             tokio::spawn(async move {
-                let res = crate::annas_archive::search_books(&query).await;
+                while let Some(prog) = prog_rx.recv().await {
+                    let _ = tx2.send(AppAction::SearchProgress(prog)).await;
+                }
+            });
+
+            tokio::spawn(async move {
+                let res = crate::annas_archive::search_books(&query, Some(prog_tx)).await;
                 let _ = tx.send(AppAction::SearchDone(res.map_err(|e| e.to_string()))).await;
             });
         }
@@ -74,8 +85,17 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             let tx = tx.clone();
             let book = app.selected_book.clone().unwrap();
             let api_key = app.api_key_input.clone();
+            
+            let (prog_tx, mut prog_rx) = tokio::sync::mpsc::channel(32);
+            let tx2 = tx.clone();
             tokio::spawn(async move {
-                let res = crate::annas_archive::download_book(&book, &api_key).await;
+                while let Some(prog) = prog_rx.recv().await {
+                    let _ = tx2.send(AppAction::DownloadProgress(prog)).await;
+                }
+            });
+
+            tokio::spawn(async move {
+                let res = crate::annas_archive::download_book(&book, &api_key, Some(prog_tx)).await;
                 let _ = tx.send(AppAction::DownloadDone(res.map_err(|e| e.to_string()))).await;
             });
         }
@@ -97,6 +117,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             }
             Some(action) = rx.recv() => {
                 match action {
+                    AppAction::SearchProgress(progress) => {
+                        app.search_progress = progress;
+                    }
                     AppAction::SearchDone(Ok(books)) => {
                         app.search_results = books;
                         app.sort_results();
@@ -110,6 +133,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                     AppAction::SearchDone(Err(e)) => {
                         app.error_message = Some(e);
                         app.current_screen = crate::app::CurrentScreen::AnnasArchiveError;
+                    }
+                    AppAction::DownloadProgress(progress) => {
+                        app.download_progress = progress;
                     }
                     AppAction::DownloadDone(Ok(path)) => {
                         app.download_path = Some(path);

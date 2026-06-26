@@ -18,19 +18,38 @@ struct FastDownloadResponse {
     error: Option<String>,
 }
 
-pub async fn search_books(query: &str) -> Result<Vec<Book>, Box<dyn Error>> {
+pub async fn search_books(query: &str, progress_tx: Option<tokio::sync::mpsc::Sender<f64>>) -> Result<Vec<Book>, Box<dyn Error>> {
     let url = format!("https://annas-archive.gd/search?q={}", urlencoding::encode(query));
     
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/120.0.0.0")
         .build()?;
         
-    let res = client.get(&url).send().await?;
-    if !res.status().is_success() {
-        return Err(format!("Search failed with status: {}", res.status()).into());
+    let mut response = client.get(&url).send().await?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Request failed with status: {}", response.status()).into());
+    }
+
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded: u64 = 0;
+    let mut bytes = Vec::new();
+
+    while let Some(chunk) = response.chunk().await? {
+        bytes.extend_from_slice(&chunk);
+        downloaded += chunk.len() as u64;
+        
+        if let Some(tx) = &progress_tx {
+            let progress = if total_size > 0 {
+                (downloaded as f64) / (total_size as f64)
+            } else {
+                0.0
+            };
+            let _ = tx.send(progress).await;
+        }
     }
     
-    let html = res.text().await?;
+    let html = String::from_utf8(bytes)?;
     
     // We split by `href="/md5/` to reliably segment the HTML into individual book blocks
     let parts: Vec<&str> = html.split("href=\"/md5/").collect();
@@ -107,7 +126,7 @@ pub async fn search_books(query: &str) -> Result<Vec<Book>, Box<dyn Error>> {
     Ok(books)
 }
 
-pub async fn download_book(book: &Book, api_key: &str) -> Result<String, Box<dyn Error>> {
+pub async fn download_book(book: &Book, api_key: &str, progress_tx: Option<tokio::sync::mpsc::Sender<f64>>) -> Result<String, Box<dyn Error>> {
     let url = format!(
         "https://annas-archive.gd/dyn/api/fast_download.json?md5={}&key={}",
         book.md5, api_key
@@ -130,19 +149,47 @@ pub async fn download_book(book: &Book, api_key: &str) -> Result<String, Box<dyn
         .download_url
         .ok_or("No download URL returned from API")?;
 
-    let response = client.get(&download_url).send().await?;
+    let mut response = client.get(&download_url).send().await?;
     if !response.status().is_success() {
         return Err(format!("Download failed with status: {}", response.status()).into());
     }
 
-    let bytes = response.bytes().await?;
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded: u64 = 0;
+    
     let ext = if book.format.is_empty() || book.format == "unknown" { "pdf" } else { &book.format };
     
     // Make sure directory exists
     std::fs::create_dir_all("data/books")?;
     
-    let path = format!("data/books/{}.{}", book.md5, ext);
-    std::fs::write(&path, bytes)?;
+    let year_str = if let Some(y) = &book.publish_year { format!(" {}", y) } else { "".to_string() };
+    let filename_base = format!("{} by {}{}", book.title, book.author, year_str);
+    
+    // Replace spaces with underscores and keep safe characters
+    let safe_filename: String = filename_base
+        .chars()
+        .map(|c| if c == ' ' { '_' } else { c })
+        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-' || *c == '.')
+        .collect();
+        
+    let path = format!("data/books/{}.{}", safe_filename, ext);
+    
+    use std::io::Write;
+    let mut file = std::fs::File::create(&path)?;
+
+    while let Some(chunk) = response.chunk().await? {
+        file.write_all(&chunk)?;
+        downloaded += chunk.len() as u64;
+        
+        if let Some(tx) = &progress_tx {
+            let progress = if total_size > 0 {
+                (downloaded as f64) / (total_size as f64)
+            } else {
+                0.0
+            };
+            let _ = tx.send(progress).await;
+        }
+    }
 
     Ok(path)
 }

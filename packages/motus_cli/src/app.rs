@@ -71,6 +71,8 @@ pub struct App {
     
     pub pending_search: bool,
     pub pending_download: bool,
+    pub search_progress: f64,
+    pub download_progress: f64,
 }
 
 impl Default for App {
@@ -108,6 +110,8 @@ impl App {
             error_message: None,
             pending_search: false,
             pending_download: false,
+            search_progress: 0.0,
+            download_progress: 0.0,
         }
     }
 
