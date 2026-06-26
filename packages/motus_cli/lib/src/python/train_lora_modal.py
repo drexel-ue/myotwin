@@ -1,5 +1,4 @@
 import modal
-import os
 import json
 
 # Define the cloud environment
@@ -34,7 +33,7 @@ model_volume = modal.Volume.from_name("motus-models", create_if_missing=True)
     timeout=3600, # 1 hour max
     volumes={"/models": model_volume}
 )
-def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Qwen3.5-0.8B", lora_name: str = "anatomy_expert"):
+def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2-1B-Instruct", lora_name: str = "anatomy_expert"):
     from unsloth import FastLanguageModel
     from datasets import Dataset
     from trl import SFTTrainer
@@ -74,16 +73,40 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Qwen3.5-0
     # 3. Process Dataset
     print("📚 Processing Dataset...")
     # Parse the JSONL string back into a list of dicts
-    data = [json.loads(line) for line in dataset_content.strip().split("\\n") if line.strip()]
+    data = [json.loads(line) for line in dataset_content.strip().splitlines() if line.strip()]
     
-    # Convert to HuggingFace dataset
-    # We expect the format {"messages": [{"role": "user", "content": "..."}, ...]}
-    hf_dataset = Dataset.from_list(data)
+    import tempfile
+    from datasets import load_dataset
+    
+    with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
+        for row in data:
+            for msg in row.get("messages", []):
+                if isinstance(msg.get("content"), list):
+                    msg["tool_calls"] = msg["content"]
+                    msg["content"] = ""
+                elif msg.get("content") is None:
+                    msg["content"] = ""
+            f.write(json.dumps(row) + "\n")
+        temp_path = f.name
+        
+    hf_dataset = load_dataset("json", data_files=temp_path, split="train")
 
     # We need to apply the chat template so the model learns the correct formatting
     def formatting_prompts_func(examples):
         convos = examples["messages"]
-        texts = [tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False) for convo in convos]
+        
+        # HuggingFace Datasets pads missing keys (like tool_calls) with None to maintain a uniform schema.
+        # This causes the Jinja chat template to crash when it tries to get the length of a NoneType.
+        # We must strip out any None values before passing to apply_chat_template.
+        clean_convos = []
+        for convo in convos:
+            clean_convo = []
+            for msg in convo:
+                clean_msg = {k: v for k, v in msg.items() if v is not None}
+                clean_convo.append(clean_msg)
+            clean_convos.append(clean_convo)
+            
+        texts = [tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False) for convo in clean_convos]
         return {"text": texts}
 
     dataset = hf_dataset.map(formatting_prompts_func, batched = True)
@@ -112,10 +135,11 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Qwen3.5-0
             lr_scheduler_type = "linear",
             seed = 3407,
             output_dir = "outputs",
+            save_strategy = "no",
         ),
     )
     
-    trainer_stats = trainer.train()
+    trainer.train()
     print("✅ Training Complete!")
 
     # 5. Export to GGUF
@@ -147,10 +171,10 @@ def main(dataset_path: str, lora_name: str):
         
     print(f"Uploading dataset to Modal and triggering training for {lora_name}...")
     # Call the cloud function synchronously
-    filename = train_lora_on_gpu.remote(content, model_name="unsloth/Qwen3.5-0.8B", lora_name=lora_name)
+    train_lora_on_gpu.remote(content, model_name="unsloth/Llama-3.2-1B-Instruct", lora_name=lora_name)
     
     print("=========================================")
     print("✅ Remote Training Complete!")
-    print(f"To download your LoRA, run this command:")
+    print("To download your LoRA, run this command:")
     print(f"modal volume get motus-models {lora_name}_lora-unsloth.Q4_K_M.gguf ./packages/motus_server/assets/models/")
     print("=========================================")
