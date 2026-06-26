@@ -47,6 +47,9 @@ pub enum CurrentScreen {
     AnnasArchiveDone,
     AnnasArchiveError,
     DatasetGen,
+    DatasetGenProcessing,
+    DatasetGenDone,
+    DatasetGenError,
     LoraTrain,
     ModalAuth,
 }
@@ -73,6 +76,14 @@ pub struct App {
     pub pending_download: bool,
     pub search_progress: f64,
     pub download_progress: f64,
+
+    // Dataset Gen
+    pub dataset_files: Vec<String>,
+    pub dataset_list_state: ListState,
+    pub dataset_path_input: String,
+    pub is_inputting_path: bool,
+    pub pending_dataset_gen: bool,
+    pub dataset_progress: f64,
 }
 
 impl Default for App {
@@ -112,6 +123,12 @@ impl App {
             pending_download: false,
             search_progress: 0.0,
             download_progress: 0.0,
+            dataset_files: Vec::new(),
+            dataset_list_state: ListState::default(),
+            dataset_path_input: String::new(),
+            is_inputting_path: false,
+            pending_dataset_gen: false,
+            dataset_progress: 0.0,
         }
     }
 
@@ -123,12 +140,24 @@ impl App {
         match self.current_screen {
             CurrentScreen::MainMenu => self.handle_main_menu_key(key_event),
             CurrentScreen::AnnasArchiveKey => self.handle_annas_key_input(key_event),
+            CurrentScreen::DatasetGen => self.handle_dataset_gen_key(key_event),
+            CurrentScreen::DatasetGenProcessing => {} // No keys while processing
+            CurrentScreen::DatasetGenDone => {
+                if key_event.code == KeyCode::Enter {
+                    self.current_screen = CurrentScreen::MainMenu;
+                }
+            }
+            CurrentScreen::DatasetGenError => {
+                if key_event.code == KeyCode::Esc || key_event.code == KeyCode::Enter {
+                    self.current_screen = CurrentScreen::DatasetGen;
+                }
+            }
             CurrentScreen::AnnasArchiveSearch => self.handle_annas_search_input(key_event),
             CurrentScreen::AnnasArchiveResults => self.handle_annas_results_key(key_event),
             CurrentScreen::AnnasArchiveSearching | CurrentScreen::AnnasArchiveDownloading => {
                 // Downloading blocks until done for now, or we can just let UI poll
             }
-            CurrentScreen::AnnasArchiveDone | CurrentScreen::AnnasArchiveError | CurrentScreen::DatasetGen | CurrentScreen::LoraTrain | CurrentScreen::ModalAuth => {
+            CurrentScreen::AnnasArchiveDone | CurrentScreen::AnnasArchiveError | CurrentScreen::LoraTrain | CurrentScreen::ModalAuth => {
                 if key_event.code == KeyCode::Enter || key_event.code == KeyCode::Esc {
                     self.current_screen = CurrentScreen::MainMenu;
                 }
@@ -157,7 +186,10 @@ impl App {
                         0 => {
                             self.init_annas_archive();
                         }
-                        1 => self.current_screen = CurrentScreen::DatasetGen,
+                        1 => {
+                            self.refresh_dataset_files();
+                            self.current_screen = CurrentScreen::DatasetGen;
+                        }
                         2 => self.current_screen = CurrentScreen::LoraTrain,
                         3 => self.current_screen = CurrentScreen::ModalAuth,
                         4 => {
@@ -229,7 +261,6 @@ impl App {
     }
 
 
-
     fn handle_annas_results_key(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => self.current_screen = CurrentScreen::AnnasArchiveSearch,
@@ -262,6 +293,75 @@ impl App {
                 }
             }
             _ => {}
+        }
+    }
+
+    fn handle_dataset_gen_key(&mut self, key_event: KeyEvent) {
+        if self.is_inputting_path {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.is_inputting_path = false;
+                }
+                KeyCode::Enter => {
+                    self.is_inputting_path = false;
+                    
+                    let mut path = self.dataset_path_input.trim().to_string();
+                    
+                    // Mac OS drag and drop wraps in single quotes and adds trailing space
+                    if path.starts_with('\'') && path.ends_with('\'') && path.len() >= 2 {
+                        path = path[1..path.len()-1].to_string();
+                    } else if path.starts_with('"') && path.ends_with('"') && path.len() >= 2 {
+                        path = path[1..path.len()-1].to_string();
+                    }
+                    
+                    // Some terminals use backslash escaping for spaces
+                    path = path.replace("\\ ", " ");
+                    
+                    self.dataset_path_input = path;
+                    
+                    self.pending_dataset_gen = true;
+                    self.current_screen = CurrentScreen::DatasetGenProcessing;
+                }
+                KeyCode::Char(c) => {
+                    self.dataset_path_input.push(c);
+                }
+                KeyCode::Backspace => {
+                    self.dataset_path_input.pop();
+                }
+                _ => {}
+            }
+        } else {
+            match key_event.code {
+                KeyCode::Esc => self.current_screen = CurrentScreen::MainMenu,
+                KeyCode::Char('p') | KeyCode::Char('P') => {
+                    self.is_inputting_path = true;
+                    self.dataset_path_input.clear();
+                }
+                KeyCode::Up => {
+                    if let Some(selected) = self.dataset_list_state.selected() {
+                        let next = if selected > 0 { selected - 1 } else { self.dataset_files.len().saturating_sub(1) };
+                        self.dataset_list_state.select(Some(next));
+                    }
+                }
+                KeyCode::Down => {
+                    if let Some(selected) = self.dataset_list_state.selected() {
+                        let next = if selected < self.dataset_files.len().saturating_sub(1) { selected + 1 } else { 0 };
+                        self.dataset_list_state.select(Some(next));
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Some(selected) = self.dataset_list_state.selected() {
+                        if selected < self.dataset_files.len() {
+                            let file = &self.dataset_files[selected];
+                            // The path inside the data/books/ directory
+                            self.dataset_path_input = format!("data/books/{}", file);
+                            self.pending_dataset_gen = true;
+                            self.current_screen = CurrentScreen::DatasetGenProcessing;
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
     }
 
@@ -305,6 +405,30 @@ impl App {
         // Reset selection to top
         if !self.search_results.is_empty() {
             self.search_results_state.select(Some(0));
+        }
+    }
+
+    pub fn refresh_dataset_files(&mut self) {
+        self.dataset_files.clear();
+        if let Ok(entries) = std::fs::read_dir("data/books") {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    if file_type.is_file() {
+                        let path = entry.path();
+                        if let Some(ext) = path.extension() {
+                            if ext == "pdf" || ext == "epub" {
+                                if let Some(name) = path.file_name() {
+                                    self.dataset_files.push(name.to_string_lossy().into_owned());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.dataset_files.sort();
+        if !self.dataset_files.is_empty() {
+            self.dataset_list_state.select(Some(0));
         }
     }
 }

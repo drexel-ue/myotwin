@@ -11,6 +11,7 @@ use std::{error::Error, io};
 
 mod app;
 mod ui;
+mod dataset_gen;
 mod annas_archive;
 
 use app::App;
@@ -52,6 +53,8 @@ enum AppAction {
     SearchDone(Result<Vec<crate::annas_archive::Book>, String>),
     DownloadProgress(f64),
     DownloadDone(Result<String, String>),
+    DatasetProgress(f64),
+    DatasetDone(Result<String, String>),
 }
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
@@ -100,6 +103,27 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             });
         }
 
+        if app.pending_dataset_gen {
+            app.pending_dataset_gen = false;
+            let tx = tx.clone();
+            let file_path = app.dataset_path_input.clone();
+            // Read GEMINI_API_KEY from environment
+            let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
+            
+            let (prog_tx, mut prog_rx) = tokio::sync::mpsc::channel(32);
+            let tx2 = tx.clone();
+            tokio::spawn(async move {
+                while let Some(prog) = prog_rx.recv().await {
+                    let _ = tx2.send(AppAction::DatasetProgress(prog)).await;
+                }
+            });
+
+            tokio::spawn(async move {
+                let res = crate::dataset_gen::generate_dataset(&file_path, &api_key, Some(prog_tx)).await;
+                let _ = tx.send(AppAction::DatasetDone(res.map_err(|e| e.to_string()))).await;
+            });
+        }
+
         tokio::select! {
             Some(Ok(event)) = reader.next() => {
                 match event {
@@ -144,6 +168,17 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                     AppAction::DownloadDone(Err(e)) => {
                         app.error_message = Some(e);
                         app.current_screen = crate::app::CurrentScreen::AnnasArchiveError;
+                    }
+                    AppAction::DatasetProgress(progress) => {
+                        app.dataset_progress = progress;
+                    }
+                    AppAction::DatasetDone(Ok(path)) => {
+                        app.dataset_path_input = path; // Reuse this field to store output path for success screen
+                        app.current_screen = crate::app::CurrentScreen::DatasetGenDone;
+                    }
+                    AppAction::DatasetDone(Err(e)) => {
+                        app.error_message = Some(e);
+                        app.current_screen = crate::app::CurrentScreen::DatasetGenError;
                     }
                 }
             }

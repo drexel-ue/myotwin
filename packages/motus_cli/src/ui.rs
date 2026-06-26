@@ -154,8 +154,68 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             f.render_widget(p, chunks[1]);
         }
         CurrentScreen::DatasetGen => {
-            let p = Paragraph::new("Dataset Generation flow coming soon...\nPress Enter to return")
-                .block(Block::default().title("Dataset Generation").borders(Borders::ALL));
+            let chunks_ds = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Min(1)])
+                .split(chunks[1]);
+
+            if app.is_inputting_path {
+                let p = Paragraph::new(app.dataset_path_input.as_str())
+                    .block(Block::default().title("Paste Absolute Path to PDF/EPUB (Press Enter to confirm, Esc to cancel)").borders(Borders::ALL));
+                f.render_widget(p, chunks_ds[0]);
+                f.set_cursor(
+                    chunks_ds[0].x + 1 + app.dataset_path_input.len() as u16,
+                    chunks_ds[0].y + 1,
+                );
+            } else {
+                let p = Paragraph::new("Select a book from data/books/ or press 'p' to paste a custom path")
+                    .block(Block::default().title("Dataset Generation").borders(Borders::ALL));
+                f.render_widget(p, chunks_ds[0]);
+                
+                let width = chunks_ds[1].width.saturating_sub(4) as usize;
+                let items: Vec<ListItem> = app.dataset_files.iter().map(|f| {
+                    let wrapped = textwrap::wrap(f.as_str(), width);
+                    let lines: Vec<Line> = wrapped.into_iter().map(|w| Line::from(w.into_owned())).collect();
+                    ListItem::new(lines)
+                }).collect();
+                
+                let list = List::new(items)
+                    .block(Block::default().borders(Borders::ALL).title("Available Books"))
+                    .highlight_style(Style::default().bg(Color::Cyan).fg(Color::Black))
+                    .highlight_symbol(">> ");
+                f.render_stateful_widget(list, chunks_ds[1], &mut app.dataset_list_state);
+            }
+        }
+        CurrentScreen::DatasetGenProcessing => {
+            let p = Paragraph::new("Processing chunks and calling Gemini API to generate synthetic conversations...\nThis can take several minutes.")
+                .block(Block::default().title("Generating Dataset").borders(Borders::ALL));
+                
+            let processing_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(4), Constraint::Length(3), Constraint::Min(1)])
+                .split(chunks[1]);
+                
+            f.render_widget(p, processing_chunks[0]);
+            
+            let gauge = Gauge::default()
+                .block(Block::default().title("Progress").borders(Borders::ALL))
+                .gauge_style(Style::default().fg(Color::Magenta).bg(Color::Black).add_modifier(Modifier::ITALIC))
+                .ratio(app.dataset_progress.clamp(0.0, 1.0));
+            f.render_widget(gauge, processing_chunks[1]);
+        }
+        CurrentScreen::DatasetGenDone => {
+            let path = app.dataset_path_input.as_str(); // We stored output path here
+            let text = format!("Dataset generated successfully!\nSaved to: {}\n\nPress Enter to return to menu", path);
+            let p = Paragraph::new(text)
+                .block(Block::default().title("Success").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            f.render_widget(p, chunks[1]);
+        }
+        CurrentScreen::DatasetGenError => {
+            let err = app.error_message.as_ref().map(|s| s.as_str()).unwrap_or("Unknown Error");
+            let p = Paragraph::new(format!("Dataset Generation Error:\n{}\n\nPress Esc or Enter to return", err))
+                .block(Block::default().title("Error").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
             f.render_widget(p, chunks[1]);
         }
         CurrentScreen::LoraTrain => {
