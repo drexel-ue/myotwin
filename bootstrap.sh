@@ -79,9 +79,9 @@ echo "🐍 Setting up Python virtual environment in packages/motus_cli/.venv..."
 python3 -m venv packages/motus_cli/.venv
 source packages/motus_cli/.venv/bin/activate
 echo "📦 Installing Python dependencies for motus_cli..."
-pip3 install PyMuPDF --quiet
+pip3 install PyMuPDF modal --quiet
 deactivate
-echo "✅ PyMuPDF installed in local .venv."
+echo "✅ PyMuPDF and Modal installed in local .venv."
 
 # 6. Activate Melos and Bootstrap Workspace
 echo "Activating Melos..."

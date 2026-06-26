@@ -7,32 +7,72 @@ import 'package:motus_cli/src/llm_api.dart';
 final env = DotEnv(includePlatformEnvironment: true)..load();
 
 void main(List<String> arguments) async {
-  print('\n🤖 Welcome to Motus CLI');
-  print('========================\n');
+  print('\n⏳ Checking Modal authentication status...');
+  final pythonPath = 'packages/motus_cli/.venv/bin/python';
+  bool isModalAuth = false;
+  
+  if (File(pythonPath).existsSync()) {
+    final authCheck = await Process.run(pythonPath, ['-m', 'modal', 'token', 'info']);
+    isModalAuth = authCheck.exitCode == 0;
+  }
 
   while (true) {
+    print('\n🤖 Welcome to Motus CLI');
+    print('========================');
+    print('Modal Status: ${isModalAuth ? '✅ Authenticated & Valid' : '❌ Not Authenticated or Invalid'}');
+    print('========================\n');
+
+    final options = [
+      'Create Dataset from PDF/EPUB',
+      'Create LoRA Adapter (Modal)',
+      if (!isModalAuth) 'Authenticate with Modal',
+      'Exit'
+    ];
+
     final selection = Select(
       prompt: 'What would you like to do?',
-      options: [
-        'Create Dataset from PDF/EPUB',
-        'Create LoRA Adapter (Modal)',
-        'Exit'
-      ],
+      options: options,
     ).interact();
 
-    switch (selection) {
-      case 0:
-        await _handleDatasetGeneration();
-        break;
-      case 1:
-        await _handleLoraTraining();
-        break;
-      case 2:
-        print('Exiting...');
-        exit(0);
+    final chosen = options[selection];
+
+    if (chosen == 'Create Dataset from PDF/EPUB') {
+      await _handleDatasetGeneration();
+    } else if (chosen == 'Create LoRA Adapter (Modal)') {
+      await _handleLoraTraining();
+    } else if (chosen == 'Authenticate with Modal') {
+      await _handleModalAuth();
+      // Re-verify after auth attempt
+      if (File(pythonPath).existsSync()) {
+        print('⏳ Verifying new token...');
+        final authCheck = await Process.run(pythonPath, ['-m', 'modal', 'token', 'info']);
+        isModalAuth = authCheck.exitCode == 0;
+      }
+    } else if (chosen == 'Exit') {
+      print('Exiting...');
+      exit(0);
     }
     print('\n');
   }
+}
+
+Future<void> _handleModalAuth() async {
+  print('\n--- Authenticate with Modal ---');
+  final pythonPath = 'packages/motus_cli/.venv/bin/python';
+  if (!File(pythonPath).existsSync()) {
+      print('❌ Error: Python virtual environment not found at $pythonPath');
+      return;
+  }
+  
+  print('Launching Modal authentication...');
+  final process = await Process.start(
+    pythonPath, 
+    ['-m', 'modal', 'token', 'new'],
+    mode: ProcessStartMode.inheritStdio
+  );
+  
+  await process.exitCode;
+  print('\n✅ Authentication check complete.');
 }
 
 Future<void> _handleDatasetGeneration() async {
@@ -120,6 +160,50 @@ Future<void> _handleDatasetGeneration() async {
 
 Future<void> _handleLoraTraining() async {
   print('\n--- Create LoRA Adapter ---');
-  // TODO: Add Modal orchestration here.
-  print('⏳ Modal Unsloth training pipeline coming soon...');
+  
+  final datasetPath = Input(
+    prompt: 'Enter the absolute path to the .jsonl dataset:',
+  ).interact();
+
+  final file = File(datasetPath);
+  if (!file.existsSync() || !datasetPath.endsWith('.jsonl')) {
+    print('❌ Error: Valid .jsonl file not found at $datasetPath');
+    return;
+  }
+
+  final loraName = Input(
+    prompt: 'Enter a name for this LoRA (e.g., anatomy_expert):',
+  ).interact();
+
+  print('🚀 Triggering Modal Cloud Training...');
+  print('This will spin up an A10G GPU, train the model, and export the GGUF.');
+  
+  final pythonPath = 'packages/motus_cli/.venv/bin/python';
+  final scriptPath = 'packages/motus_cli/lib/src/python/train_lora_modal.py';
+  
+  if (!File(pythonPath).existsSync()) {
+      print('❌ Error: Python virtual environment not found at $pythonPath');
+      return;
+  }
+
+  // We use python -m modal run to ensure it uses the venv's modal installation
+  final process = await Process.start(pythonPath, [
+    '-m', 'modal', 'run', scriptPath,
+    '--dataset-path', file.path,
+    '--lora-name', loraName
+  ]);
+
+  // Stream stdout and stderr so the user can see Modal's progress
+  process.stdout.transform(utf8.decoder).listen((data) => stdout.write(data));
+  process.stderr.transform(utf8.decoder).listen((data) => stderr.write(data));
+
+  final exitCode = await process.exitCode;
+  
+  if (exitCode == 0) {
+      print('\n✅ Cloud Training Complete!');
+      print('To download your LoRA to the server assets, run:');
+      print('packages/motus_cli/.venv/bin/python -m modal volume get motus-models ${loraName}_lora-unsloth.Q4_K_M.gguf packages/motus_server/assets/models/');
+  } else {
+      print('\n❌ Cloud Training Failed with exit code $exitCode');
+  }
 }
