@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:interact/interact.dart';
 import 'package:dotenv/dotenv.dart';
 import 'package:motus_cli/src/llm_api.dart';
+import 'package:motus_cli/src/annas_archive_workflow.dart';
+import 'package:motus_cli/src/menu_utils.dart';
 
 final env = DotEnv(includePlatformEnvironment: true)..load(['packages/motus_cli/.env']);
 
@@ -23,20 +25,23 @@ void main(List<String> arguments) async {
     print('========================\n');
 
     final options = [
+      'Search & Download Book (Anna\'s Archive)',
       'Create Dataset from PDF/EPUB',
       'Create LoRA Adapter (Modal)',
       if (!isModalAuth) 'Authenticate with Modal',
       'Exit'
     ];
 
-    final selection = Select(
-      prompt: 'What would you like to do?',
-      options: options,
-    ).interact();
+    final selection = promptSelect(
+      'What would you like to do?',
+      options,
+    );
 
     final chosen = options[selection];
 
-    if (chosen == 'Create Dataset from PDF/EPUB') {
+    if (chosen == 'Search & Download Book (Anna\'s Archive)') {
+      await runAnnasArchiveWorkflow();
+    } else if (chosen == 'Create Dataset from PDF/EPUB') {
       await _handleDatasetGeneration();
     } else if (chosen == 'Create LoRA Adapter (Modal)') {
       await _handleLoraTraining();
@@ -111,8 +116,28 @@ Future<void> _handleDatasetGeneration() async {
     print('✅ Saved GEMINI_API_KEY to packages/motus_cli/.env\n');
   }
 
-  stdout.write('? Enter the absolute path to the PDF/EPUB file: ');
-  var filePath = stdin.readLineSync();
+  final booksDir = Directory('packages/motus_cli/data/books');
+  final downloadedBooks = booksDir.existsSync() ? booksDir.listSync().whereType<File>().where((e) => !e.path.endsWith('.DS_Store')).toList() : <File>[];
+  
+  String? filePath;
+  if (downloadedBooks.isNotEmpty) {
+    final options = ['Paste absolute path', ...downloadedBooks.map((e) => e.path.split('/').last)];
+    final selection = promptSelect(
+      'Select a downloaded book or paste a path:',
+      options,
+    );
+    
+    if (selection == 0) {
+      stdout.write('? Enter the absolute path to the PDF/EPUB file: ');
+      filePath = stdin.readLineSync();
+    } else {
+      filePath = downloadedBooks[selection - 1].path;
+    }
+  } else {
+    stdout.write('? Enter the absolute path to the PDF/EPUB file: ');
+    filePath = stdin.readLineSync();
+  }
+  
   if (filePath == null || filePath.trim().isEmpty) return;
   
   filePath = filePath.trim();
@@ -257,51 +282,94 @@ Future<void> _handleLoraTraining() async {
       .where((f) => f.path.endsWith('.jsonl'))
       .toList();
       
-  String datasetPath = '';
+  List<String> datasetPaths = [];
   
   if (datasetFiles.isEmpty) {
-    stdout.write('? Enter the absolute path to the .jsonl dataset: ');
+    stdout.write('? Enter absolute paths to .jsonl datasets (comma-separated): ');
     final input = stdin.readLineSync();
     if (input == null || input.trim().isEmpty) return;
-    datasetPath = input.trim();
+    datasetPaths = input.split(',').map((e) => e.trim()).toList();
   } else {
     final datasetOptions = [
       ...datasetFiles.map((f) => f.uri.pathSegments.last),
-      'Paste Absolute Path...'
+      'Paste Absolute Path(s)...'
     ];
     
-    final dsSelection = Select(
-      prompt: 'How would you like to provide the dataset?',
-      options: datasetOptions,
-    ).interact();
+    final dsSelection = promptMultiSelect(
+      'Select datasets to include:',
+      datasetOptions,
+    );
     
-    if (dsSelection == datasetOptions.length - 1) {
-      stdout.write('? Enter the absolute path to the .jsonl dataset: ');
+    if (dsSelection.isEmpty) {
+      print('❌ No datasets selected.');
+      return;
+    }
+
+    if (dsSelection.contains(datasetOptions.length - 1)) {
+      stdout.write('? Enter absolute paths to .jsonl datasets (comma-separated): ');
       final input = stdin.readLineSync();
-      if (input == null || input.trim().isEmpty) return;
-      datasetPath = input.trim();
-    } else {
-      datasetPath = datasetFiles[dsSelection].path;
+      if (input != null && input.trim().isNotEmpty) {
+        datasetPaths.addAll(input.split(',').map((e) => e.trim()));
+      }
+    }
+    
+    for (var idx in dsSelection) {
+      if (idx != datasetOptions.length - 1) {
+        datasetPaths.add(datasetFiles[idx].path);
+      }
     }
   }
   
-  if (datasetPath.startsWith("'") && datasetPath.endsWith("'")) {
-    datasetPath = datasetPath.substring(1, datasetPath.length - 1);
-  } else if (datasetPath.startsWith("'") && !datasetPath.endsWith("'")) {
-    datasetPath = datasetPath.substring(1);
+  if (datasetPaths.isEmpty) return;
+
+  // Clean paths
+  datasetPaths = datasetPaths.map((p) {
+    var clean = p;
+    if (clean.startsWith("'") && clean.endsWith("'")) {
+      clean = clean.substring(1, clean.length - 1);
+    } else if (clean.startsWith("'") && !clean.endsWith("'")) {
+      clean = clean.substring(1);
+    }
+    return clean;
+  }).toList();
+
+  final validFiles = <File>[];
+  for (var p in datasetPaths) {
+    final f = File(p);
+    if (!f.existsSync() || !p.endsWith('.jsonl')) {
+      print('⚠️ Warning: Valid .jsonl file not found at $p. Skipping.');
+    } else {
+      validFiles.add(f);
+      if (!p.contains('packages/motus_cli/data/datasets')) {
+        try {
+          f.copySync('${datasetsDir.path}/${f.uri.pathSegments.last}');
+          print('📚 Added $p to dataset library for future use.');
+        } catch (_) {}
+      }
+    }
   }
 
-  final file = File(datasetPath);
-  if (!file.existsSync() || !datasetPath.endsWith('.jsonl')) {
-    print('❌ Error: Valid .jsonl file not found at $datasetPath');
+  if (validFiles.isEmpty) {
+    print('❌ Error: No valid datasets provided.');
     return;
   }
-  
-  if (!datasetPath.contains('packages/motus_cli/data/datasets')) {
-    try {
-      file.copySync('${datasetsDir.path}/${file.uri.pathSegments.last}');
-      print('📚 Added to dataset library for future use.');
-    } catch (_) {}
+
+  File finalDatasetFile;
+  if (validFiles.length == 1) {
+    finalDatasetFile = validFiles.first;
+    print('📚 Using dataset: ${finalDatasetFile.path}');
+  } else {
+    final mergedPath = '${datasetsDir.path}/merged_${DateTime.now().millisecondsSinceEpoch}.jsonl';
+    finalDatasetFile = File(mergedPath);
+    final sink = finalDatasetFile.openWrite();
+    for (var f in validFiles) {
+      sink.write(f.readAsStringSync());
+      if (!f.readAsStringSync().endsWith('\n')) {
+        sink.writeln();
+      }
+    }
+    await sink.close();
+    print('📚 Combined ${validFiles.length} datasets into: $mergedPath');
   }
 
   final historyFile = File('packages/motus_cli/data/history.json');
@@ -326,10 +394,10 @@ Future<void> _handleLoraTraining() async {
       'Create New Name...'
     ];
     
-    final nameSelection = Select(
-      prompt: 'Select a LoRA name:',
-      options: nameOptions,
-    ).interact();
+    final nameSelection = promptSelect(
+      'Select a LoRA name:',
+      nameOptions,
+    );
     
     if (nameSelection == nameOptions.length - 1) {
       loraName = Input(
@@ -366,7 +434,7 @@ Future<void> _handleLoraTraining() async {
   // We use python -m modal run to ensure it uses the venv's modal installation
   final process = await Process.start(pythonPath, [
     '-m', 'modal', 'run', scriptPath,
-    '--dataset-path', file.path,
+    '--dataset-path', finalDatasetFile.path,
     '--lora-name', loraName
   ]);
 
