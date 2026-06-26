@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
     Frame,
 };
 
@@ -42,17 +42,62 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             let text = format!("Anna's Archive API Key required.\nEnter Key: {}\n\n(Press Enter to save)", app.api_key_input);
             let p = Paragraph::new(text).block(Block::default().title("API Key").borders(Borders::ALL));
             f.render_widget(p, chunks[1]);
+            
+            #[allow(deprecated)]
+            f.set_cursor(
+                chunks[1].x + 12 + app.api_key_input.len() as u16,
+                chunks[1].y + 2,
+            );
         }
         CurrentScreen::AnnasArchiveSearch => {
             let text = format!("Enter book title or author: {}\n\n(Press Enter to search)", app.search_input);
             let p = Paragraph::new(text).block(Block::default().title("Search Anna's Archive").borders(Borders::ALL));
             f.render_widget(p, chunks[1]);
+            
+            #[allow(deprecated)]
+            f.set_cursor(
+                chunks[1].x + 29 + app.search_input.len() as u16,
+                chunks[1].y + 1,
+            );
+        }
+        CurrentScreen::AnnasArchiveSearching => {
+            let p = Paragraph::new(format!("Searching Anna's Archive for '{}'...\nThis may take a moment...", app.search_input))
+                .block(Block::default().title("Searching").borders(Borders::ALL));
+            f.render_widget(p, chunks[1]);
         }
         CurrentScreen::AnnasArchiveResults => {
+            let result_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Min(1)])
+                .split(chunks[1]);
+
+            let sort_titles = vec!["Year", "Title", "Author", "Format", "Size"];
+            let sort_idx = match app.sort_mode {
+                crate::app::SortMode::Year => 0,
+                crate::app::SortMode::Title => 1,
+                crate::app::SortMode::Author => 2,
+                crate::app::SortMode::Format => 3,
+                crate::app::SortMode::Size => 4,
+            };
+
+            let tabs = Tabs::new(sort_titles.into_iter().map(Line::from).collect::<Vec<_>>())
+                .block(Block::default().title("Sort By (Tab / <Left> <Right>)").borders(Borders::ALL))
+                .select(sort_idx)
+                .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                .divider("|");
+            
+            f.render_widget(tabs, result_chunks[0]);
+
+            let width = result_chunks[1].width.saturating_sub(4) as usize; // account for borders and list highlight symbol
             let items: Vec<ListItem> = app.search_results
                 .iter()
                 .map(|b| {
-                    ListItem::new(format!("{} by {} [{}, {}]", b.title, b.author, b.format, b.size))
+                    let year_str = if let Some(y) = &b.publish_year { format!(" ({})", y) } else { "".to_string() };
+                    let edition_str = if let Some(e) = &b.edition { format!(" ({})", e) } else { "".to_string() };
+                    let content = format!("{} by {}{}{} [{}, {}]", b.title, b.author, year_str, edition_str, b.format.to_uppercase(), b.size);
+                    let wrapped = textwrap::wrap(&content, width);
+                    let lines: Vec<Line> = wrapped.into_iter().map(|s| Line::from(s.into_owned())).collect();
+                    ListItem::new(lines)
                 })
                 .collect();
             
@@ -61,7 +106,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
                 .highlight_symbol(">> ");
             
-            f.render_stateful_widget(list, chunks[1], &mut app.search_results_state);
+            f.render_stateful_widget(list, result_chunks[1], &mut app.search_results_state);
         }
         CurrentScreen::AnnasArchiveDownloading => {
             let title = app.selected_book.as_ref().map(|b| b.title.as_str()).unwrap_or("Book");
