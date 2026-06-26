@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 
 class TeacherLlmClient {
   final String apiKey;
-  // Use Gemini 1.5 Pro as the default Teacher Model
-  final String baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
+  // Use Gemini 2.5 Flash as the default Teacher Model (faster and cheaper for bulk generation)
+  final String baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
   TeacherLlmClient(this.apiKey);
 
@@ -41,7 +41,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
 ''';
 
     final response = await http.post(
-      Uri.parse('\$baseUrl?key=\$apiKey'),
+      Uri.parse('$baseUrl?key=$apiKey'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "systemInstruction": {
@@ -50,7 +50,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
         "contents": [
           {
             "parts": [
-              {"text": "Textbook Chunk:\\n\\n\$textChunk"}
+              {"text": "Textbook Chunk:\\n\\n$textChunk"}
             ]
           }
         ],
@@ -62,7 +62,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to generate content: \${response.body}');
+      throw Exception('Failed to generate content: ${response.body}');
     }
 
     final data = jsonDecode(response.body);
@@ -71,7 +71,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
       final parsedArray = jsonDecode(textResponse) as List<dynamic>;
       return parsedArray.cast<Map<String, dynamic>>();
     } catch (e) {
-      throw Exception('Failed to parse Teacher LLM output. Model may not have returned strict JSON.\\nError: \$e');
+      throw Exception('Failed to parse Teacher LLM output. Model may not have returned strict JSON.\\nError: $e');
     }
   }
 }

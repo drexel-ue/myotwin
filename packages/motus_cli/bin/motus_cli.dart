@@ -4,7 +4,7 @@ import 'package:interact/interact.dart';
 import 'package:dotenv/dotenv.dart';
 import 'package:motus_cli/src/llm_api.dart';
 
-final env = DotEnv(includePlatformEnvironment: true)..load();
+final env = DotEnv(includePlatformEnvironment: true)..load(['packages/motus_cli/.env']);
 
 void main(List<String> arguments) async {
   print('\n⏳ Checking Modal authentication status...');
@@ -77,9 +77,52 @@ Future<void> _handleModalAuth() async {
 
 Future<void> _handleDatasetGeneration() async {
   print('\n--- Create Dataset ---');
-  final filePath = Input(
-    prompt: 'Enter the absolute path to the PDF/EPUB file:',
-  ).interact();
+  
+  var apiKey = env['GEMINI_API_KEY'];
+  if (apiKey == null || apiKey.isEmpty || apiKey == "your_api_key_here") {
+    print('\n⚠️ Missing GEMINI_API_KEY.');
+    print('The Motus CLI uses Google Gemini (the "Teacher Model") to read your PDF');
+    print('and intelligently format it into a high-quality .jsonl dataset for training.');
+    print('You can get a free API key here: https://aistudio.google.com/app/apikey\n');
+    
+    apiKey = Input(
+      prompt: 'Please enter your Gemini API Key:',
+    ).interact();
+    
+    final envFile = File('packages/motus_cli/.env');
+    if (!envFile.existsSync()) {
+      final exampleFile = File('packages/motus_cli/.env.example');
+      if (exampleFile.existsSync()) {
+        exampleFile.copySync(envFile.path);
+      } else {
+        envFile.createSync();
+      }
+    }
+    
+    var envContent = envFile.readAsStringSync();
+    if (envContent.contains('GEMINI_API_KEY=')) {
+      envContent = envContent.replaceAll(RegExp(r'GEMINI_API_KEY=.*'), 'GEMINI_API_KEY=$apiKey');
+    } else {
+      if (envContent.isNotEmpty && !envContent.endsWith('\n')) envContent += '\n';
+      envContent += 'GEMINI_API_KEY=$apiKey\n';
+    }
+    
+    envFile.writeAsStringSync(envContent);
+    print('✅ Saved GEMINI_API_KEY to packages/motus_cli/.env\n');
+  }
+
+  stdout.write('? Enter the absolute path to the PDF/EPUB file: ');
+  var filePath = stdin.readLineSync();
+  if (filePath == null || filePath.trim().isEmpty) return;
+  
+  filePath = filePath.trim();
+  // macOS drag-and-drop wraps paths with spaces in single quotes
+  if (filePath.startsWith("'") && filePath.endsWith("'")) {
+    filePath = filePath.substring(1, filePath.length - 1);
+  } else if (filePath.startsWith("'") && !filePath.endsWith("'")) {
+    // If the string was cutoff or user only pasted part of it
+    filePath = filePath.substring(1);
+  }
 
   final file = File(filePath);
   if (!file.existsSync()) {
@@ -113,7 +156,19 @@ Future<void> _handleDatasetGeneration() async {
   }
 
   try {
-      final jsonResponse = jsonDecode(process.stdout as String);
+      final stdoutStr = process.stdout as String;
+      final startIndex = stdoutStr.indexOf('{');
+      final endIndex = stdoutStr.lastIndexOf('}');
+      
+      if (startIndex == -1 || endIndex == -1) {
+          print('❌ Extraction Error: Could not find JSON response in python output:');
+          print(stdoutStr);
+          return;
+      }
+      
+      final jsonStr = stdoutStr.substring(startIndex, endIndex + 1);
+      final jsonResponse = jsonDecode(jsonStr);
+      
       if (jsonResponse['error'] != null) {
           print('❌ Extraction Error: ${jsonResponse['error']}');
           return;
@@ -124,13 +179,17 @@ Future<void> _handleDatasetGeneration() async {
       
       print('⏳ Connecting to Teacher LLM API (Gemini)...');
       
-      final apiKey = env['GEMINI_API_KEY'];
-      if (apiKey == null || apiKey.isEmpty || apiKey == "your_api_key_here") {
-        print('❌ Error: Missing GEMINI_API_KEY in packages/motus_cli/.env');
-        print('Please copy packages/motus_cli/.env.example to packages/motus_cli/.env and add your key.');
-        return;
+      final useDelay = Confirm(
+        prompt: 'Apply a 4-second delay between chunks to respect the Free Tier rate limit (15 RPM)?',
+        defaultValue: true,
+      ).interact();
+      
+      if (useDelay) {
+        print('ℹ️  You can check your current quota at: https://aistudio.google.com/app/rate-limit\n');
+      } else {
+        print('\n🚀 Running without delay. Warning: You may hit 429 Too Many Requests if you are on the free tier.\n');
       }
-
+      
       final llmClient = TeacherLlmClient(apiKey);
       final outputFile = File('${file.parent.path}/${file.uri.pathSegments.last.split('.').first}_dataset.jsonl');
       final sink = outputFile.openWrite(mode: FileMode.append);
@@ -138,14 +197,33 @@ Future<void> _handleDatasetGeneration() async {
       int totalExamples = 0;
       for (int i = 0; i < chunks.length; i++) {
         print('🔄 Processing chunk ${i + 1}/${chunks.length}...');
-        try {
-          final examples = await llmClient.generateDatasetFromChunk(chunks[i]);
-          for (var example in examples) {
-            sink.writeln(jsonEncode(example));
-            totalExamples++;
+        
+        int retries = 0;
+        bool success = false;
+        
+        while (!success && retries < 5) {
+          try {
+            final examples = await llmClient.generateDatasetFromChunk(chunks[i]);
+            for (var example in examples) {
+              sink.writeln(jsonEncode(example));
+              totalExamples++;
+            }
+            success = true;
+            
+            if (useDelay && i < chunks.length - 1) {
+              await Future.delayed(Duration(seconds: 4));
+            }
+          } catch (e) {
+            retries++;
+            print('⚠️ Error on chunk ${i + 1} (Attempt $retries/5): $e');
+            if (retries >= 5) {
+              print('❌ Skipping chunk ${i + 1} after 5 failed attempts.');
+            } else {
+              int backoffSeconds = 4 * retries; // 4s, 8s, 12s, 16s...
+              print('⏳ API busy or rate limited. Retrying in $backoffSeconds seconds...');
+              await Future.delayed(Duration(seconds: backoffSeconds));
+            }
           }
-        } catch (e) {
-          print('⚠️ Error on chunk ${i + 1}: $e');
         }
       }
 
@@ -161,9 +239,16 @@ Future<void> _handleDatasetGeneration() async {
 Future<void> _handleLoraTraining() async {
   print('\n--- Create LoRA Adapter ---');
   
-  final datasetPath = Input(
-    prompt: 'Enter the absolute path to the .jsonl dataset:',
-  ).interact();
+  stdout.write('? Enter the absolute path to the .jsonl dataset: ');
+  var datasetPath = stdin.readLineSync();
+  if (datasetPath == null || datasetPath.trim().isEmpty) return;
+  
+  datasetPath = datasetPath.trim();
+  if (datasetPath.startsWith("'") && datasetPath.endsWith("'")) {
+    datasetPath = datasetPath.substring(1, datasetPath.length - 1);
+  } else if (datasetPath.startsWith("'") && !datasetPath.endsWith("'")) {
+    datasetPath = datasetPath.substring(1);
+  }
 
   final file = File(datasetPath);
   if (!file.existsSync() || !datasetPath.endsWith('.jsonl')) {
