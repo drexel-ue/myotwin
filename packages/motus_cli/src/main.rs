@@ -18,6 +18,8 @@ use app::App;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    dotenvy::dotenv().ok();
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -53,7 +55,7 @@ enum AppAction {
     SearchDone(Result<Vec<crate::annas_archive::Book>, String>),
     DownloadProgress(f64),
     DownloadDone(Result<String, String>),
-    DatasetProgress(f64),
+    DatasetMessage(crate::dataset_gen::DatasetGenMessage),
     DatasetDone(Result<String, String>),
 }
 
@@ -113,8 +115,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             let (prog_tx, mut prog_rx) = tokio::sync::mpsc::channel(32);
             let tx2 = tx.clone();
             tokio::spawn(async move {
-                while let Some(prog) = prog_rx.recv().await {
-                    let _ = tx2.send(AppAction::DatasetProgress(prog)).await;
+                while let Some(msg) = prog_rx.recv().await {
+                    let _ = tx2.send(AppAction::DatasetMessage(msg)).await;
                 }
             });
 
@@ -132,6 +134,9 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                             return Ok(());
                         }
                         app.handle_key_event(key);
+                        if app.should_quit {
+                            return Ok(());
+                        }
                     }
                     Event::Resize(_, _) => {
                         // Let the loop tick to redraw immediately
@@ -169,8 +174,19 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                         app.error_message = Some(e);
                         app.current_screen = crate::app::CurrentScreen::AnnasArchiveError;
                     }
-                    AppAction::DatasetProgress(progress) => {
-                        app.dataset_progress = progress;
+                    AppAction::DatasetMessage(msg) => {
+                        match msg {
+                            crate::dataset_gen::DatasetGenMessage::Progress(progress) => {
+                                app.dataset_progress = progress;
+                            }
+                            crate::dataset_gen::DatasetGenMessage::Log(log_msg) => {
+                                app.dataset_logs.push(log_msg);
+                                let len = app.dataset_logs.len();
+                                if len > 0 {
+                                    app.dataset_logs_state.select(Some(len - 1));
+                                }
+                            }
+                        }
                     }
                     AppAction::DatasetDone(Ok(path)) => {
                         app.dataset_path_input = path; // Reuse this field to store output path for success screen

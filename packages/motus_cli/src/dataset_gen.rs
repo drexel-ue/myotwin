@@ -2,14 +2,22 @@ use std::error::Error;
 use std::process::Stdio;
 use tokio::process::Command;
 use serde_json::{Value, json};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
+use std::sync::Arc;
+use futures::StreamExt;
+use tokio::sync::Mutex;
 use std::fs::OpenOptions;
 use std::io::Write;
+
+pub enum DatasetGenMessage {
+    Progress(f64),
+    Log(String),
+}
 
 pub async fn generate_dataset(
     file_path: &str,
     api_key: &str,
-    progress_tx: Option<mpsc::Sender<f64>>
+    progress_tx: Option<mpsc::Sender<DatasetGenMessage>>
 ) -> Result<String, Box<dyn Error>> {
     // 1. If path is not inside data/books/, copy it.
     let mut target_path = file_path.to_string();
@@ -22,15 +30,14 @@ pub async fn generate_dataset(
     }
     
     // 2. Invoke extract_pdf.py
-    // We assume the venv is located at packages/motus_cli_legacy/.venv
     let venv_python = "../motus_cli_legacy/.venv/bin/python";
     let script_path = "../motus_cli_legacy/lib/src/python/extract_pdf.py";
     
     let abs_target_path = std::fs::canonicalize(&target_path)?;
 
-    // Send a small progress bump to indicate parsing started
     if let Some(ref tx) = progress_tx {
-        let _ = tx.send(0.05).await;
+        let _ = tx.send(DatasetGenMessage::Log(format!("Parsing PDF/EPUB: {}", target_path))).await;
+        let _ = tx.send(DatasetGenMessage::Progress(0.05)).await;
     }
 
     let output = Command::new(venv_python)
@@ -73,123 +80,200 @@ pub async fn generate_dataset(
         .to_string_lossy();
     let output_file_path = format!("data/datasets/{}_dataset.jsonl", base_name);
     
-    let mut file = OpenOptions::new()
+    let file = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
         .open(&output_file_path)?;
 
+    let safe_file = Arc::new(Mutex::new(file));
     let client = reqwest::Client::new();
     let gemini_url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}", api_key);
     
     let system_instruction = r#"You are a Dataset Generator. You extract physical therapy and rehab knowledge from the provided textbook chunk and convert it into synthetic conversation examples.
-Output strictly a JSON array of conversational objects. Each object should have a "messages" array representing the conversation, ending with a tool call.
-
-Example output format:
-[
-  {
-    "messages": [
-      {"role": "system", "content": "You are Motus, an AI physical therapist..."},
-      {"role": "user", "content": "I have shoulder impingement, it hurts when I lift my arm."},
-      {
-        "role": "assistant",
-        "content": "I've generated a rehab protocol for shoulder impingement based on your symptoms.",
-        "tool_calls": [
-          {
-            "id": "call_rehab_1",
-            "type": "function",
-            "function": {
-              "name": "generate_workout_protocol",
-              "arguments": "{\"exercises\":[\"Wall Slides\",\"Scapular Retractions\"],\"intensity\":\"low\"}"
-            }
-          }
-        ]
-      }
-    ]
-  }
-]
-
-Generate 3 to 5 realistic examples based ONLY on the clinical information in the text chunk below. Return ONLY the raw JSON array."#;
+Generate 3 to 5 realistic examples based ONLY on the clinical information in the text chunk below."#;
 
     let standard_system_prompt = "You are Motus, a world-class AI physical therapist and rehabilitation expert. Your goal is to help users address their aches and pains by generating highly specific rehab and workout protocols based on clinical knowledge.";
 
-    // 4. Iterate chunks and call Gemini
-    for (i, chunk_val) in chunks.iter().enumerate() {
-        let chunk_text = chunk_val.as_str().unwrap_or("");
-        if chunk_text.trim().is_empty() {
-            continue;
-        }
-
-        let req_body = json!({
-            "systemInstruction": {
-                "parts": [{"text": system_instruction}]
-            },
-            "contents": [
-                {
-                    "parts": [{"text": format!("Textbook Chunk:\n\n{}", chunk_text)}]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.2,
-                "responseMimeType": "application/json"
-            }
-        });
-
-        let res = client.post(&gemini_url)
-            .header("Content-Type", "application/json")
-            .json(&req_body)
-            .send()
-            .await?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let err_text = res.text().await.unwrap_or_default();
-            return Err(format!("Gemini API failed with status: {} - {}", status, err_text).into());
-        }
-
-        let resp_json: Value = res.json().await?;
-        
-        let text_response = resp_json
-            .pointer("/candidates/0/content/parts/0/text")
-            .and_then(|v| v.as_str())
-            .ok_or("Failed to extract text from Gemini response")?;
-
-        let generated_examples: Vec<Value> = serde_json::from_str(text_response)
-            .map_err(|e| format!("Failed to parse Gemini output as JSON array: {}\nOutput was: {}", e, text_response))?;
-
-        for mut example in generated_examples {
-            if let Some(messages) = example.get_mut("messages").and_then(|m| m.as_array_mut()) {
-                for msg in messages.iter_mut() {
-                    let role = msg.get("role").and_then(|r| r.as_str()).unwrap_or("").to_string();
-                    
-                    // Enforce Standard System Prompt
-                    if role == "system" {
-                        msg["content"] = json!(standard_system_prompt);
+    let response_schema = json!({
+        "type": "ARRAY",
+        "items": {
+            "type": "OBJECT",
+            "properties": {
+                "messages": {
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "role": { "type": "STRING" },
+                            "content": { "type": "STRING", "nullable": true },
+                            "tool_calls": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "id": { "type": "STRING" },
+                                        "type": { "type": "STRING" },
+                                        "function": {
+                                            "type": "OBJECT",
+                                            "properties": {
+                                                "name": { "type": "STRING" },
+                                                "arguments": { "type": "STRING" }
+                                            },
+                                            "required": ["name", "arguments"]
+                                        }
+                                    },
+                                    "required": ["id", "type", "function"]
+                                }
+                            }
+                        },
+                        "required": ["role"]
                     }
-                    
-                    // Fix Tool Call Hallucination (content is an array instead of tool_calls)
-                    if role == "assistant" {
-                        if let Some(content_val) = msg.get("content") {
-                            if content_val.is_array() {
-                                // Move the array to tool_calls and nullify content
-                                msg["tool_calls"] = content_val.clone();
-                                msg["content"] = Value::Null;
+                }
+            },
+            "required": ["messages"]
+        }
+    });
+
+    // 4. Concurrent chunk processing
+    let concurrency_limit = 5; // Safe default
+    let semaphore = Arc::new(Semaphore::new(concurrency_limit));
+    let chunk_texts: Vec<String> = chunks.iter().map(|c| c.as_str().unwrap_or("").to_string()).collect();
+
+    let processed_count = Arc::new(tokio::sync::Mutex::new(0_usize));
+    
+    let futures = chunk_texts.into_iter().enumerate().filter(|(_, text)| !text.trim().is_empty()).map(|(i, chunk_text)| {
+        let sem = semaphore.clone();
+        let client = client.clone();
+        let gemini_url = gemini_url.clone();
+        let safe_file = safe_file.clone();
+        let progress_tx = progress_tx.clone();
+        let sys_instr = system_instruction.to_string();
+        let sys_prompt = standard_system_prompt.to_string();
+        let schema = response_schema.clone();
+        let processed_count = processed_count.clone();
+
+        async move {
+            let _permit = sem.acquire().await.unwrap();
+
+            let req_body = json!({
+                "systemInstruction": {
+                    "parts": [{"text": sys_instr}]
+                },
+                "contents": [
+                    {
+                        "parts": [{"text": format!("Textbook Chunk:\n\n{}", chunk_text)}]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.2,
+                    "responseMimeType": "application/json",
+                    "responseSchema": schema
+                }
+            });
+
+            if let Some(ref tx) = progress_tx {
+                let _ = tx.send(DatasetGenMessage::Log(format!("Processing chunk {}...", i + 1))).await;
+            }
+
+            // Retry logic
+            let mut attempts = 0;
+            let mut res_text = String::new();
+            let mut success = false;
+            
+            while attempts < 3 {
+                let res = client.post(&gemini_url)
+                    .header("Content-Type", "application/json")
+                    .json(&req_body)
+                    .send()
+                    .await;
+
+                match res {
+                    Ok(resp) => {
+                        if resp.status().is_success() {
+                            let resp_json: Value = resp.json().await.unwrap_or_default();
+                            if let Some(text) = resp_json.pointer("/candidates/0/content/parts/0/text").and_then(|v| v.as_str()) {
+                                res_text = text.to_string();
+                                success = true;
+                                break;
+                            }
+                        } else if resp.status() == 429 {
+                            attempts += 1;
+                            tokio::time::sleep(tokio::time::Duration::from_secs(2 * attempts)).await;
+                            continue;
+                        }
+                        
+                        attempts += 1;
+                    }
+                    Err(_) => {
+                        attempts += 1;
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2 * attempts)).await;
+                    }
+                }
+            }
+
+            if !success {
+                if let Some(ref tx) = progress_tx {
+                    let _ = tx.send(DatasetGenMessage::Log(format!("Warning: Chunk {} failed after 3 attempts. Skipping.", i + 1))).await;
+                }
+                return;
+            }
+
+            let generated_examples_res: Result<Vec<Value>, _> = serde_json::from_str(&res_text);
+            let generated_examples = match generated_examples_res {
+                Ok(ex) => ex,
+                Err(e) => {
+                    if let Some(ref tx) = progress_tx {
+                        let _ = tx.send(DatasetGenMessage::Log(format!("Warning: Chunk {} produced invalid JSON. Error: {}", i + 1, e))).await;
+                    }
+                    return;
+                }
+            };
+
+            let mut valid_count = 0;
+            for mut example in generated_examples {
+                if let Some(messages) = example.get_mut("messages").and_then(|m| m.as_array_mut()) {
+                    for msg in messages.iter_mut() {
+                        let role = msg.get("role").and_then(|r| r.as_str()).unwrap_or("").to_string();
+                        if role == "system" {
+                            msg["content"] = json!(sys_prompt);
+                        }
+                        
+                        // Handle cases where Gemini puts an array in content by mistake
+                        if role == "assistant" {
+                            if let Some(content_val) = msg.get("content") {
+                                if content_val.is_array() {
+                                    msg["tool_calls"] = content_val.clone();
+                                    msg["content"] = Value::Null;
+                                }
                             }
                         }
                     }
                 }
+                
+                let row_str = serde_json::to_string(&example).unwrap_or_default();
+                if !row_str.is_empty() {
+                    let mut file_guard = safe_file.lock().await;
+                    let _ = writeln!(file_guard, "{}", row_str);
+                    valid_count += 1;
+                }
             }
-            
-            let row_str = serde_json::to_string(&example)?;
-            writeln!(file, "{}", row_str)?;
-        }
 
-        if let Some(ref tx) = progress_tx {
-            // progress is 5% + 95% * (i+1)/total
-            let progress = 0.05 + 0.95 * ((i + 1) as f64 / total_chunks as f64);
-            let _ = tx.send(progress).await;
+            // Update progress
+            let mut pc = processed_count.lock().await;
+            *pc += 1;
+            let current_pc = *pc;
+            drop(pc);
+
+            if let Some(ref tx) = progress_tx {
+                let _ = tx.send(DatasetGenMessage::Log(format!("Chunk {} complete ({} examples).", i + 1, valid_count))).await;
+                let progress = 0.05 + 0.95 * (current_pc as f64 / total_chunks as f64);
+                let _ = tx.send(DatasetGenMessage::Progress(progress)).await;
+            }
         }
-    }
+    });
+
+    futures::stream::iter(futures).buffer_unordered(concurrency_limit).collect::<Vec<()>>().await;
 
     Ok(output_file_path)
 }

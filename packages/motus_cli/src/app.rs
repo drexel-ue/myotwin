@@ -84,6 +84,9 @@ pub struct App {
     pub is_inputting_path: bool,
     pub pending_dataset_gen: bool,
     pub dataset_progress: f64,
+    pub dataset_logs: Vec<String>,
+    pub dataset_logs_state: ListState,
+    pub dataset_error_scroll: u16,
 }
 
 impl Default for App {
@@ -129,6 +132,9 @@ impl App {
             is_inputting_path: false,
             pending_dataset_gen: false,
             dataset_progress: 0.0,
+            dataset_logs: Vec::new(),
+            dataset_logs_state: ListState::default(),
+            dataset_error_scroll: 0,
         }
     }
 
@@ -141,15 +147,52 @@ impl App {
             CurrentScreen::MainMenu => self.handle_main_menu_key(key_event),
             CurrentScreen::AnnasArchiveKey => self.handle_annas_key_input(key_event),
             CurrentScreen::DatasetGen => self.handle_dataset_gen_key(key_event),
-            CurrentScreen::DatasetGenProcessing => {} // No keys while processing
+            CurrentScreen::DatasetGenProcessing => {
+                match key_event.code {
+                    KeyCode::Up => {
+                        let i = match self.dataset_logs_state.selected() {
+                            Some(i) => if i == 0 { 0 } else { i - 1 },
+                            None => self.dataset_logs.len().saturating_sub(1),
+                        };
+                        self.dataset_logs_state.select(Some(i));
+                    }
+                    KeyCode::Down => {
+                        let i = match self.dataset_logs_state.selected() {
+                            Some(i) => if i >= self.dataset_logs.len().saturating_sub(1) { self.dataset_logs.len().saturating_sub(1) } else { i + 1 },
+                            None => 0,
+                        };
+                        self.dataset_logs_state.select(Some(i));
+                    }
+                    KeyCode::Char('q') => {
+                        self.should_quit = true;
+                    }
+                    KeyCode::Esc => {
+                        self.current_screen = CurrentScreen::DatasetGen;
+                    }
+                    KeyCode::Char('c') if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                        self.should_quit = true;
+                    }
+                    _ => {}
+                }
+            }
             CurrentScreen::DatasetGenDone => {
                 if key_event.code == KeyCode::Enter {
                     self.current_screen = CurrentScreen::MainMenu;
                 }
             }
             CurrentScreen::DatasetGenError => {
-                if key_event.code == KeyCode::Esc || key_event.code == KeyCode::Enter {
-                    self.current_screen = CurrentScreen::DatasetGen;
+                match key_event.code {
+                    KeyCode::Enter | KeyCode::Esc => {
+                        self.current_screen = CurrentScreen::DatasetGen;
+                        self.dataset_error_scroll = 0;
+                    }
+                    KeyCode::Up => {
+                        self.dataset_error_scroll = self.dataset_error_scroll.saturating_sub(1);
+                    }
+                    KeyCode::Down => {
+                        self.dataset_error_scroll = self.dataset_error_scroll.saturating_add(1);
+                    }
+                    _ => {}
                 }
             }
             CurrentScreen::AnnasArchiveSearch => self.handle_annas_search_input(key_event),

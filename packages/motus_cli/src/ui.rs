@@ -187,14 +187,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             }
         }
         CurrentScreen::DatasetGenProcessing => {
-            let p = Paragraph::new("Processing chunks and calling Gemini API to generate synthetic conversations...\nThis can take several minutes.")
-                .block(Block::default().title("Generating Dataset").borders(Borders::ALL));
-                
             let processing_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Length(4), Constraint::Length(3), Constraint::Min(1)])
                 .split(chunks[1]);
                 
+            let p = Paragraph::new("Processing chunks and calling Gemini API to generate synthetic conversations...\nThis can take several minutes.")
+                .block(Block::default().title("Generating Dataset").borders(Borders::ALL));
             f.render_widget(p, processing_chunks[0]);
             
             let gauge = Gauge::default()
@@ -202,9 +201,21 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .gauge_style(Style::default().fg(Color::Magenta).bg(Color::Black).add_modifier(Modifier::ITALIC))
                 .ratio(app.dataset_progress.clamp(0.0, 1.0));
             f.render_widget(gauge, processing_chunks[1]);
+            
+            let width = processing_chunks[2].width.saturating_sub(2) as usize;
+            let log_items: Vec<ListItem> = app.dataset_logs.iter().map(|log| {
+                let wrapped = textwrap::wrap(log.as_str(), width);
+                let lines: Vec<Line> = wrapped.into_iter().map(|w| Line::from(w.into_owned())).collect();
+                ListItem::new(lines)
+            }).collect();
+            
+            let log_list = List::new(log_items)
+                .block(Block::default().borders(Borders::ALL).title("Logs"))
+                .highlight_style(Style::default().bg(Color::DarkGray).fg(Color::White));
+            f.render_stateful_widget(log_list, processing_chunks[2], &mut app.dataset_logs_state);
         }
         CurrentScreen::DatasetGenDone => {
-            let path = app.dataset_path_input.as_str(); // We stored output path here
+            let path = app.dataset_path_input.as_str();
             let text = format!("Dataset generated successfully!\nSaved to: {}\n\nPress Enter to return to menu", path);
             let p = Paragraph::new(text)
                 .block(Block::default().title("Success").borders(Borders::ALL))
@@ -213,9 +224,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         }
         CurrentScreen::DatasetGenError => {
             let err = app.error_message.as_ref().map(|s| s.as_str()).unwrap_or("Unknown Error");
-            let p = Paragraph::new(format!("Dataset Generation Error:\n{}\n\nPress Esc or Enter to return", err))
+            let p = Paragraph::new(format!("Dataset Generation Error:\n{}\n\nPress Esc or Enter to return (Use Up/Down to scroll)", err))
                 .block(Block::default().title("Error").borders(Borders::ALL))
-                .wrap(ratatui::widgets::Wrap { trim: true });
+                .wrap(ratatui::widgets::Wrap { trim: true })
+                .scroll((app.dataset_error_scroll, 0));
             f.render_widget(p, chunks[1]);
         }
         CurrentScreen::LoraTrain => {
