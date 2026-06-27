@@ -56,10 +56,11 @@ pub async fn run_lora_training(
         return Err("Modal training process failed".into());
     }
 
-    let output_gguf = format!("{}_lora-unsloth.Q4_K_M.gguf", lora_name);
+    let remote_gguf = format!("{}_lora_gguf/llama-3.2-1b-instruct.Q4_K_M.gguf", lora_name);
+    let local_gguf = format!("./data/models/{}_lora-unsloth.Q4_K_M.gguf", lora_name);
 
     if let Some(ref tx) = progress_tx {
-        let _ = tx.send(LoraTrainMessage::Log(format!("Training successful! Downloading {} from Modal...", output_gguf))).await;
+        let _ = tx.send(LoraTrainMessage::Log(format!("Training successful! Downloading {} from Modal...", remote_gguf))).await;
     }
 
     std::fs::create_dir_all("data/models")?;
@@ -70,8 +71,8 @@ pub async fn run_lora_training(
         .arg("volume")
         .arg("get")
         .arg("motus-models")
-        .arg(&output_gguf)
-        .arg("./data/models/")
+        .arg(&remote_gguf)
+        .arg(&local_gguf)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
@@ -104,6 +105,5 @@ pub async fn run_lora_training(
         return Err("Failed to download model from Modal volume".into());
     }
 
-    let final_path = format!("data/models/{}", output_gguf);
-    Ok(final_path)
+    Ok(local_gguf)
 }
