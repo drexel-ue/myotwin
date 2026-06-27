@@ -38,9 +38,22 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             
             f.render_stateful_widget(list, chunks[1], &mut app.main_menu_state);
         }
-        CurrentScreen::AnnasArchiveKey => {
-            let text = format!("Anna's Archive API Key required.\nEnter Key: {}\n\n(Press Enter to save)", app.api_key_input);
-            let p = Paragraph::new(text).block(Block::default().title("API Key").borders(Borders::ALL));
+        CurrentScreen::ApiKeysList => {
+            let items: Vec<ListItem> = app.api_keys.iter().map(|(_, name, val)| {
+                let status = if val.is_empty() { "[ ]" } else { "[✓]" };
+                ListItem::new(format!("{} {}", status, name))
+            }).collect();
+            
+            let list = List::new(items)
+                .block(Block::default().title("API Keys (Enter to edit, Esc to return)").borders(Borders::ALL))
+                .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                .highlight_symbol(">> ");
+            
+            f.render_stateful_widget(list, chunks[1], &mut app.api_keys_state);
+        }
+        CurrentScreen::ApiKeyEdit(field) => {
+            let text = format!("Edit {}\nEnter Key: {}\n\n(Press Enter to save, Esc to cancel)", field.name(), app.api_key_input);
+            let p = Paragraph::new(text).block(Block::default().title("Edit API Key").borders(Borders::ALL));
             f.render_widget(p, chunks[1]);
             
             #[allow(deprecated)]

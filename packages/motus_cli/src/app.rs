@@ -37,9 +37,29 @@ impl SortMode {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ApiKeyField {
+    AnnasArchive,
+    Gemini,
+    ModalTokenId,
+    ModalTokenSecret,
+}
+
+impl ApiKeyField {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ApiKeyField::AnnasArchive => "ANNAS_ARCHIVE_KEY",
+            ApiKeyField::Gemini => "GEMINI_API_KEY",
+            ApiKeyField::ModalTokenId => "MODAL_TOKEN_ID",
+            ApiKeyField::ModalTokenSecret => "MODAL_TOKEN_SECRET",
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CurrentScreen {
     MainMenu,
-    AnnasArchiveKey,
+    ApiKeysList,
+    ApiKeyEdit(ApiKeyField),
     AnnasArchiveSearch,
     AnnasArchiveSearching,
     AnnasArchiveResults,
@@ -99,8 +119,12 @@ pub struct App {
     pub main_menu_state: ListState,
     pub main_menu_items: Vec<&'static str>,
 
-    // Anna's Archive
+    // API Keys
+    pub api_keys_state: ListState,
+    pub api_keys: Vec<(ApiKeyField, String, String)>,
     pub api_key_input: String,
+
+    // Anna's Archive
     pub search_input: String,
     pub search_results: Vec<Book>,
     pub search_results_state: ListState,
@@ -173,6 +197,8 @@ impl App {
                 "Exit",
             ],
 
+            api_keys_state: ListState::default(),
+            api_keys: Vec::new(),
             api_key_input: String::new(),
             search_input: String::new(),
             search_results: Vec::new(),
@@ -225,7 +251,9 @@ impl App {
     pub fn handle_key_event(&mut self, key_event: KeyEvent) {
         match self.current_screen {
             CurrentScreen::MainMenu => self.handle_main_menu_key(key_event),
-            CurrentScreen::AnnasArchiveKey => self.handle_annas_key_input(key_event),
+            CurrentScreen::ApiKeysList => self.handle_api_keys_list_input(key_event),
+            CurrentScreen::ApiKeyEdit(field) => self.handle_api_key_edit_input(key_event, field),
+            CurrentScreen::AnnasArchiveSearch => self.handle_annas_search_input(key_event),
             CurrentScreen::DatasetGen => {
                 self.handle_dataset_gen_key(key_event);
             }
@@ -309,7 +337,7 @@ impl App {
                     _ => {}
                 }
             }
-            CurrentScreen::AnnasArchiveSearch => self.handle_annas_search_input(key_event),
+            // CurrentScreen::AnnasArchiveSearch => self.handle_annas_search_input(key_event),
             CurrentScreen::AnnasArchiveResults => self.handle_annas_results_key(key_event),
             CurrentScreen::AnnasArchiveSearching | CurrentScreen::AnnasArchiveDownloading => {
                 // Downloading blocks until done for now, or we can just let UI poll
@@ -439,9 +467,8 @@ impl App {
                         3 => self.current_screen = CurrentScreen::ModalAuth,
                         4 => {
                             // Update API Keys
-                            dotenv().ok();
-                            self.api_key_input = env::var("ANNAS_ARCHIVE_KEY").unwrap_or_default();
-                            self.current_screen = CurrentScreen::AnnasArchiveKey;
+                            self.load_api_keys();
+                            self.current_screen = CurrentScreen::ApiKeysList;
                         }
                         5 => self.quit(),
                         _ => {}
@@ -461,28 +488,75 @@ impl App {
                 return;
             }
         }
-        self.current_screen = CurrentScreen::AnnasArchiveKey;
+        self.current_screen = CurrentScreen::ApiKeyEdit(ApiKeyField::AnnasArchive);
     }
 
-    fn handle_annas_key_input(&mut self, key_event: KeyEvent) {
+    pub fn load_api_keys(&mut self) {
+        dotenv().ok();
+        let fields = vec![
+            ApiKeyField::AnnasArchive,
+            ApiKeyField::Gemini,
+            ApiKeyField::ModalTokenId,
+            ApiKeyField::ModalTokenSecret,
+        ];
+        self.api_keys = fields
+            .into_iter()
+            .map(|f| (f, f.name().to_string(), env::var(f.name()).unwrap_or_default()))
+            .collect();
+        if self.api_keys_state.selected().is_none() {
+            self.api_keys_state.select(Some(0));
+        }
+    }
+
+    fn handle_api_keys_list_input(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => self.current_screen = CurrentScreen::MainMenu,
+            KeyCode::Up => {
+                let i = match self.api_keys_state.selected() {
+                    Some(i) => if i == 0 { self.api_keys.len() - 1 } else { i - 1 },
+                    None => 0,
+                };
+                self.api_keys_state.select(Some(i));
+            }
+            KeyCode::Down => {
+                let i = match self.api_keys_state.selected() {
+                    Some(i) => if i >= self.api_keys.len() - 1 { 0 } else { i + 1 },
+                    None => 0,
+                };
+                self.api_keys_state.select(Some(i));
+            }
             KeyCode::Enter => {
-                if !self.api_key_input.is_empty() {
-                    // Save this to .env
-                    let env_path = std::path::Path::new(".env");
-                    let mut contents = std::fs::read_to_string(env_path).unwrap_or_default();
-                    
-                    if contents.contains("ANNAS_ARCHIVE_KEY=") {
-                        let re = regex::Regex::new(r"(?m)^ANNAS_ARCHIVE_KEY=.*$").unwrap();
-                        contents = re.replace(&contents, format!("ANNAS_ARCHIVE_KEY=\"{}\"", self.api_key_input)).to_string();
-                    } else {
-                        contents.push_str(&format!("\nANNAS_ARCHIVE_KEY=\"{}\"\n", self.api_key_input));
-                    }
-                    let _ = std::fs::write(env_path, contents);
-                    
-                    self.current_screen = CurrentScreen::AnnasArchiveSearch;
+                if let Some(i) = self.api_keys_state.selected() {
+                    let field = self.api_keys[i].0;
+                    self.api_key_input = self.api_keys[i].2.clone();
+                    self.current_screen = CurrentScreen::ApiKeyEdit(field);
                 }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_api_key_edit_input(&mut self, key_event: KeyEvent, field: ApiKeyField) {
+        match key_event.code {
+            KeyCode::Esc => self.current_screen = CurrentScreen::ApiKeysList,
+            KeyCode::Enter => {
+                let env_path = std::path::Path::new(".env");
+                let mut contents = std::fs::read_to_string(env_path).unwrap_or_default();
+                let key_name = field.name();
+                let new_value = &self.api_key_input;
+                
+                let re_pattern = format!(r"(?m)^{}=.*$", key_name);
+                let re = regex::Regex::new(&re_pattern).unwrap();
+                
+                if contents.contains(&format!("{}=", key_name)) {
+                    contents = re.replace(&contents, format!("{}=\"{}\"", key_name, new_value)).to_string();
+                } else {
+                    contents.push_str(&format!("\n{}=\"{}\"\n", key_name, new_value));
+                }
+                let _ = std::fs::write(env_path, contents);
+                
+                self.load_api_keys();
+                self.current_screen = CurrentScreen::ApiKeysList;
             }
             KeyCode::Char(c) => self.api_key_input.push(c),
             KeyCode::Backspace => { self.api_key_input.pop(); }
