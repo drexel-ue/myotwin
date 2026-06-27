@@ -389,13 +389,18 @@ impl App {
                             all_logs.push_str(&format!("Training Error: {}\n\n", err));
                         }
                         all_logs.push_str(&self.lora_logs.join("\n"));
+                        
+                        // Strip ANSI escape codes so copied text is clean
+                        let re = regex::Regex::new(r"\x1b\[[0-9;?]*[a-zA-Z]").unwrap();
+                        let clean_logs = re.replace_all(&all_logs, "").into_owned();
+                        
                         let _ = std::process::Command::new("pbcopy")
                             .stdin(std::process::Stdio::piped())
                             .spawn()
                             .and_then(|mut child| {
                                 use std::io::Write;
                                 if let Some(mut stdin) = child.stdin.take() {
-                                    let _ = stdin.write_all(all_logs.as_bytes());
+                                    let _ = stdin.write_all(clean_logs.as_bytes());
                                 }
                                 child.wait()
                             });
