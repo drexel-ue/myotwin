@@ -393,10 +393,23 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         }
         CurrentScreen::LoraTrainError => {
             let err = app.error_message.as_ref().map(|s| s.as_str()).unwrap_or("Unknown Error");
-            let p = Paragraph::new(format!("Training Error:\n{}\n\nPress Esc or Enter to return", err))
-                .block(Block::default().title("Error").borders(Borders::ALL))
-                .wrap(ratatui::widgets::Wrap { trim: true });
-            f.render_widget(p, chunks[1]);
+            let title = format!("Training Failed (Press Esc or Enter to return): {}", err);
+            
+            let mut log_items: Vec<ListItem> = app.lora_logs.iter().map(|log| {
+                let width = chunks[1].width.saturating_sub(2) as usize;
+                let wrapped = textwrap::wrap(log.as_str(), width);
+                let lines: Vec<Line> = wrapped.into_iter().map(|w| Line::from(w.into_owned())).collect();
+                ListItem::new(lines)
+            }).collect();
+            
+            if log_items.is_empty() {
+                log_items.push(ListItem::new("No logs captured before error occurred."));
+            }
+            
+            let log_list = List::new(log_items)
+                .block(Block::default().borders(Borders::ALL).title(title).border_style(Style::default().fg(Color::Red)))
+                .highlight_style(Style::default().bg(Color::Red).fg(Color::White));
+            f.render_stateful_widget(log_list, chunks[1], &mut app.lora_logs_state);
         }
         CurrentScreen::ModalAuth => {
             let p = Paragraph::new("Modal Auth flow coming soon...\nPress Enter to return")

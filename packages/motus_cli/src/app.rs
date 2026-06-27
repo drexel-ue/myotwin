@@ -359,8 +359,31 @@ impl App {
                 }
             }
             CurrentScreen::LoraTrainError => {
-                if key_event.code == KeyCode::Enter || key_event.code == KeyCode::Esc {
-                    self.current_screen = CurrentScreen::LoraTrainSelect;
+                match key_event.code {
+                    KeyCode::Enter | KeyCode::Esc => {
+                        self.current_screen = CurrentScreen::LoraTrainSelect;
+                    }
+                    KeyCode::Up => {
+                        self.lora_auto_scroll = false;
+                        let i = match self.lora_logs_state.selected() {
+                            Some(i) => if i == 0 { 0 } else { i - 1 },
+                            None => 0,
+                        };
+                        self.lora_logs_state.select(Some(i));
+                    }
+                    KeyCode::Down => {
+                        self.lora_auto_scroll = false;
+                        let i = match self.lora_logs_state.selected() {
+                            Some(i) => if i >= self.lora_logs.len().saturating_sub(1) {
+                                self.lora_logs.len().saturating_sub(1)
+                            } else {
+                                i + 1
+                            },
+                            None => 0,
+                        };
+                        self.lora_logs_state.select(Some(i));
+                    }
+                    _ => {}
                 }
             }
         }
