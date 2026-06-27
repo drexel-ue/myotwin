@@ -173,8 +173,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 f.render_widget(p, chunks_ds[0]);
                 
                 let width = chunks_ds[1].width.saturating_sub(4) as usize;
-                let items: Vec<ListItem> = app.dataset_files.iter().map(|f| {
-                    let wrapped = textwrap::wrap(f.as_str(), width);
+                let items: Vec<ListItem> = app.dataset_files.iter().map(|item| {
+                    let text = match item.dataset_status {
+                        crate::app::DatasetStatus::Complete => format!("[✓] {}", item.name),
+                        crate::app::DatasetStatus::Partial => format!("[-] {}", item.name),
+                        crate::app::DatasetStatus::None => format!("[ ] {}", item.name),
+                    };
+                    let wrapped = textwrap::wrap(&text, width);
                     let lines: Vec<Line> = wrapped.into_iter().map(|w| Line::from(w.into_owned())).collect();
                     ListItem::new(lines)
                 }).collect();
@@ -185,6 +190,17 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     .highlight_symbol(">> ");
                 f.render_stateful_widget(list, chunks_ds[1], &mut app.dataset_list_state);
             }
+        }
+        CurrentScreen::DatasetGenTagInput => {
+            let text = if app.is_fetching_tags {
+                format!("Enter comma-separated tags for this dataset (e.g. anatomy, clinical, basics):\nLeave empty for no tags.\n\n> {}\n\n[Gemini is analyzing title...]", app.dataset_tags_input)
+            } else {
+                format!("Enter comma-separated tags for this dataset (e.g. anatomy, clinical, basics):\nLeave empty for no tags.\n\n> {}\n\n(Press Enter to start generation, Esc to back out, Ctrl+G to auto-generate tags)", app.dataset_tags_input)
+            };
+            let p = Paragraph::new(text)
+                .block(Block::default().title("Dataset Tags").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            f.render_widget(p, chunks[1]);
         }
         CurrentScreen::DatasetGenProcessing => {
             let processing_chunks = Layout::default()
@@ -230,9 +246,106 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .scroll((app.dataset_error_scroll, 0));
             f.render_widget(p, chunks[1]);
         }
-        CurrentScreen::LoraTrain => {
-            let p = Paragraph::new("LoRA Training flow coming soon...\nPress Enter to return")
-                .block(Block::default().title("LoRA Training").borders(Borders::ALL));
+        CurrentScreen::LoraTrainSelect => {
+            let lora_chunks = ratatui::layout::Layout::default()
+                .direction(ratatui::layout::Direction::Vertical)
+                .constraints([
+                    ratatui::layout::Constraint::Length(3),
+                    ratatui::layout::Constraint::Min(1),
+                ].as_ref())
+                .split(chunks[1]);
+
+            let list_chunks = ratatui::layout::Layout::default()
+                .direction(ratatui::layout::Direction::Horizontal)
+                .constraints([
+                    ratatui::layout::Constraint::Percentage(50),
+                    ratatui::layout::Constraint::Percentage(50),
+                ].as_ref())
+                .split(lora_chunks[1]);
+
+            let search_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::Search {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+            
+            let search_text = format!("> {}", app.lora_search_input);
+            let search_p = Paragraph::new(search_text)
+                .block(Block::default().borders(Borders::ALL).title("Fuzzy Search").border_style(search_border_style));
+            f.render_widget(search_p, lora_chunks[0]);
+
+            let left_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::AvailableList {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+
+            let avail_items: Vec<ListItem> = app.filtered_available_datasets.iter().map(|item| {
+                let text = if item.tags.is_empty() {
+                    item.name.clone()
+                } else {
+                    format!("{} [{}]", item.name, item.tags.join(", "))
+                };
+                ListItem::new(text)
+            }).collect();
+            let avail_list = List::new(avail_items)
+                .block(Block::default().borders(Borders::ALL).title("Available Datasets (Press Enter to Add)").border_style(left_border_style))
+                .highlight_style(Style::default().bg(Color::DarkGray).fg(Color::White))
+                .highlight_symbol(">> ");
+            f.render_stateful_widget(avail_list, list_chunks[0], &mut app.available_datasets_state);
+
+            let right_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::SelectedList {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+
+            let sel_items: Vec<ListItem> = app.selected_datasets.iter().map(|item| {
+                let text = if item.tags.is_empty() {
+                    item.name.clone()
+                } else {
+                    format!("{} [{}]", item.name, item.tags.join(", "))
+                };
+                ListItem::new(text)
+            }).collect();
+            let sel_list = List::new(sel_items)
+                .block(Block::default().borders(Borders::ALL).title("Selected Datasets (Press Ctrl+S to Train)").border_style(right_border_style))
+                .highlight_style(Style::default().bg(Color::DarkGray).fg(Color::White))
+                .highlight_symbol(">> ");
+            f.render_stateful_widget(sel_list, list_chunks[1], &mut app.selected_datasets_state);
+        }
+        CurrentScreen::LoraTrainNameInput => {
+            let text = format!("Enter a name for your LoRA Adapter (e.g. anatomy_expert):\n\n> {}\n\n(Press Enter to start training, Esc to back out)", app.lora_name_input);
+            let p = Paragraph::new(text)
+                .block(Block::default().title("Name LoRA Adapter").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            f.render_widget(p, chunks[1]);
+        }
+        CurrentScreen::LoraTrainProcessing => {
+            let log_items: Vec<ListItem> = app.lora_logs.iter().map(|log| {
+                let width = chunks[1].width.saturating_sub(2) as usize;
+                let wrapped = textwrap::wrap(log.as_str(), width);
+                let lines: Vec<Line> = wrapped.into_iter().map(|w| Line::from(w.into_owned())).collect();
+                ListItem::new(lines)
+            }).collect();
+            
+            let log_list = List::new(log_items)
+                .block(Block::default().borders(Borders::ALL).title(format!("Training LoRA: {} (via Modal)", app.lora_name_input)))
+                .highlight_style(Style::default().bg(Color::DarkGray).fg(Color::White));
+            f.render_stateful_widget(log_list, chunks[1], &mut app.lora_logs_state);
+        }
+        CurrentScreen::LoraTrainDone => {
+            let text = format!("Training Complete!\n\nYour GGUF has been successfully trained and downloaded to:\n{}\n\nPress Enter to return", app.lora_output_gguf);
+            let p = Paragraph::new(text)
+                .block(Block::default().title("Success").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            f.render_widget(p, chunks[1]);
+        }
+        CurrentScreen::LoraTrainError => {
+            let err = app.error_message.as_ref().map(|s| s.as_str()).unwrap_or("Unknown Error");
+            let p = Paragraph::new(format!("Training Error:\n{}\n\nPress Esc or Enter to return", err))
+                .block(Block::default().title("Error").borders(Borders::ALL))
+                .wrap(ratatui::widgets::Wrap { trim: true });
             f.render_widget(p, chunks[1]);
         }
         CurrentScreen::ModalAuth => {

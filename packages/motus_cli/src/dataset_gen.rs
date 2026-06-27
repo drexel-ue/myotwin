@@ -14,11 +14,20 @@ pub enum DatasetGenMessage {
     Log(String),
 }
 
-pub async fn generate_dataset(
+pub async fn run_dataset_generation(
     file_path: &str,
     api_key: &str,
+    tags_input: &str,
     progress_tx: Option<mpsc::Sender<DatasetGenMessage>>
 ) -> Result<String, Box<dyn Error>> {
+    
+    // Parse tags early
+    let tags: Vec<String> = if !tags_input.trim().is_empty() {
+        tags_input.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
+    } else {
+        Vec::new()
+    };
+
     // 1. If path is not inside data/books/, copy it.
     let mut target_path = file_path.to_string();
     if !file_path.starts_with("data/books/") {
@@ -79,14 +88,25 @@ pub async fn generate_dataset(
         .unwrap_or_default()
         .to_string_lossy();
     let output_file_path = format!("data/datasets/{}_dataset.jsonl", base_name);
+    let progress_file_path = format!("data/datasets/{}_dataset.progress.json", base_name);
+
+    let mut completed_indices: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    if let Ok(content) = std::fs::read_to_string(&progress_file_path) {
+        if let Ok(indices) = serde_json::from_str::<Vec<usize>>(&content) {
+            completed_indices = indices.into_iter().collect();
+        }
+    }
+    let is_resuming = !completed_indices.is_empty();
     
     let file = OpenOptions::new()
         .create(true)
         .write(true)
-        .truncate(true)
+        .append(is_resuming)
+        .truncate(!is_resuming)
         .open(&output_file_path)?;
 
     let safe_file = Arc::new(Mutex::new(file));
+    let safe_progress = Arc::new(tokio::sync::Mutex::new(completed_indices.clone()));
     let client = reqwest::Client::new();
     let gemini_url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}", api_key);
     
@@ -140,13 +160,15 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
     let semaphore = Arc::new(Semaphore::new(concurrency_limit));
     let chunk_texts: Vec<String> = chunks.iter().map(|c| c.as_str().unwrap_or("").to_string()).collect();
 
-    let processed_count = Arc::new(tokio::sync::Mutex::new(0_usize));
+    let processed_count = Arc::new(tokio::sync::Mutex::new(completed_indices.len()));
     
-    let futures = chunk_texts.into_iter().enumerate().filter(|(_, text)| !text.trim().is_empty()).map(|(i, chunk_text)| {
+    let futures = chunk_texts.into_iter().enumerate().filter(|(i, text)| !text.trim().is_empty() && !completed_indices.contains(i)).map(|(i, chunk_text)| {
         let sem = semaphore.clone();
         let client = client.clone();
         let gemini_url = gemini_url.clone();
         let safe_file = safe_file.clone();
+        let safe_progress = safe_progress.clone();
+        let progress_path = progress_file_path.clone();
         let progress_tx = progress_tx.clone();
         let sys_instr = system_instruction.to_string();
         let sys_prompt = standard_system_prompt.to_string();
@@ -260,6 +282,13 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
             }
 
             // Update progress
+            {
+                let mut p = safe_progress.lock().await;
+                p.insert(i);
+                let indices: Vec<usize> = p.iter().cloned().collect();
+                let _ = std::fs::write(&progress_path, serde_json::to_string(&indices).unwrap());
+            }
+
             let mut pc = processed_count.lock().await;
             *pc += 1;
             let current_pc = *pc;
@@ -275,5 +304,53 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
 
     futures::stream::iter(futures).buffer_unordered(concurrency_limit).collect::<Vec<()>>().await;
 
+    // Write sidecar metadata file
+    let meta_path = format!("{}.meta", output_file_path);
+    let metadata = crate::app::DatasetMetadata { tags };
+    if let Ok(meta_json) = serde_json::to_string_pretty(&metadata) {
+        let _ = std::fs::write(&meta_path, meta_json);
+    }
+
     Ok(output_file_path)
+}
+
+pub async fn recommend_tags(filename: &str, api_key: &str) -> Result<String, Box<dyn Error>> {
+    let gemini_url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}", api_key);
+    let prompt = format!("Given the following medical book filename, output 3 to 5 lowercase, comma-separated tags describing its domain (e.g. anatomy, clinical, rehab, physiology). Do not output anything else. Filename: {}", filename);
+    let req_body = json!({
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "temperature": 0.2
+        }
+    });
+    
+    let client = reqwest::Client::new();
+    let mut retries = 3;
+    
+    while retries > 0 {
+        let res = client.post(&gemini_url).json(&req_body).send().await?;
+        
+        if res.status().is_success() {
+            let res_json: serde_json::Value = res.json().await?;
+            let text = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            return Ok(text);
+        } else if res.status().as_u16() == 503 {
+            retries -= 1;
+            if retries > 0 {
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                continue;
+            }
+            return Err("Gemini API is currently overloaded (503). Please type tags manually.".into());
+        } else {
+            return Err("Failed to fetch tags from Gemini. Please type manually.".into());
+        }
+    }
+    
+    Err("Gemini API is currently overloaded. Please type tags manually.".into())
 }

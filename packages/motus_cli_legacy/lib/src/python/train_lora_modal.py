@@ -113,6 +113,16 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2
 
     # 4. Train
     print("🔥 Starting Training...")
+    
+    import os
+    checkpoint_dir = f"/models/{lora_name}_checkpoints"
+    resume = False
+    if os.path.exists(checkpoint_dir):
+        # Check if it contains checkpoint folders (starts with "checkpoint-")
+        checkpoints = [d for d in os.listdir(checkpoint_dir) if d.startswith("checkpoint-")]
+        if len(checkpoints) > 0:
+            resume = True
+            print(f"🔄 Found existing checkpoints in {checkpoint_dir}. Resuming training...")
     trainer = SFTTrainer(
         model = model,
         tokenizer = tokenizer,
@@ -134,12 +144,13 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2
             weight_decay = 0.01,
             lr_scheduler_type = "linear",
             seed = 3407,
-            output_dir = "outputs",
-            save_strategy = "no",
+            output_dir = checkpoint_dir,
+            save_strategy = "steps",
+            save_steps = 10,
         ),
     )
     
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume)
     print("✅ Training Complete!")
 
     # 5. Export to GGUF
@@ -160,18 +171,26 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2
     return f"{lora_name}_lora-unsloth.Q4_K_M.gguf"
 
 @app.local_entrypoint()
-def main(dataset_path: str, lora_name: str):
+def main(dataset_paths: str, lora_name: str):
     """
-    Local entrypoint called by the Dart CLI.
-    Example: modal run extract_pdf.py --dataset-path data.jsonl --lora-name anatomy
+    Local entrypoint called by the Dart CLI or Rust CLI.
+    Example: modal run train_lora_modal.py --dataset-paths data1.jsonl,data2.jsonl --lora-name anatomy
     """
-    print(f"Reading dataset from {dataset_path}...")
-    with open(dataset_path, "r") as f:
-        content = f.read()
-        
-    print(f"Uploading dataset to Modal and triggering training for {lora_name}...")
+    print(f"Reading datasets from {dataset_paths}...")
+    paths = dataset_paths.split(',')
+    
+    combined_content = ""
+    for path in paths:
+        path = path.strip()
+        if not path:
+            continue
+        print(f"  - Loading {path}")
+        with open(path, "r") as f:
+            combined_content += f.read() + "\n"
+            
+    print(f"Uploading merged dataset to Modal and triggering training for {lora_name}...")
     # Call the cloud function synchronously
-    train_lora_on_gpu.remote(content, model_name="unsloth/Llama-3.2-1B-Instruct", lora_name=lora_name)
+    train_lora_on_gpu.remote(combined_content, model_name="unsloth/Llama-3.2-1B-Instruct", lora_name=lora_name)
     
     print("=========================================")
     print("✅ Remote Training Complete!")

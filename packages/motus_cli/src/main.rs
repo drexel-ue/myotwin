@@ -13,8 +13,12 @@ mod app;
 mod ui;
 mod dataset_gen;
 mod annas_archive;
+mod lora_train;
 
 use app::App;
+use crossterm::event::{EventStream, KeyCode, KeyModifiers};
+use tokio_stream::StreamExt;
+use tokio::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -46,10 +50,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-use crossterm::event::{EventStream, KeyCode, KeyModifiers};
-use tokio_stream::StreamExt;
-use tokio::sync::mpsc;
-
 enum AppAction {
     SearchProgress(f64),
     SearchDone(Result<Vec<crate::annas_archive::Book>, String>),
@@ -57,6 +57,17 @@ enum AppAction {
     DownloadDone(Result<String, String>),
     DatasetMessage(crate::dataset_gen::DatasetGenMessage),
     DatasetDone(Result<String, String>),
+    TagRecommendation(Result<String, String>),
+    LoraMessage(crate::lora_train::LoraTrainMessage),
+    LoraDone(Result<String, String>),
+}
+
+fn notify(title: &str, message: &str) {
+    let script = format!("display notification \"{}\" with title \"{}\" sound name \"Glass\"", message, title);
+    let _ = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .spawn();
 }
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
@@ -104,11 +115,29 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                 let _ = tx.send(AppAction::DownloadDone(res.map_err(|e| e.to_string()))).await;
             });
         }
+        
+        if app.pending_tag_recommendation {
+            app.pending_tag_recommendation = false;
+            let tx = tx.clone();
+            // Just use the filename part of the path
+            let filename = std::path::Path::new(&app.dataset_path_input)
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
+            
+            tokio::spawn(async move {
+                let res = crate::dataset_gen::recommend_tags(&filename, &api_key).await;
+                let _ = tx.send(AppAction::TagRecommendation(res.map_err(|e| e.to_string()))).await;
+            });
+        }
 
         if app.pending_dataset_gen {
             app.pending_dataset_gen = false;
             let tx = tx.clone();
             let file_path = app.dataset_path_input.clone();
+            let tags_input = app.dataset_tags_input.clone();
             // Read GEMINI_API_KEY from environment
             let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
             
@@ -121,8 +150,32 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             });
 
             tokio::spawn(async move {
-                let res = crate::dataset_gen::generate_dataset(&file_path, &api_key, Some(prog_tx)).await;
+                let res = crate::dataset_gen::run_dataset_generation(&file_path, &api_key, &tags_input, Some(prog_tx)).await;
                 let _ = tx.send(AppAction::DatasetDone(res.map_err(|e| e.to_string()))).await;
+            });
+        }
+        
+        if app.pending_lora_train {
+            app.pending_lora_train = false;
+            let tx = tx.clone();
+            
+            // Get selected datasets
+            let dataset_paths: Vec<String> = app.selected_datasets.iter().map(|info| {
+                format!("data/datasets/{}", info.name)
+            }).collect();
+            let lora_name = app.lora_name_input.clone();
+            
+            let (prog_tx, mut prog_rx) = tokio::sync::mpsc::channel(32);
+            let tx2 = tx.clone();
+            tokio::spawn(async move {
+                while let Some(msg) = prog_rx.recv().await {
+                    let _ = tx2.send(AppAction::LoraMessage(msg)).await;
+                }
+            });
+
+            tokio::spawn(async move {
+                let res = crate::lora_train::run_lora_training(dataset_paths, &lora_name, Some(prog_tx)).await;
+                let _ = tx.send(AppAction::LoraDone(res.map_err(|e| e.to_string()))).await;
             });
         }
 
@@ -169,6 +222,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                     AppAction::DownloadDone(Ok(path)) => {
                         app.download_path = Some(path);
                         app.current_screen = crate::app::CurrentScreen::AnnasArchiveDone;
+                        notify("Motus CLI", "Book downloaded successfully!");
                     }
                     AppAction::DownloadDone(Err(e)) => {
                         app.error_message = Some(e);
@@ -176,25 +230,50 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
                     }
                     AppAction::DatasetMessage(msg) => {
                         match msg {
-                            crate::dataset_gen::DatasetGenMessage::Progress(progress) => {
-                                app.dataset_progress = progress;
-                            }
-                            crate::dataset_gen::DatasetGenMessage::Log(log_msg) => {
-                                app.dataset_logs.push(log_msg);
-                                let len = app.dataset_logs.len();
-                                if len > 0 {
-                                    app.dataset_logs_state.select(Some(len - 1));
+                            crate::dataset_gen::DatasetGenMessage::Progress(p) => app.dataset_progress = p,
+                            crate::dataset_gen::DatasetGenMessage::Log(log) => {
+                                app.dataset_logs.push(log);
+                                if app.dataset_auto_scroll {
+                                    app.dataset_logs_state.select(Some(app.dataset_logs.len().saturating_sub(1)));
                                 }
                             }
+                        }
+                    }
+                    AppAction::TagRecommendation(res) => {
+                        app.is_fetching_tags = false;
+                        match res {
+                            Ok(tags) => app.dataset_tags_input = tags,
+                            Err(err) => app.dataset_tags_input = format!("Error: {}", err),
                         }
                     }
                     AppAction::DatasetDone(Ok(path)) => {
                         app.dataset_path_input = path; // Reuse this field to store output path for success screen
                         app.current_screen = crate::app::CurrentScreen::DatasetGenDone;
+                        notify("Motus CLI", "Dataset generation complete!");
                     }
                     AppAction::DatasetDone(Err(e)) => {
                         app.error_message = Some(e);
                         app.current_screen = crate::app::CurrentScreen::DatasetGenError;
+                    }
+                    AppAction::LoraMessage(msg) => {
+                        match msg {
+                            crate::lora_train::LoraTrainMessage::Log(log_msg) => {
+                                app.lora_logs.push(log_msg);
+                                let len = app.lora_logs.len();
+                                if len > 0 && app.lora_auto_scroll {
+                                    app.lora_logs_state.select(Some(len - 1));
+                                }
+                            }
+                        }
+                    }
+                    AppAction::LoraDone(Ok(path)) => {
+                        app.lora_output_gguf = path;
+                        app.current_screen = crate::app::CurrentScreen::LoraTrainDone;
+                        notify("Motus CLI", "LoRA Adapter training complete!");
+                    }
+                    AppAction::LoraDone(Err(e)) => {
+                        app.error_message = Some(e);
+                        app.current_screen = crate::app::CurrentScreen::LoraTrainError;
                     }
                 }
             }

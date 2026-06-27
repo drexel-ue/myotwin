@@ -149,19 +149,11 @@ pub async fn download_book(book: &Book, api_key: &str, progress_tx: Option<tokio
         .download_url
         .ok_or("No download URL returned from API")?;
 
-    let mut response = client.get(&download_url).send().await?;
-    if !response.status().is_success() {
-        return Err(format!("Download failed with status: {}", response.status()).into());
-    }
-
-    let total_size = response.content_length().unwrap_or(0);
-    let mut downloaded: u64 = 0;
-    
     let ext = if book.format.is_empty() || book.format == "unknown" { "pdf" } else { &book.format };
     
     // Make sure directory exists
     std::fs::create_dir_all("data/books")?;
-    
+
     let year_str = if let Some(y) = &book.publish_year { format!(" {}", y) } else { "".to_string() };
     let filename_base = format!("{} by {}{}", book.title, book.author, year_str);
     
@@ -174,8 +166,38 @@ pub async fn download_book(book: &Book, api_key: &str, progress_tx: Option<tokio
         
     let path = format!("data/books/{}.{}", safe_filename, ext);
     
+    // Resumability check
+    let part_path = format!("{}.part", path);
+    let mut start_bytes = 0;
+    if let Ok(metadata) = std::fs::metadata(&part_path) {
+        start_bytes = metadata.len();
+    }
+
+    let mut req = client.get(&download_url);
+    if start_bytes > 0 {
+        req = req.header(reqwest::header::RANGE, format!("bytes={}-", start_bytes));
+    }
+    
+    let mut response = req.send().await?;
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()).into());
+    }
+
+    let is_resuming = response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
+    if !is_resuming {
+        start_bytes = 0;
+    }
+    
+    let total_size = start_bytes + response.content_length().unwrap_or(0);
+    let mut downloaded = start_bytes;
+
     use std::io::Write;
-    let mut file = std::fs::File::create(&path)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(is_resuming)
+        .truncate(!is_resuming)
+        .open(&part_path)?;
 
     while let Some(chunk) = response.chunk().await? {
         file.write_all(&chunk)?;
@@ -190,6 +212,8 @@ pub async fn download_book(book: &Book, api_key: &str, progress_tx: Option<tokio
             let _ = tx.send(progress).await;
         }
     }
+    
+    std::fs::rename(&part_path, &path)?;
 
     Ok(path)
 }

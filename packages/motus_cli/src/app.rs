@@ -47,11 +47,47 @@ pub enum CurrentScreen {
     AnnasArchiveDone,
     AnnasArchiveError,
     DatasetGen,
+    DatasetGenTagInput,
     DatasetGenProcessing,
     DatasetGenDone,
     DatasetGenError,
-    LoraTrain,
+    LoraTrainSelect,
+    LoraTrainNameInput,
+    LoraTrainProcessing,
+    LoraTrainDone,
+    LoraTrainError,
     ModalAuth,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Default, Clone)]
+pub struct DatasetMetadata {
+    pub tags: Vec<String>,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct DatasetInfo {
+    pub name: String,
+    pub tags: Vec<String>,
+}
+
+#[derive(Clone, PartialEq)]
+pub enum DatasetStatus {
+    None,
+    Partial,
+    Complete,
+}
+
+#[derive(Clone, PartialEq)]
+pub struct BookFileInfo {
+    pub name: String,
+    pub dataset_status: DatasetStatus,
+}
+
+#[derive(PartialEq)]
+pub enum LoraSelectFocus {
+    Search,
+    AvailableList,
+    SelectedList,
 }
 
 pub struct App {
@@ -78,15 +114,34 @@ pub struct App {
     pub download_progress: f64,
 
     // Dataset Gen
-    pub dataset_files: Vec<String>,
+    pub dataset_files: Vec<BookFileInfo>,
     pub dataset_list_state: ListState,
     pub dataset_path_input: String,
     pub is_inputting_path: bool,
+    pub dataset_tags_input: String,
+    pub is_fetching_tags: bool,
+    pub pending_tag_recommendation: bool,
     pub pending_dataset_gen: bool,
     pub dataset_progress: f64,
     pub dataset_logs: Vec<String>,
     pub dataset_logs_state: ListState,
+    pub dataset_auto_scroll: bool,
     pub dataset_error_scroll: u16,
+    
+    // LoRA Training
+    pub available_datasets: Vec<DatasetInfo>,
+    pub filtered_available_datasets: Vec<DatasetInfo>,
+    pub available_datasets_state: ListState,
+    pub selected_datasets: Vec<DatasetInfo>,
+    pub selected_datasets_state: ListState,
+    pub lora_search_input: String,
+    pub lora_select_focus: LoraSelectFocus,
+    pub lora_name_input: String,
+    pub pending_lora_train: bool,
+    pub lora_logs: Vec<String>,
+    pub lora_logs_state: ListState,
+    pub lora_auto_scroll: bool,
+    pub lora_output_gguf: String,
 }
 
 impl Default for App {
@@ -130,11 +185,29 @@ impl App {
             dataset_list_state: ListState::default(),
             dataset_path_input: String::new(),
             is_inputting_path: false,
+            dataset_tags_input: String::new(),
+            is_fetching_tags: false,
+            pending_tag_recommendation: false,
             pending_dataset_gen: false,
             dataset_progress: 0.0,
             dataset_logs: Vec::new(),
             dataset_logs_state: ListState::default(),
+            dataset_auto_scroll: true,
             dataset_error_scroll: 0,
+            
+            available_datasets: Vec::new(),
+            filtered_available_datasets: Vec::new(),
+            available_datasets_state: ListState::default(),
+            selected_datasets: Vec::new(),
+            selected_datasets_state: ListState::default(),
+            lora_search_input: String::new(),
+            lora_select_focus: LoraSelectFocus::Search,
+            lora_name_input: String::new(),
+            pending_lora_train: false,
+            lora_logs: Vec::new(),
+            lora_logs_state: ListState::default(),
+            lora_auto_scroll: true,
+            lora_output_gguf: String::new(),
         }
     }
 
@@ -146,10 +219,41 @@ impl App {
         match self.current_screen {
             CurrentScreen::MainMenu => self.handle_main_menu_key(key_event),
             CurrentScreen::AnnasArchiveKey => self.handle_annas_key_input(key_event),
-            CurrentScreen::DatasetGen => self.handle_dataset_gen_key(key_event),
+            CurrentScreen::DatasetGen => {
+                self.handle_dataset_gen_key(key_event);
+            }
+            CurrentScreen::DatasetGenTagInput => {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        self.current_screen = CurrentScreen::DatasetGen;
+                    }
+                    KeyCode::Enter => {
+                        self.pending_dataset_gen = true;
+                        self.current_screen = CurrentScreen::DatasetGenProcessing;
+                    }
+                    KeyCode::Char('g') if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                        if !self.is_fetching_tags {
+                            self.is_fetching_tags = true;
+                            self.pending_tag_recommendation = true;
+                        }
+                    }
+                    KeyCode::Char(c) => {
+                        if !self.is_fetching_tags && !key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
+                            self.dataset_tags_input.push(c);
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        if !self.is_fetching_tags {
+                            self.dataset_tags_input.pop();
+                        }
+                    }
+                    _ => {}
+                }
+            }
             CurrentScreen::DatasetGenProcessing => {
                 match key_event.code {
                     KeyCode::Up => {
+                        self.dataset_auto_scroll = false;
                         let i = match self.dataset_logs_state.selected() {
                             Some(i) => if i == 0 { 0 } else { i - 1 },
                             None => self.dataset_logs.len().saturating_sub(1),
@@ -162,6 +266,9 @@ impl App {
                             None => 0,
                         };
                         self.dataset_logs_state.select(Some(i));
+                        if i >= self.dataset_logs.len().saturating_sub(1) {
+                            self.dataset_auto_scroll = true;
+                        }
                     }
                     KeyCode::Char('q') => {
                         self.should_quit = true;
@@ -200,9 +307,53 @@ impl App {
             CurrentScreen::AnnasArchiveSearching | CurrentScreen::AnnasArchiveDownloading => {
                 // Downloading blocks until done for now, or we can just let UI poll
             }
-            CurrentScreen::AnnasArchiveDone | CurrentScreen::AnnasArchiveError | CurrentScreen::LoraTrain | CurrentScreen::ModalAuth => {
+            CurrentScreen::AnnasArchiveDone | CurrentScreen::AnnasArchiveError | CurrentScreen::ModalAuth => {
                 if key_event.code == KeyCode::Enter || key_event.code == KeyCode::Esc {
                     self.current_screen = CurrentScreen::MainMenu;
+                }
+            }
+            CurrentScreen::LoraTrainSelect => self.handle_lora_select_key(key_event),
+            CurrentScreen::LoraTrainNameInput => self.handle_lora_name_key(key_event),
+            CurrentScreen::LoraTrainProcessing => {
+                match key_event.code {
+                    KeyCode::Up => {
+                        self.lora_auto_scroll = false;
+                        let i = match self.lora_logs_state.selected() {
+                            Some(i) => if i == 0 { 0 } else { i - 1 },
+                            None => self.lora_logs.len().saturating_sub(1),
+                        };
+                        self.lora_logs_state.select(Some(i));
+                    }
+                    KeyCode::Down => {
+                        let i = match self.lora_logs_state.selected() {
+                            Some(i) => if i >= self.lora_logs.len().saturating_sub(1) { self.lora_logs.len().saturating_sub(1) } else { i + 1 },
+                            None => 0,
+                        };
+                        self.lora_logs_state.select(Some(i));
+                        if i >= self.lora_logs.len().saturating_sub(1) {
+                            self.lora_auto_scroll = true;
+                        }
+                    }
+                    KeyCode::Char('q') => {
+                        self.should_quit = true;
+                    }
+                    KeyCode::Esc => {
+                        self.current_screen = CurrentScreen::LoraTrainSelect;
+                    }
+                    KeyCode::Char('c') if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                        self.should_quit = true;
+                    }
+                    _ => {}
+                }
+            }
+            CurrentScreen::LoraTrainDone => {
+                if key_event.code == KeyCode::Enter {
+                    self.current_screen = CurrentScreen::MainMenu;
+                }
+            }
+            CurrentScreen::LoraTrainError => {
+                if key_event.code == KeyCode::Enter || key_event.code == KeyCode::Esc {
+                    self.current_screen = CurrentScreen::LoraTrainSelect;
                 }
             }
         }
@@ -233,7 +384,10 @@ impl App {
                             self.refresh_dataset_files();
                             self.current_screen = CurrentScreen::DatasetGen;
                         }
-                        2 => self.current_screen = CurrentScreen::LoraTrain,
+                        2 => {
+                            self.refresh_datasets();
+                            self.current_screen = CurrentScreen::LoraTrainSelect;
+                        }
                         3 => self.current_screen = CurrentScreen::ModalAuth,
                         4 => {
                             // Update API Keys
@@ -340,71 +494,29 @@ impl App {
     }
 
     fn handle_dataset_gen_key(&mut self, key_event: KeyEvent) {
-        if self.is_inputting_path {
-            match key_event.code {
-                KeyCode::Esc => {
-                    self.is_inputting_path = false;
+        match key_event.code {
+            KeyCode::Esc => self.current_screen = CurrentScreen::MainMenu,
+            KeyCode::Up => {
+                if let Some(selected) = self.dataset_list_state.selected() {
+                    let next = if selected > 0 { selected - 1 } else { self.dataset_files.len().saturating_sub(1) };
+                    self.dataset_list_state.select(Some(next));
                 }
-                KeyCode::Enter => {
-                    self.is_inputting_path = false;
-                    
-                    let mut path = self.dataset_path_input.trim().to_string();
-                    
-                    // Mac OS drag and drop wraps in single quotes and adds trailing space
-                    if path.starts_with('\'') && path.ends_with('\'') && path.len() >= 2 {
-                        path = path[1..path.len()-1].to_string();
-                    } else if path.starts_with('"') && path.ends_with('"') && path.len() >= 2 {
-                        path = path[1..path.len()-1].to_string();
-                    }
-                    
-                    // Some terminals use backslash escaping for spaces
-                    path = path.replace("\\ ", " ");
-                    
-                    self.dataset_path_input = path;
-                    
-                    self.pending_dataset_gen = true;
-                    self.current_screen = CurrentScreen::DatasetGenProcessing;
-                }
-                KeyCode::Char(c) => {
-                    self.dataset_path_input.push(c);
-                }
-                KeyCode::Backspace => {
-                    self.dataset_path_input.pop();
-                }
-                _ => {}
             }
-        } else {
-            match key_event.code {
-                KeyCode::Esc => self.current_screen = CurrentScreen::MainMenu,
-                KeyCode::Char('p') | KeyCode::Char('P') => {
-                    self.is_inputting_path = true;
-                    self.dataset_path_input.clear();
+            KeyCode::Down => {
+                if let Some(selected) = self.dataset_list_state.selected() {
+                    let next = if selected < self.dataset_files.len().saturating_sub(1) { selected + 1 } else { 0 };
+                    self.dataset_list_state.select(Some(next));
                 }
-                KeyCode::Up => {
-                    if let Some(selected) = self.dataset_list_state.selected() {
-                        let next = if selected > 0 { selected - 1 } else { self.dataset_files.len().saturating_sub(1) };
-                        self.dataset_list_state.select(Some(next));
-                    }
-                }
-                KeyCode::Down => {
-                    if let Some(selected) = self.dataset_list_state.selected() {
-                        let next = if selected < self.dataset_files.len().saturating_sub(1) { selected + 1 } else { 0 };
-                        self.dataset_list_state.select(Some(next));
-                    }
-                }
-                KeyCode::Enter => {
-                    if let Some(selected) = self.dataset_list_state.selected() {
-                        if selected < self.dataset_files.len() {
-                            let file = &self.dataset_files[selected];
-                            // The path inside the data/books/ directory
-                            self.dataset_path_input = format!("data/books/{}", file);
-                            self.pending_dataset_gen = true;
-                            self.current_screen = CurrentScreen::DatasetGenProcessing;
-                        }
-                    }
-                }
-                _ => {}
             }
+            KeyCode::Enter => {
+                if let Some(selected) = self.dataset_list_state.selected() {
+                    let file = self.dataset_files[selected].name.clone();
+                    self.dataset_path_input = format!("data/books/{}", file);
+                    self.dataset_tags_input.clear();
+                    self.current_screen = CurrentScreen::DatasetGenTagInput;
+                }
+            }
+            _ => {}
         }
     }
 
@@ -453,6 +565,7 @@ impl App {
 
     pub fn refresh_dataset_files(&mut self) {
         self.dataset_files.clear();
+        let mut files = Vec::new();
         if let Ok(entries) = std::fs::read_dir("data/books") {
             for entry in entries.flatten() {
                 if let Ok(file_type) = entry.file_type() {
@@ -461,7 +574,8 @@ impl App {
                         if let Some(ext) = path.extension() {
                             if ext == "pdf" || ext == "epub" {
                                 if let Some(name) = path.file_name() {
-                                    self.dataset_files.push(name.to_string_lossy().into_owned());
+                                    let modified = entry.metadata().and_then(|m| m.modified()).unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                                    files.push((name.to_string_lossy().into_owned(), modified));
                                 }
                             }
                         }
@@ -469,9 +583,203 @@ impl App {
                 }
             }
         }
-        self.dataset_files.sort();
+        files.sort_by(|a, b| b.1.cmp(&a.1));
+        self.dataset_files = files.into_iter().map(|(n, _)| {
+            let base_name = std::path::Path::new(&n).file_stem().unwrap_or_default().to_string_lossy();
+            let dataset_path = format!("data/datasets/{}_dataset.jsonl", base_name);
+            let meta_path = format!("data/datasets/{}_dataset.jsonl.meta", base_name);
+            let progress_path = format!("data/datasets/{}_dataset.progress.json", base_name);
+            
+            let dataset_status = if std::path::Path::new(&meta_path).exists() {
+                DatasetStatus::Complete
+            } else if std::path::Path::new(&progress_path).exists() || std::path::Path::new(&dataset_path).exists() {
+                DatasetStatus::Partial
+            } else {
+                DatasetStatus::None
+            };
+
+            BookFileInfo {
+                name: n,
+                dataset_status,
+            }
+        }).collect();
         if !self.dataset_files.is_empty() {
             self.dataset_list_state.select(Some(0));
+        }
+    }
+
+    pub fn refresh_datasets(&mut self) {
+        self.available_datasets.clear();
+        self.filtered_available_datasets.clear();
+        if let Ok(entries) = std::fs::read_dir("data/datasets") {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    if file_type.is_file() {
+                        let path = entry.path();
+                        if path.extension().and_then(|e| e.to_str()) == Some("jsonl") {
+                            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                                let mut tags = Vec::new();
+                                // Try to read sidecar file
+                                let meta_path = path.with_extension("jsonl.meta");
+                                if let Ok(meta_json) = std::fs::read_to_string(&meta_path) {
+                                    if let Ok(meta) = serde_json::from_str::<DatasetMetadata>(&meta_json) {
+                                        tags = meta.tags;
+                                    }
+                                }
+                                self.available_datasets.push(DatasetInfo {
+                                    name: name.to_string(),
+                                    tags,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.available_datasets.sort_by(|a, b| a.name.cmp(&b.name));
+        self.update_lora_filter();
+    }
+
+    pub fn update_lora_filter(&mut self) {
+        let query = self.lora_search_input.to_lowercase();
+        self.filtered_available_datasets = self.available_datasets
+            .iter()
+            .filter(|d| {
+                let name_matches = d.name.to_lowercase().contains(&query);
+                let tag_matches = d.tags.iter().any(|t| t.to_lowercase().contains(&query));
+                (name_matches || tag_matches) && !self.selected_datasets.contains(d)
+            })
+            .cloned()
+            .collect();
+        
+        if !self.filtered_available_datasets.is_empty() {
+            self.available_datasets_state.select(Some(0));
+        } else {
+            self.available_datasets_state.select(None);
+        }
+    }
+    
+    fn handle_lora_select_key(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Esc => self.current_screen = CurrentScreen::MainMenu,
+            KeyCode::Tab => {
+                self.lora_select_focus = match self.lora_select_focus {
+                    LoraSelectFocus::Search => LoraSelectFocus::AvailableList,
+                    LoraSelectFocus::AvailableList => LoraSelectFocus::SelectedList,
+                    LoraSelectFocus::SelectedList => LoraSelectFocus::Search,
+                };
+            }
+            KeyCode::Char('s') if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                if !self.selected_datasets.is_empty() {
+                    self.current_screen = CurrentScreen::LoraTrainNameInput;
+                }
+            }
+            _ => {
+                match self.lora_select_focus {
+                    LoraSelectFocus::Search => {
+                        match key_event.code {
+                            KeyCode::Char(c) => {
+                                self.lora_search_input.push(c);
+                                self.update_lora_filter();
+                            }
+                            KeyCode::Backspace => {
+                                self.lora_search_input.pop();
+                                self.update_lora_filter();
+                            }
+                            KeyCode::Down => {
+                                self.lora_select_focus = LoraSelectFocus::AvailableList;
+                            }
+                            _ => {}
+                        }
+                    }
+                    LoraSelectFocus::AvailableList => {
+                        match key_event.code {
+                            KeyCode::Up => {
+                                let i = match self.available_datasets_state.selected() {
+                                    Some(i) => if i == 0 { 0 } else { i - 1 },
+                                    None => 0,
+                                };
+                                self.available_datasets_state.select(Some(i));
+                            }
+                            KeyCode::Down => {
+                                let i = match self.available_datasets_state.selected() {
+                                    Some(i) => if i >= self.filtered_available_datasets.len().saturating_sub(1) { self.filtered_available_datasets.len().saturating_sub(1) } else { i + 1 },
+                                    None => 0,
+                                };
+                                self.available_datasets_state.select(Some(i));
+                            }
+                            KeyCode::Enter => {
+                                if let Some(i) = self.available_datasets_state.selected() {
+                                    if i < self.filtered_available_datasets.len() {
+                                        let selected = self.filtered_available_datasets[i].clone();
+                                        self.selected_datasets.push(selected);
+                                        self.update_lora_filter();
+                                        if self.selected_datasets_state.selected().is_none() && !self.selected_datasets.is_empty() {
+                                            self.selected_datasets_state.select(Some(0));
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    LoraSelectFocus::SelectedList => {
+                        match key_event.code {
+                            KeyCode::Up => {
+                                let i = match self.selected_datasets_state.selected() {
+                                    Some(i) => if i == 0 { 0 } else { i - 1 },
+                                    None => 0,
+                                };
+                                self.selected_datasets_state.select(Some(i));
+                            }
+                            KeyCode::Down => {
+                                let i = match self.selected_datasets_state.selected() {
+                                    Some(i) => if i >= self.selected_datasets.len().saturating_sub(1) { self.selected_datasets.len().saturating_sub(1) } else { i + 1 },
+                                    None => 0,
+                                };
+                                self.selected_datasets_state.select(Some(i));
+                            }
+                            KeyCode::Enter => {
+                                if let Some(i) = self.selected_datasets_state.selected() {
+                                    if i < self.selected_datasets.len() {
+                                        self.selected_datasets.remove(i);
+                                        if i >= self.selected_datasets.len() && !self.selected_datasets.is_empty() {
+                                            self.selected_datasets_state.select(Some(self.selected_datasets.len() - 1));
+                                        } else if self.selected_datasets.is_empty() {
+                                            self.selected_datasets_state.select(None);
+                                        }
+                                        self.update_lora_filter();
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    fn handle_lora_name_key(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Esc => self.current_screen = CurrentScreen::LoraTrainSelect,
+            KeyCode::Enter => {
+                if !self.lora_name_input.is_empty() {
+                    self.pending_lora_train = true;
+                    self.lora_logs.clear();
+                    self.lora_output_gguf.clear();
+                    self.current_screen = CurrentScreen::LoraTrainProcessing;
+                }
+            }
+            KeyCode::Char(c) => {
+                if c.is_alphanumeric() || c == '_' || c == '-' {
+                    self.lora_name_input.push(c);
+                }
+            }
+            KeyCode::Backspace => {
+                self.lora_name_input.pop();
+            }
+            _ => {}
         }
     }
 }
