@@ -393,7 +393,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         }
         CurrentScreen::LoraTrainError => {
             let err = app.error_message.as_ref().map(|s| s.as_str()).unwrap_or("Unknown Error");
-            let title = format!("Training Failed (Press Esc or Enter to return): {}", err);
+            let title = format!("Training Failed (Press Esc or Enter to return, 'c' to copy logs): {}", err);
             
             let mut log_items: Vec<ListItem> = app.lora_logs.iter().map(|log| {
                 let width = chunks[1].width.saturating_sub(2) as usize;

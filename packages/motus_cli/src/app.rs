@@ -383,6 +383,23 @@ impl App {
                         };
                         self.lora_logs_state.select(Some(i));
                     }
+                    KeyCode::Char('c') => {
+                        let mut all_logs = String::new();
+                        if let Some(err) = &self.error_message {
+                            all_logs.push_str(&format!("Training Error: {}\n\n", err));
+                        }
+                        all_logs.push_str(&self.lora_logs.join("\n"));
+                        let _ = std::process::Command::new("pbcopy")
+                            .stdin(std::process::Stdio::piped())
+                            .spawn()
+                            .and_then(|mut child| {
+                                use std::io::Write;
+                                if let Some(mut stdin) = child.stdin.take() {
+                                    let _ = stdin.write_all(all_logs.as_bytes());
+                                }
+                                child.wait()
+                            });
+                    }
                     _ => {}
                 }
             }
