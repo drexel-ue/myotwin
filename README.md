@@ -85,7 +85,8 @@ myotwin/
 │   ├── myotwin_ui/      # HUD components, 3D viewport, and specialized UI Controllers
 │   ├── myotwin_app/     # Multi-platform app (iOS, Android, macOS) with Repositories/Cubits
 │   ├── myotwin_catalog/ # Component gallery and interactive GenUI stories
-│   └── motus_server/    # Dart orchestration hub for research and research sync
+│   ├── motus_server/    # Dart orchestration hub for research and research sync
+│   └── motus_cli/       # Rust CLI for dataset generation and cloud model training ([Dev Guide](packages/motus_cli/README.md))
 ```
 
 ---
@@ -163,8 +164,9 @@ Deep-dives into specific implemented subsystems.
 - [**3D Digital Twin**](docs/features/3d_digital_twin.md): Anatomy viewport, shaders, and heatmap logic.
 - [**Biomechanical Intelligence**](docs/features/biomechanical_intelligence.md): Semantic context, kinetic chain awareness, and context switching.
 - [**Interactive GenUI Model**](docs/features/interactive_genui_model.md): Hardware-inspired HUD interactions (FAB sliders, rotary menus).
-- [**Unstructured Data Strategy**](docs/features/unstructured_data_strategy.md): Drift JSONB and Dart 3.3 Extension Type wrappers.
-- [**3D Asset Pipeline**](docs/features/3d_asset_pipeline.md): Blender-to-Flutter workflow and optimization.
+- **[Unstructured Data Strategy](docs/features/unstructured_data_strategy.md)**: Drift JSONB and Dart 3.3 Extension Type wrappers.
+- **[3D Asset Pipeline](docs/features/3d_asset_pipeline.md)**: Blender-to-Flutter workflow and optimization.
+- **[Motus CLI](packages/motus_cli/README.md)**: Rust-based CLI for TUI medical textbook scraping, Gemini dataset generation, and cloud LoRA model training via Modal.
 
 ---
 
