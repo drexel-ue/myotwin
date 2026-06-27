@@ -202,6 +202,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
             let mut attempts = 0;
             let mut res_text = String::new();
             let mut success = false;
+            let mut last_error = String::new();
             
             while attempts < 3 {
                 let res = client.post(&gemini_url)
@@ -219,15 +220,18 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
                                 success = true;
                                 break;
                             }
-                        } else if resp.status() == 429 {
+                        } else {
+                            let status = resp.status();
+                            let err_text = resp.text().await.unwrap_or_else(|_| "Unknown".to_string());
+                            last_error = format!("Status {}: {}", status, err_text);
                             attempts += 1;
-                            tokio::time::sleep(tokio::time::Duration::from_secs(2 * attempts)).await;
-                            continue;
+                            if status == 429 {
+                                tokio::time::sleep(tokio::time::Duration::from_secs(2 * attempts)).await;
+                            }
                         }
-                        
-                        attempts += 1;
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        last_error = e.to_string();
                         attempts += 1;
                         tokio::time::sleep(tokio::time::Duration::from_secs(2 * attempts)).await;
                     }
@@ -236,7 +240,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
 
             if !success {
                 if let Some(ref tx) = progress_tx {
-                    let _ = tx.send(DatasetGenMessage::Log(format!("Warning: Chunk {} failed after 3 attempts. Skipping.", i + 1))).await;
+                    let _ = tx.send(DatasetGenMessage::Log(format!("Warning: Chunk {} failed after 3 attempts. Error: {}", i + 1, last_error))).await;
                 }
                 return;
             }
@@ -342,13 +346,16 @@ pub async fn recommend_tags(filename: &str, api_key: &str) -> Result<String, Box
             return Ok(text);
         } else if res.status().as_u16() == 503 {
             retries -= 1;
+            let err_text = res.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             if retries > 0 {
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                 continue;
             }
-            return Err("Gemini API is currently overloaded (503). Please type tags manually.".into());
+            return Err(format!("Gemini API is currently overloaded (503). Error: {}", err_text).into());
         } else {
-            return Err("Failed to fetch tags from Gemini. Please type manually.".into());
+            let status = res.status();
+            let err_text = res.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Gemini Error ({}): {}", status, err_text).into());
         }
     }
     
