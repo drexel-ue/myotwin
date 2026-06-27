@@ -88,7 +88,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
             println!("Please follow the instructions below to log into Modal in your browser.");
             println!("--------------------------------------------------");
             
-            let status = std::process::Command::new("../motus_cli_legacy/.venv/bin/python")
+            let status = std::process::Command::new("./python/.venv/bin/python")
                 .arg("-m")
                 .arg("modal")
                 .arg("token")

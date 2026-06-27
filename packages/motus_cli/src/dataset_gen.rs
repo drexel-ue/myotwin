@@ -39,8 +39,8 @@ pub async fn run_dataset_generation(
     }
     
     // 2. Invoke extract_pdf.py
-    let venv_python = "../motus_cli_legacy/.venv/bin/python";
-    let script_path = "../motus_cli_legacy/lib/src/python/extract_pdf.py";
+    let venv_python = "./python/.venv/bin/python";
+    let script_path = "./python/extract_pdf.py";
     
     let abs_target_path = std::fs::canonicalize(&target_path)?;
 

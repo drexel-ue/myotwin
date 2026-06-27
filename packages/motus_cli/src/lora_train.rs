@@ -15,11 +15,12 @@ pub async fn run_lora_training(
     progress_tx: Option<mpsc::Sender<LoraTrainMessage>>
 ) -> Result<String, Box<dyn Error>> {
     let combined_paths = dataset_paths.join(",");
-    let mut child = Command::new("../motus_cli_legacy/.venv/bin/python")
+    let mut child = Command::new("./python/.venv/bin/python")
+        .arg("-u")
         .arg("-m")
         .arg("modal")
         .arg("run")
-        .arg("../motus_cli_legacy/lib/src/python/train_lora_modal.py")
+        .arg("./python/train_lora_modal.py")
         .arg("--dataset-paths")
         .arg(combined_paths)
         .arg("--lora-name")
@@ -65,7 +66,7 @@ pub async fn run_lora_training(
 
     std::fs::create_dir_all("data/models")?;
 
-    let mut download_child = Command::new("../motus_cli_legacy/.venv/bin/python")
+    let mut download_child = Command::new("./python/.venv/bin/python")
         .arg("-m")
         .arg("modal")
         .arg("volume")
