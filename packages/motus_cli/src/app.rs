@@ -40,8 +40,6 @@ impl SortMode {
 pub enum ApiKeyField {
     AnnasArchive,
     Gemini,
-    ModalTokenId,
-    ModalTokenSecret,
 }
 
 impl ApiKeyField {
@@ -49,8 +47,6 @@ impl ApiKeyField {
         match self {
             ApiKeyField::AnnasArchive => "ANNAS_ARCHIVE_KEY",
             ApiKeyField::Gemini => "GEMINI_API_KEY",
-            ApiKeyField::ModalTokenId => "MODAL_TOKEN_ID",
-            ApiKeyField::ModalTokenSecret => "MODAL_TOKEN_SECRET",
         }
     }
 }
@@ -499,8 +495,6 @@ impl App {
         let fields = vec![
             ApiKeyField::AnnasArchive,
             ApiKeyField::Gemini,
-            ApiKeyField::ModalTokenId,
-            ApiKeyField::ModalTokenSecret,
         ];
         self.api_keys = fields
             .into_iter()

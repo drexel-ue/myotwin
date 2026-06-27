@@ -223,7 +223,12 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
                         } else {
                             let status = resp.status();
                             let err_text = resp.text().await.unwrap_or_else(|_| "Unknown".to_string());
-                            last_error = format!("Status {}: {}", status, err_text);
+                            let formatted_err = if let Ok(json_val) = serde_json::from_str::<Value>(&err_text) {
+                                serde_json::to_string_pretty(&json_val).unwrap_or(err_text)
+                            } else {
+                                err_text
+                            };
+                            last_error = format!("Status {}: {}", status, formatted_err);
                             attempts += 1;
                             if status == 429 {
                                 tokio::time::sleep(tokio::time::Duration::from_secs(2 * attempts)).await;
@@ -290,7 +295,7 @@ Generate 3 to 5 realistic examples based ONLY on the clinical information in the
                 let mut p = safe_progress.lock().await;
                 p.insert(i);
                 let indices: Vec<usize> = p.iter().cloned().collect();
-                let _ = std::fs::write(&progress_path, serde_json::to_string(&indices).unwrap());
+                let _ = std::fs::write(&progress_path, serde_json::to_string_pretty(&indices).unwrap());
             }
 
             let mut pc = processed_count.lock().await;
