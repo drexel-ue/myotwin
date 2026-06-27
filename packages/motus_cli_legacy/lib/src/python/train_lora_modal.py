@@ -80,7 +80,10 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2
     
     with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
         for row in data:
-            for msg in row.get("messages", []):
+            messages = row.get("messages", [])
+            if not messages:
+                continue
+            for msg in messages:
                 if isinstance(msg.get("content"), list):
                     msg["tool_calls"] = msg["content"]
                     msg["content"] = ""
