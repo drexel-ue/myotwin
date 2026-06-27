@@ -274,6 +274,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             let search_p = Paragraph::new(search_text)
                 .block(Block::default().borders(Borders::ALL).title("Fuzzy Search").border_style(search_border_style));
             f.render_widget(search_p, lora_chunks[0]);
+            
+            if app.lora_select_focus == crate::app::LoraSelectFocus::Search {
+                f.set_cursor_position((
+                    lora_chunks[0].x + 3 + app.lora_search_input.len() as u16,
+                    lora_chunks[0].y + 1,
+                ));
+            }
 
             let tags_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::Tags {
                 Style::default().fg(Color::Yellow)
@@ -359,6 +366,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .block(Block::default().title("Name LoRA Adapter").borders(Borders::ALL))
                 .wrap(ratatui::widgets::Wrap { trim: true });
             f.render_widget(p, chunks[1]);
+            f.set_cursor_position((
+                chunks[1].x + 3 + app.lora_name_input.len() as u16,
+                chunks[1].y + 3,
+            ));
         }
         CurrentScreen::LoraTrainProcessing => {
             let log_items: Vec<ListItem> = app.lora_logs.iter().map(|log| {
