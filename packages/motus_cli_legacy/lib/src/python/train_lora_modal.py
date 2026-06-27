@@ -121,11 +121,7 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2
     checkpoint_dir = f"/models/{lora_name}_checkpoints"
     resume = False
     if os.path.exists(checkpoint_dir):
-        # Check if it contains checkpoint folders (starts with "checkpoint-")
-        checkpoints = [d for d in os.listdir(checkpoint_dir) if d.startswith("checkpoint-")]
-        if len(checkpoints) > 0:
-            resume = True
-            print(f"🔄 Found existing checkpoints in {checkpoint_dir}. Resuming training...")
+        print(f"📁 Found existing directory {checkpoint_dir}. Starting fresh training run...")
     trainer = SFTTrainer(
         model = model,
         tokenizer = tokenizer,
