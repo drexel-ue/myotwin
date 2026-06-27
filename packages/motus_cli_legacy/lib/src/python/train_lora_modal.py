@@ -148,8 +148,7 @@ def train_lora_on_gpu(dataset_content: str, model_name: str = "unsloth/Llama-3.2
             lr_scheduler_type = "linear",
             seed = 3407,
             output_dir = checkpoint_dir,
-            save_strategy = "steps",
-            save_steps = 10,
+            save_strategy = "no",
         ),
     )
     
