@@ -86,6 +86,7 @@ pub struct BookFileInfo {
 #[derive(PartialEq)]
 pub enum LoraSelectFocus {
     Search,
+    Tags,
     AvailableList,
     SelectedList,
 }
@@ -136,6 +137,9 @@ pub struct App {
     pub selected_datasets_state: ListState,
     pub lora_search_input: String,
     pub lora_select_focus: LoraSelectFocus,
+    pub lora_available_tags: Vec<(String, usize)>,
+    pub lora_selected_tag: Option<String>,
+    pub lora_tag_state: ListState,
     pub lora_name_input: String,
     pub pending_lora_train: bool,
     pub lora_logs: Vec<String>,
@@ -202,6 +206,9 @@ impl App {
             selected_datasets_state: ListState::default(),
             lora_search_input: String::new(),
             lora_select_focus: LoraSelectFocus::Search,
+            lora_available_tags: Vec::new(),
+            lora_selected_tag: None,
+            lora_tag_state: ListState::default(),
             lora_name_input: String::new(),
             pending_lora_train: false,
             lora_logs: Vec::new(),
@@ -637,6 +644,17 @@ impl App {
             }
         }
         self.available_datasets.sort_by(|a, b| a.name.cmp(&b.name));
+        
+        let mut tag_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for dataset in &self.available_datasets {
+            for tag in &dataset.tags {
+                *tag_counts.entry(tag.clone()).or_insert(0) += 1;
+            }
+        }
+        let mut tags_vec: Vec<(String, usize)> = tag_counts.into_iter().collect();
+        tags_vec.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        self.lora_available_tags = tags_vec;
+        
         self.update_lora_filter();
     }
 
@@ -647,7 +665,13 @@ impl App {
             .filter(|d| {
                 let name_matches = d.name.to_lowercase().contains(&query);
                 let tag_matches = d.tags.iter().any(|t| t.to_lowercase().contains(&query));
-                (name_matches || tag_matches) && !self.selected_datasets.contains(d)
+                
+                let filter_matches = match &self.lora_selected_tag {
+                    Some(tag) => d.tags.contains(tag),
+                    None => true,
+                };
+                
+                (name_matches || tag_matches) && filter_matches && !self.selected_datasets.contains(d)
             })
             .cloned()
             .collect();
@@ -664,7 +688,8 @@ impl App {
             KeyCode::Esc => self.current_screen = CurrentScreen::MainMenu,
             KeyCode::Tab => {
                 self.lora_select_focus = match self.lora_select_focus {
-                    LoraSelectFocus::Search => LoraSelectFocus::AvailableList,
+                    LoraSelectFocus::Search => LoraSelectFocus::Tags,
+                    LoraSelectFocus::Tags => LoraSelectFocus::AvailableList,
                     LoraSelectFocus::AvailableList => LoraSelectFocus::SelectedList,
                     LoraSelectFocus::SelectedList => LoraSelectFocus::Search,
                 };
@@ -687,7 +712,48 @@ impl App {
                                 self.update_lora_filter();
                             }
                             KeyCode::Down => {
+                                self.lora_select_focus = LoraSelectFocus::Tags;
+                            }
+                            _ => {}
+                        }
+                    }
+                    LoraSelectFocus::Tags => {
+                        match key_event.code {
+                            KeyCode::Left => {
+                                let i = match self.lora_tag_state.selected() {
+                                    Some(i) => if i == 0 { 0 } else { i - 1 },
+                                    None => 0,
+                                };
+                                self.lora_tag_state.select(Some(i));
+                            }
+                            KeyCode::Right => {
+                                let len = self.lora_available_tags.len();
+                                if len > 0 {
+                                    let i = match self.lora_tag_state.selected() {
+                                        Some(i) => if i >= len - 1 { len - 1 } else { i + 1 },
+                                        None => 0,
+                                    };
+                                    self.lora_tag_state.select(Some(i));
+                                }
+                            }
+                            KeyCode::Enter => {
+                                if let Some(i) = self.lora_tag_state.selected() {
+                                    if i < self.lora_available_tags.len() {
+                                        let selected = self.lora_available_tags[i].0.clone();
+                                        if Some(selected.clone()) == self.lora_selected_tag {
+                                            self.lora_selected_tag = None;
+                                        } else {
+                                            self.lora_selected_tag = Some(selected);
+                                        }
+                                        self.update_lora_filter();
+                                    }
+                                }
+                            }
+                            KeyCode::Down => {
                                 self.lora_select_focus = LoraSelectFocus::AvailableList;
+                            }
+                            KeyCode::Up => {
+                                self.lora_select_focus = LoraSelectFocus::Search;
                             }
                             _ => {}
                         }
@@ -699,7 +765,11 @@ impl App {
                                     Some(i) => if i == 0 { 0 } else { i - 1 },
                                     None => 0,
                                 };
-                                self.available_datasets_state.select(Some(i));
+                                if i == 0 && self.available_datasets_state.selected() == Some(0) {
+                                    self.lora_select_focus = LoraSelectFocus::Tags;
+                                } else {
+                                    self.available_datasets_state.select(Some(i));
+                                }
                             }
                             KeyCode::Down => {
                                 let i = match self.available_datasets_state.selected() {

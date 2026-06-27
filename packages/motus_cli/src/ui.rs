@@ -251,6 +251,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .direction(ratatui::layout::Direction::Vertical)
                 .constraints([
                     ratatui::layout::Constraint::Length(3),
+                    ratatui::layout::Constraint::Length(3),
                     ratatui::layout::Constraint::Min(1),
                 ].as_ref())
                 .split(chunks[1]);
@@ -261,7 +262,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     ratatui::layout::Constraint::Percentage(50),
                     ratatui::layout::Constraint::Percentage(50),
                 ].as_ref())
-                .split(lora_chunks[1]);
+                .split(lora_chunks[2]);
 
             let search_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::Search {
                 Style::default().fg(Color::Yellow)
@@ -274,19 +275,54 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .block(Block::default().borders(Borders::ALL).title("Fuzzy Search").border_style(search_border_style));
             f.render_widget(search_p, lora_chunks[0]);
 
+            let tags_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::Tags {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+            
+            let mut tag_spans = Vec::new();
+            for (i, (tag, count)) in app.lora_available_tags.iter().enumerate() {
+                let display = format!("{} ({})", tag, count);
+                let is_active_filter = Some(tag.clone()) == app.lora_selected_tag;
+                let is_focused = app.lora_tag_state.selected() == Some(i) && app.lora_select_focus == crate::app::LoraSelectFocus::Tags;
+                
+                let mut style = Style::default();
+                if is_active_filter {
+                    style = style.fg(Color::Green).add_modifier(ratatui::style::Modifier::BOLD);
+                }
+                if is_focused {
+                    style = style.bg(Color::DarkGray).fg(Color::White);
+                }
+                
+                tag_spans.push(ratatui::text::Span::styled(format!(" {} ", display), style));
+                tag_spans.push(ratatui::text::Span::raw(" "));
+            }
+            if tag_spans.is_empty() {
+                tag_spans.push(ratatui::text::Span::raw("No tags available"));
+            }
+            
+            let tags_p = Paragraph::new(ratatui::text::Line::from(tag_spans))
+                .block(Block::default().borders(Borders::ALL).title("Filter by Tag (Left/Right to navigate, Enter to toggle)").border_style(tags_border_style))
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            f.render_widget(tags_p, lora_chunks[1]);
+
             let left_border_style = if app.lora_select_focus == crate::app::LoraSelectFocus::AvailableList {
                 Style::default().fg(Color::Yellow)
             } else {
                 Style::default()
             };
 
+            let avail_width = list_chunks[0].width.saturating_sub(4) as usize;
             let avail_items: Vec<ListItem> = app.filtered_available_datasets.iter().map(|item| {
                 let text = if item.tags.is_empty() {
                     item.name.clone()
                 } else {
                     format!("{} [{}]", item.name, item.tags.join(", "))
                 };
-                ListItem::new(text)
+                let wrapped = textwrap::wrap(&text, avail_width.max(10));
+                let lines: Vec<ratatui::text::Line> = wrapped.into_iter().map(|w| ratatui::text::Line::from(w.into_owned())).collect();
+                ListItem::new(lines)
             }).collect();
             let avail_list = List::new(avail_items)
                 .block(Block::default().borders(Borders::ALL).title("Available Datasets (Press Enter to Add)").border_style(left_border_style))
@@ -300,13 +336,16 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 Style::default()
             };
 
+            let sel_width = list_chunks[1].width.saturating_sub(4) as usize;
             let sel_items: Vec<ListItem> = app.selected_datasets.iter().map(|item| {
                 let text = if item.tags.is_empty() {
                     item.name.clone()
                 } else {
                     format!("{} [{}]", item.name, item.tags.join(", "))
                 };
-                ListItem::new(text)
+                let wrapped = textwrap::wrap(&text, sel_width.max(10));
+                let lines: Vec<ratatui::text::Line> = wrapped.into_iter().map(|w| ratatui::text::Line::from(w.into_owned())).collect();
+                ListItem::new(lines)
             }).collect();
             let sel_list = List::new(sel_items)
                 .block(Block::default().borders(Borders::ALL).title("Selected Datasets (Press Ctrl+S to Train)").border_style(right_border_style))
