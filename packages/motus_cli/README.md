@@ -45,6 +45,11 @@ Because our CLI makes network requests (downloading gigabytes of PDFs, talking t
 - **[Serde](https://serde.rs/)**: The absolute standard for serializing and deserializing data in Rust. We use it to parse the JSON responses from Anna's Archive and Gemini.
 - **[Reqwest](https://docs.rs/reqwest/latest/reqwest/)**: A high-level HTTP client for making API requests.
 
+### Python & Virtual Environments (venvs)
+While the core CLI is built in Rust, we use Python for specific tasks like parsing PDFs (via `PyMuPDF`) and running AI frameworks (via `modal` and `unsloth`).
+- **What is Python?** A popular scripting language heavily used in AI and data science.
+- **What is a venv?** A "Virtual Environment". Because Python installs dependencies globally by default, different projects can clash. A `venv` is an isolated folder (often named `.venv`) that contains a specific project's Python interpreter and libraries, keeping your main system clean.
+
 ---
 
 ## 3. Project Architecture (How It Works)
@@ -120,14 +125,22 @@ To solve this in `main.rs`, we:
 We interact with Anna's Archive using standard HTTP `GET` requests via the `reqwest` crate. Since the API returns JSON, we use `serde_json` to parse it into strongly-typed Rust structs (like `Book`). For downloading, we stream the response body in chunks to update the progress bar in the UI.
 
 ### Dataset Generation (`dataset_gen.rs`)
-We use a hybrid approach here. Since Python has excellent PDF extraction libraries (like `PyMuPDF`), we bundled a Python script (`extract_pdf.py`) into our Rust project.
+To teach an AI specialized medical knowledge, we cannot just feed it raw PDF text; AI models learn best from structured, conversational data (e.g., a "User" asks a question, the "Assistant" answers). This process involves:
+- **Chunking**: Breaking a massive book into smaller, manageable pieces (chunks) so the AI can process them.
+- **Cleaning**: Removing gibberish, page numbers, or corrupted text from the raw PDF extraction.
+- **Formatting**: Structuring the clean text into JSONL (JSON Lines) format with a strict schema that the AI expects during training.
+
+We use a hybrid approach here to accomplish this. Since Python has excellent PDF extraction libraries (like `PyMuPDF`), we bundled a Python script (`extract_pdf.py`) into our Rust project.
 1. Rust spawns the Python script as a subprocess to extract text chunks from the PDF.
 2. Rust captures the JSON output from the Python script.
-3. Rust makes asynchronous HTTP requests to the Gemini API (`gemini-2.5-flash`) to format those chunks into conversational Q&A data.
+3. Rust makes asynchronous HTTP requests to the Gemini API (`gemini-2.5-flash`) to format those raw chunks into clean, conversational Q&A data.
 
 ### LoRA Training via Modal (`lora_train.rs`)
-Modal allows us to run heavy GPU workloads (like training a LLaMA model) in the cloud as if it were a local function.
-1. We bundled `train_lora_modal.py` which contains the Unsloth training logic.
+Training a Large Language Model (LLM) like LLaMA from scratch costs millions of dollars. Instead, we use **Fine-Tuning**.
+- **What is a LoRA?** Low-Rank Adaptation (LoRA) is a technique that freezes the original AI model and only trains a tiny, separate "adapter" module on top of it. Think of the base model as a general doctor, and the LoRA adapter as a specialized textbook they carry. It makes training extremely fast and cheap!
+
+Modal allows us to run these heavy GPU workloads in the cloud as if they were local functions on our machine.
+1. We bundled `train_lora_modal.py` which contains the Unsloth training logic (Unsloth makes LoRA training up to 2x faster).
 2. Rust executes `python -m modal run ./python/train_lora_modal.py` to trigger the cloud training.
 3. Rust streams the standard output (`stdout`) of this process in real-time, parsing the logs and displaying them in the Ratatui scrollable log viewer.
 
