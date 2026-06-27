@@ -76,7 +76,6 @@ pub enum CurrentScreen {
     LoraTrainProcessing,
     LoraTrainDone,
     LoraTrainError,
-    ModalAuth,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Default, Clone)]
@@ -137,6 +136,9 @@ pub struct App {
     pub pending_download: bool,
     pub search_progress: f64,
     pub download_progress: f64,
+    
+    // Modal
+    pub pending_modal_auth: bool,
 
     // Dataset Gen
     pub dataset_files: Vec<BookFileInfo>,
@@ -211,6 +213,7 @@ impl App {
             pending_download: false,
             search_progress: 0.0,
             download_progress: 0.0,
+            pending_modal_auth: false,
             dataset_files: Vec::new(),
             dataset_list_state: ListState::default(),
             dataset_path_input: String::new(),
@@ -342,7 +345,7 @@ impl App {
             CurrentScreen::AnnasArchiveSearching | CurrentScreen::AnnasArchiveDownloading => {
                 // Downloading blocks until done for now, or we can just let UI poll
             }
-            CurrentScreen::AnnasArchiveDone | CurrentScreen::AnnasArchiveError | CurrentScreen::ModalAuth => {
+            CurrentScreen::AnnasArchiveDone | CurrentScreen::AnnasArchiveError => {
                 if key_event.code == KeyCode::Enter || key_event.code == KeyCode::Esc {
                     self.current_screen = CurrentScreen::MainMenu;
                 }
@@ -464,7 +467,7 @@ impl App {
                             self.refresh_datasets();
                             self.current_screen = CurrentScreen::LoraTrainSelect;
                         }
-                        3 => self.current_screen = CurrentScreen::ModalAuth,
+                        3 => self.pending_modal_auth = true,
                         4 => {
                             // Update API Keys
                             self.load_api_keys();

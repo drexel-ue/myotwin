@@ -77,6 +77,45 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::R
     loop {
         terminal.draw(|f| ui::draw(f, app)).unwrap();
 
+        if app.pending_modal_auth {
+            app.pending_modal_auth = false;
+            
+            // Suspend UI
+            disable_raw_mode().unwrap();
+            execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen).unwrap();
+            
+            println!("Starting Modal Authentication Flow...");
+            println!("Please follow the instructions below to log into Modal in your browser.");
+            println!("--------------------------------------------------");
+            
+            let status = std::process::Command::new("../motus_cli_legacy/.venv/bin/python")
+                .arg("-m")
+                .arg("modal")
+                .arg("token")
+                .arg("new")
+                .status();
+                
+            println!("--------------------------------------------------");
+            match status {
+                Ok(s) if s.success() => {
+                    println!("Successfully authenticated with Modal!");
+                }
+                _ => {
+                    println!("Modal authentication failed or was cancelled.");
+                }
+            }
+            
+            println!("\nPress any key to return to Motus CLI...");
+            
+            // Wait for user to press any key before returning to TUI
+            let _ = crossterm::event::read();
+            
+            // Restore UI
+            enable_raw_mode().unwrap();
+            execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen).unwrap();
+            terminal.clear().unwrap();
+        }
+
         if app.pending_search {
             app.pending_search = false;
             let tx = tx.clone();

@@ -424,11 +424,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 .highlight_style(Style::default().bg(Color::Red).fg(Color::White));
             f.render_stateful_widget(log_list, chunks[1], &mut app.lora_logs_state);
         }
-        CurrentScreen::ModalAuth => {
-            let p = Paragraph::new("Modal Auth flow coming soon...\nPress Enter to return")
-                .block(Block::default().title("Modal Auth").borders(Borders::ALL));
-            f.render_widget(p, chunks[1]);
-        }
+
     }
 
     let footer = Paragraph::new(Line::from(vec![
